@@ -21,7 +21,6 @@
 			transition: background-color 2s ease;
 			background-color: green !important;
 		}
-		}
 
 		.fade-to-white {
 			transition: background-color 2s ease;
@@ -648,6 +647,10 @@
 	<?php }
 	if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) {
 		if (!isset($_SESSION["start"])) {
+			//$servername = "localhost";  
+//$username = "f1072203_adadmin";
+//$password = "l4lSalpX";
+//$database = "f1072203_adadmin";
 			$servername = "localhost";
 			$username = "root";
 			$password = "";
