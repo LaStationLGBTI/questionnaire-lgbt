@@ -4,6 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 header('Content-Type: application/json');
 session_start();
+require_once 'conf.php';
 if(isset($_SESSION["finish"]))
 if($_SESSION["finish"] == 1)
 {
@@ -61,7 +62,7 @@ $password = "";
 $database = "lastation";
 
 try {
-    $conn = new PDO("mysql:host=$servername;dbname=$database;charset=utf8", $username, $password);
+    $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $PASSWORD);
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     echo "Erreur connection: " . $e->getMessage();
