@@ -1,4 +1,5 @@
 <!DOCTYPE html><?php session_start(); ?>
+<?php require_once 'conf.php'; ?>
 <html style="font-size: 16px;" lang="fr">
 
 <head>
@@ -647,16 +648,8 @@
 	<?php }
 	if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) {
 		if (!isset($_SESSION["start"])) {
-			//$servername = "localhost";  
-//$username = "f1072203_adadmin";
-//$password = "l4lSalpX";
-//$database = "f1072203_adadmin";
-			$servername = "localhost";
-			$username = "root";
-			$password = "";
-			$database = "lastation";
 			try {
-				$conn = new PDO("mysql:host=$servername;dbname=$database;charset=utf8", $username, $password);
+				$conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
 				$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();

@@ -1,0 +1,6 @@
+<?php
+
+$DB_HOSTNAME = "localhost";
+$DB_USERNAME = "USERNAME";
+$DB_PASSWORD = "PASSWORD";
+$DB_NAME = "questionnaire-lgbti";
