@@ -1,4 +1,5 @@
 <!DOCTYPE html><?php session_start(); ?>
+<?php require_once 'conf.php'; ?>
 <html style="font-size: 16px;" lang="fr">
 
 <head>
