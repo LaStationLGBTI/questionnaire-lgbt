@@ -838,15 +838,9 @@
 		$_SESSION["acc"] = "1";
 		$_SESSION["genre"] = isset($_POST['genre']) ? htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8') : '';
 		$_SESSION["orient"] = isset($_POST['orient']) ? htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8') : '';
-		$servername = "localhost";
-		$username = "root";
-		$password = "";
-		$database = "lastation";
-
-
 		if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 			try {
-				$conn = new PDO("mysql:host=$servername;dbname=$database;charset=utf8", $username, $password);
+				$conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
 				$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
