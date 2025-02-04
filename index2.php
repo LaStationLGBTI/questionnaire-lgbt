@@ -650,21 +650,14 @@
 	<?php }
 	if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) {
 		if (!isset($_SESSION["start"])) {
-			//$servername = "localhost";  
-//$username = "f1072203_adadmin";
-//$password = "l4lSalpX";
-//$database = "f1072203_adadmin";
-			$servername = "localhost";
-			$username = "root";
-			$password = "";
-			$database = "lastation";
+
 			try {
-				$conn = new PDO("mysql:host=$servername;dbname=$database;charset=utf8", $username, $password);
+				$conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
 				$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
 			}
-			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC LIMIT 6");
+			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
 
 			$stmt->execute();
 			$results = $stmt->fetchAll(PDO::FETCH_ASSOC);
