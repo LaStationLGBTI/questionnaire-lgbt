@@ -657,7 +657,7 @@
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
 			}
-			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC LIMIT 4");
+			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
 
 			$stmt->execute();
 			$results = $stmt->fetchAll(PDO::FETCH_ASSOC);
