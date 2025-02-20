@@ -5,8 +5,6 @@ header('Content-Type: application/json');
 try {
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
 				$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $stmt = $pdo->prepare("TRUNCATE TABLE stationr2");
-    $stmt->execute();
     $stmt = $pdo->query("SELECT * FROM stationq1");
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
