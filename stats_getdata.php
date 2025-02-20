@@ -1,16 +1,10 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+require_once 'conf.php'; 
 header('Content-Type: application/json');
 
-$dsn = "mysql:host=localhost;dbname=lastation;charset=utf8mb4";
-$username = "root";
-$password = "";
 try {
-    $pdo = new PDO($dsn, $username, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+				$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $stmt = $pdo->prepare("DELETE FROM stationq1 WHERE id = :id");
     $stmt->execute(['id' => 2]);
     //$stmt = $pdo->prepare("TRUNCATE TABLE stationr2");
