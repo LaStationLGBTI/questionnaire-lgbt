@@ -43,6 +43,8 @@ if (isset($_SESSION['start'])) {
 	$prochaineQ  .= "__" . explode("__",$_SESSION["answer"])[$_SESSION["LastQuestion"] - 1]; //7
 	$prochaineQ  .= "__" . explode("__",$_SESSION["qtype"])[$_SESSION["LastQuestion"]]; //8
 	$prochaineQ  .= "__" . explode("__",$_SESSION["qtype"])[$_SESSION["LastQuestion"] - 1]; //9
+	$prochaineQ  .= "__" . explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]]; //10
+
 	}
 		else
 	{
