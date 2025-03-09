@@ -661,7 +661,10 @@ session_start();
 				echo "Erreur connection: " . $e->getMessage();
 			}
 
-			
+			$stmt = $conn->prepare("TRUNCATE TABLE stationr2");
+ 
+
+$stmt->execute();
 			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
 
 			$stmt->execute();
