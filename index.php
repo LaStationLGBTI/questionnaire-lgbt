@@ -1,4 +1,5 @@
 <!DOCTYPE html><?php 
+ini_set('session.gc_maxlifetime', 31536000);
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -682,7 +683,7 @@ session_start();
 
 			$stmt->execute();
 			$results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-			ini_set('session.gc_maxlifetime', 3600);
+			
 			$_SESSION["QuestionToUse"] = "Questions";
 			$_SESSION["Rep1"] = "Reponses1";
 			$_SESSION["Rep2"] = "Reponses2";
