@@ -10,13 +10,12 @@ try {
 
     $stmt = $pdo->query("SELECT * FROM stationr2");
     $reponsesdb = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+    $QuestionsR = [];
     $formattedData = [];
     foreach ($reponsesdb as $row) {
         $responseString = $row['reponse'];
         $responseString = str_replace('&amp;', '&', $responseString);
         $parts = explode('__', $responseString);
-        $QuestionsR = [];
         foreach ($parts as $part) {
             if (strpos($part, '&&') !== false) {
                 $subParts = explode('&&', $part);
