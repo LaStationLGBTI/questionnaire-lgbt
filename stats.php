@@ -103,7 +103,7 @@
                 data: {
                     labels: [question, ...validResponses],
                     datasets: [{
-                        data: [0, ...validResponses.map(() => 1)],
+                        data: [0, ...validResponses.map(() => 0)],
                         backgroundColor: ["Blue", "#FF0080", "Yellow", "Orange", "Red"]
                     }]
                 },
@@ -143,7 +143,7 @@
             container.appendChild(div);
             let datasets = responses.map((response, index) => ({
                 label: response.slice(0, 32) + "...",
-                data: response.slice(0, 32) === "null" ? subQuestions.map(() => 0) : subQuestions.map(() => 1),
+                data: response.slice(0, 32) === "null" ? subQuestions.map(() => 0) : subQuestions.map(() => 0),
                 backgroundColor: `hsl(${index * 137.508}, 70%, 50%)`
             }));
 
