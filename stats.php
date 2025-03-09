@@ -63,11 +63,7 @@
 
                             let dataRep = newSubResponses.map(Number);
                             let dataQuest = newSubQuestion.map(Number);
-                            console.log(dataQuest);
-                            console.log(dataRep);
-                            console.log(questionId);
                             dataQuest.forEach((questF, index) => {
-                                console.log(chart.data.datasets[dataRep[index] - 1].data[questF - 1]);
                                 chart.data.datasets[dataRep[index] - 1].data[questF - 1]++;
                             });
 
