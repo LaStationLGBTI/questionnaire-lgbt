@@ -21,6 +21,8 @@ if (isset($_SESSION['start'])) {
 	$prochaineQ .= "__". explode("__",$_SESSION["Rep5"])[$_SESSION["LastQuestion"]]; //5
 	$prochaineQ  .= "__" . $_SESSION["LastQuestion"]; //6
 	$prochaineQ  .= "__" . explode("__",$_SESSION["qtype"])[$_SESSION["LastQuestion"]]; //7
+	$prochaineQ  .= "__" . explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]]; //8
+
 	}
 		else
 	{
