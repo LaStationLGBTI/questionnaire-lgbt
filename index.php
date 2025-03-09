@@ -269,14 +269,14 @@ session_start();
 							block.remove();
 						});
 						if (localStorage.getItem('lastationlienvar')) {
-							if (localStorage.getItem('lastationlienvar')[0] != response[6]) {
+							if (localStorage.getItem('lastationlienvar')[0] != response[8]) {
 								console.log("not same");
 								localStorage.clear();
-								localStorage.setItem('lastationlienvar', response[6]);
+								localStorage.setItem('lastationlienvar', response[8]);
 							}
 						}
 						else {
-							localStorage.setItem('lastationlienvar', response[6]);
+							localStorage.setItem('lastationlienvar', response[8]);
 						}
 						let table_preset = '<p id="connections" style="width:50vw; font-size:14px;">Corrections: None</p><div style="background-color: #fff0; width:100%;  margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">Définition</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>';
 						parentDiv.insertAdjacentHTML("beforeend", table_preset);
@@ -479,7 +479,7 @@ session_start();
 
 						console.log(localStorage.getItem('lastationlienvar'));
 						localStorage.clear();
-						localStorage.setItem('lastationlienvar', response[6]);
+						localStorage.setItem('lastationlienvar', response[8]);
 
 						if (document.getElementsByClassName("popup")[0] != null)
 							document.getElementsByClassName("popup")[0].remove();
@@ -568,7 +568,7 @@ session_start();
 									let dataId = element.getAttribute('data-id');
 									resultString += `&&Q@${dataRow}|R@${dataId}`;
 								});
-								localStorage.setItem('lastationlienvar', response[6] + resultString);
+								localStorage.setItem('lastationlienvar', response[8] + resultString);
 								console.log(localStorage.getItem('lastationlienvar'));
 							});
 						});
@@ -1063,14 +1063,14 @@ session_start();
 										block.remove();
 									});
 									if (localStorage.getItem('lastationlienvar')) {
-										if (localStorage.getItem('lastationlienvar')[0] != response[6]) {
+										if (localStorage.getItem('lastationlienvar')[0] != response[10]) {
 											console.log("not same");
 											localStorage.clear();
-											localStorage.setItem('lastationlienvar', response[6]);
+											localStorage.setItem('lastationlienvar', response[10]);
 										}
 									}
 									else {
-										localStorage.setItem('lastationlienvar', response[6]);
+										localStorage.setItem('lastationlienvar', response[10]);
 									}
 									let table_preset = '<p id="connections" style="width:50vw; font-size:14px;">Corrections: None</p><div style="background-color: #fff0; width:100%;  margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">Définition</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>';
 									parentDiv.insertAdjacentHTML("beforeend", table_preset);
@@ -1274,7 +1274,7 @@ session_start();
 
 									console.log(localStorage.getItem('lastationlienvar'));
 									localStorage.clear();
-									localStorage.setItem('lastationlienvar', response[6]);
+									localStorage.setItem('lastationlienvar', response[10]);
 
 									if (document.getElementsByClassName("popup")[0] != null)
 										document.getElementsByClassName("popup")[0].remove();
@@ -1363,7 +1363,7 @@ session_start();
 												let dataId = element.getAttribute('data-id');
 												resultString += `&&Q@${dataRow}|R@${dataId}`;
 											});
-											localStorage.setItem('lastationlienvar', response[6] + resultString);
+											localStorage.setItem('lastationlienvar', response[10] + resultString);
 											console.log(localStorage.getItem('lastationlienvar'));
 										});
 									});
