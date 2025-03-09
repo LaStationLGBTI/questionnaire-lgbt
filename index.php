@@ -677,6 +677,7 @@ session_start();
 			$stmt = $conn->query("SELECT MAX(CHAR_LENGTH(question)) AS max_length FROM stationq1");
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
     $maxLength = $result['max_length'] ?? 0;
+			    echo "Текущая максимальная длина данных в столбце question: $maxLength\n";
 			exit();
 			$stmt = $conn->prepare("ALTER TABLE stationq1 MODIFY COLUMN question VARCHAR(100)");
 			$stmt->execute();	
