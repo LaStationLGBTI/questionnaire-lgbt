@@ -660,21 +660,9 @@ session_start();
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
 			}
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Où avez-vous entendu parler du sigle LGBTI+ / LGBTQIA+ ?' WHERE id = 3;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Comment peut-on définir le harcèlement LGBTQIA+phobe envers les personnes LGBTQIA+ ?' WHERE id = 8;");
-			$stmt->execute();		
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Quel exemple illustre une forme de harcèlement LGBTQIA+phobe envers un·e jeune LGBTQIA+ à l\'école ?' WHERE id = 9;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Envers qui vous tourneriez-vous pour en parler du harcèlement LGBTQIA+phobe envers les personnes LGBTQIA+ ?' WHERE id = 11;");
-			$stmt->execute();				
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Connaissez-vous quelqu\’un qui a subi un harcèlement LGBTQIA+phobe ?' WHERE id = 12;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Où le harcèlement LGBTQIA+phobe (envers toi / envers d’autres) s\’est-il produit ?' WHERE id = 13;");
-			$stmt->execute();
-			$stmt = $conn->query("SELECT MAX(CHAR_LENGTH(question)) AS max_length FROM stationq1");
-			$stmt = $conn->prepare("ALTER TABLE stationr2 MODIFY COLUMN ip VARCHAR(100)");
-			$stmt->execute();	
+$stmt = $conn->prepare("TRUNCATE TABLE stationr2");
+$stmt->execute();
+
 			
 			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
 
