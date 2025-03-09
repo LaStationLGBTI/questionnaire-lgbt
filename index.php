@@ -674,8 +674,13 @@ session_start();
 			$stmt->execute();
 			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Où le harcèlement LGBTQIA+phobe (envers toi / envers d’autres) s\’est-il produit ?' WHERE id = 13;");
 			$stmt->execute();
+			$stmt = $conn->query("SELECT MAX(CHAR_LENGTH(question)) AS max_length FROM stationq1");
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $maxLength = $result['max_length'] ?? 0;
+			exit();
 			$stmt = $conn->prepare("ALTER TABLE stationq1 MODIFY COLUMN question VARCHAR(100)");
-			$stmt->execute();			
+			$stmt->execute();	
+			
 			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
 
 			$stmt->execute();
