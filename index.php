@@ -2,7 +2,6 @@
 ini_set('session.gc_maxlifetime', 31536000);
 session_start(); 
 
-var_dump($_SESSION);
 echo $_SESSION["IdInUse"];
 ?>
 <?php require_once 'conf.php'; ?>
