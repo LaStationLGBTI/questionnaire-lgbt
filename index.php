@@ -2,7 +2,7 @@
 ini_set('session.gc_maxlifetime', 31536000);
 session_start(); 
 
-echo $_SESSION["IdInUse"];
+echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 ?>
 <?php require_once 'conf.php'; ?>
 <html style="font-size: 16px;" lang="fr">
