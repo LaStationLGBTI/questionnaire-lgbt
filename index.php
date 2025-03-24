@@ -1,7 +1,9 @@
 <!DOCTYPE html><?php 
 ini_set('session.gc_maxlifetime', 31536000);
 session_start(); 
+
 var_dump($_SESSION);
+echo $_SESSION["IdInUse"];
 ?>
 <?php require_once 'conf.php'; ?>
 <html style="font-size: 16px;" lang="fr">
