@@ -58,7 +58,7 @@ session_start();
 
 		#rep.u-align-center.u-custom-item.u-text.u-text-5 {
 
-			font-size: calc(1vh + 0.6vw);
+			
 			margin: 0;
 			margin-top: 0;
 
@@ -591,11 +591,10 @@ session_start();
 					<div class="u-container-layout u-container-layout-1">
 						<div class="u-clearfix u-sheet u-sheet-1">
 							<p class="u-text u-text-default u-text-1"
-								style="text-align:center;margin:auto; font-size:24px;"><b>Projet solidaire de Luc Fey, élève
+								style="text-align:center;margin:auto; font-size:24px;"><b>Projet solidaire d'un élève
 									du Collège international Vauban de Strasbourg,<br> avec le soutien de la STATION, centre
 									LGBTQIA+ de Strasbourg.</b></p>
-							<p style="margin:0; font-size:16px;">Présentation du Projet Solidaire de Luc Fey
-								Luc Fey, élève du Collège international Vauban à Strasbourg, a lancé un projet solidaire
+							<p style="margin:0; font-size:16px;">Présentation du Projet Solidaire d'un élève du Collège international Vauban à Strasbourg, a lancé un projet 
 								remarquable visant à sensibiliser ses camarades de classe aux questions LGBTQIA+. À travers
 								une enquête en ligne qu’il a soigneusement conçue, Luc invite ses pairs à réfléchir sur des
 								thématiques essentielles telles que l'identité de genre, l'orientation sexuelle et le
@@ -642,7 +641,7 @@ session_start();
 								<button style="margin-top:1vh;" value="1" name="start" type="submit"
 									class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">Continuer</button>
 								<p style="font-size:10px;">Conception de la page : R. (Hex) ; maître de stage : Gérald
-									Schlemminger, (c) 2025 La STATION / Luc Fey. </p>
+									Schlemminger, (c) 2025 La STATION / Collège international Vauban. </p>
 							</div>
 						</div>
 					</div>
@@ -725,7 +724,7 @@ session_start();
 
 					<b>
 						<p id="Question" class="u-align-center"
-							style=" margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9; font-size: calc(1.5vw + 1vh);">
+							style=" margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9;">
 							<?php echo $currentQuestion; ?>
 						</p>
 					</b>
@@ -842,6 +841,8 @@ session_start();
 		$_SESSION["acc"] = "1";
 		$_SESSION["genre"] = isset($_POST['genre']) ? htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8') : '';
 		$_SESSION["orient"] = isset($_POST['orient']) ? htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8') : '';
+		$_SESSION["emailr"] = isset($_POST['e_mm']) ? htmlspecialchars($_POST['e_mm'], ENT_QUOTES, 'UTF-8') : '';
+
 		if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 			try {
 				$conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
@@ -849,13 +850,15 @@ session_start();
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
 			}
-
-			$query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation WHERE id = :id";
+			$sql = "ALTER TABLE stationr2 ADD COLUMN repmail VARCHAR(255) NULL DEFAULT ''";
+    			$conn->exec($sql);
+			$query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail WHERE id = :id";
 			$stmt = $conn->prepare($query);
 			$stmt->execute([
 				'genre' => $_SESSION["genre"],
 				'orientation' => $_SESSION["orient"],
-				'id' => $_SESSION["id_user"]
+				'id' => $_SESSION["id_user"],
+				'repmail' => $_SESSION["emailr"]
 			]);
 			unset($_SESSION["id_user"]);
 		}
