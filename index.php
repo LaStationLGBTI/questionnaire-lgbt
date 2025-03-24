@@ -1,11 +1,4 @@
 <!DOCTYPE html><?php 
-ini_set('display_errors', 1);
- 
-
-ini_set('display_startup_errors', 1);
- 
-
-error_reporting(E_ALL);
 ini_set('session.gc_maxlifetime', 31536000);
 session_start(); 
 var_dump($_SESSION);
@@ -667,8 +660,6 @@ var_dump($_SESSION);
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
 			}
-			$sql = "ALTER TABLE stationr2 ADD COLUMN repmail VARCHAR(255) NULL DEFAULT ''";
-    			$conn->exec($sql);
 			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
 
 			$stmt->execute();
