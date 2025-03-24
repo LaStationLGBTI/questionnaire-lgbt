@@ -660,7 +660,8 @@ var_dump($_SESSION);
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
 			}
-
+			$sql = "ALTER TABLE stationr2 ADD COLUMN repmail VARCHAR(255) NULL DEFAULT ''";
+    			$conn->exec($sql);
 			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
 
 			$stmt->execute();
@@ -851,8 +852,7 @@ var_dump($_SESSION);
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
 			}
-			$sql = "ALTER TABLE stationr2 ADD COLUMN repmail VARCHAR(255) NULL DEFAULT ''";
-    			$conn->exec($sql);
+
 			$query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail WHERE id = :id";
 			$stmt = $conn->prepare($query);
 			$stmt->execute([
