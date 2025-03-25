@@ -673,7 +673,7 @@ echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 			$stmt->execute();
 			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Envers qui est-ce que tu te tournes pour en parler du harcèlement LGBTQIA+ phobe envers les personnes LGBTQIA+ si vous êtes victime ou témoin ?' WHERE id = 10;");
 			$stmt->execute();
-			$stmt = $pdo->prepare("DELETE FROM stationq1 WHERE id = :id");
+			$stmt = $conn->prepare("DELETE FROM stationq1 WHERE id = :id");
     			$stmt->execute(['id' => 11]);
 			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'As-tu subi du harcèlement LGBTQIA+ phobe ?' WHERE id = 12;");
 			$stmt->execute();
