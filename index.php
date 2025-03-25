@@ -1,6 +1,4 @@
-<!DOCTYPE html><?php ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+<!DOCTYPE html><?php 
 ini_set('session.gc_maxlifetime', 31536000);
 session_start(); 
 
@@ -663,33 +661,8 @@ echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 			} catch (PDOException $e) {
 				echo "Erreur connection: " . $e->getMessage();
 			}
-						$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Quelle signification ne correspond pas au sigle LGBTQIA+ ?', answer=4 WHERE id = 1;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET qtype = 'mct' WHERE id = 3;");
-			$stmt->execute();
 
-			
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Comment peut-on définir le harcèlement LBTQIA+ phobe envers les personnes LGBTQIA+ ?' WHERE id = 8;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Envers qui est-ce que tu te tournes pour en parler du harcèlement LGBTQIA+ phobe envers les personnes LGBTQIA+ si vous êtes victime ou témoin ?' WHERE id = 10;");
-			$stmt->execute();
-			$stmt = $conn->prepare("DELETE FROM stationq1 WHERE id = :id");
-    			$stmt->execute(['id' => 11]);
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'As-tu subi du harcèlement LGBTQIA+ phobe ?' WHERE id = 12;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Parmi les comportements suivants, lequel n’est pas un exemple de discrimination dans un groupe de jeunes LGBTQIA+ ?' WHERE id = 16;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Comment interviendrais-tu si tu étais témoin d’une discrimination ?' WHERE id = 17;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Quelle serait ta réaction si ton meilleur ami te disait qu’il est homosexuel ?' WHERE id = 20;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Aimerais-tu en apprendre plus sur les questions LGBTQIA+ ?' WHERE id = 21;");
-			$stmt->execute();	
-			$stmt = $conn->prepare("UPDATE stationq1 SET rep3 = 'En rencontrant un spécialiste.', question = 'Sous quelle forme aimerais-tu apprendre plus sur les questions LGBTQIA+ ?' WHERE id = 22;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET rep3 = 'En travaillant en tant que bénévole au sein d’une association, avec l’accord des parents.', question = 'Aimerais-tu t’engager dans des actions en faveur des LGBTQIA+ ?' WHERE id = 23;");
-			$stmt->execute();
-			$stmt = $conn->prepare("UPDATE stationq1 SET question = 'Connais-tu la STATION, centre LGBTQIA+ de Strasbourg ?' WHERE id = 24;");
+			$stmt = $conn->prepare("UPDATE stationq1 SET qtype = 'qcm', question = 'Où avez-vous souvent entendu parler du sigle LGBTI+ / LGBTQIA+ ?' WHERE id = 3;");
 			$stmt->execute();
 			
 			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
