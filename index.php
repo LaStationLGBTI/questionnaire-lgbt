@@ -662,7 +662,7 @@ echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 				echo "Erreur connection: " . $e->getMessage();
 			}
 
-			$stmt = $conn->prepare("UPDATE stationq1 SET qtype = 'qcm', question = 'Où avez-vous souvent entendu parler du sigle LGBTI+ / LGBTQIA+ ?' WHERE id = 3;");
+			$stmt = $conn->prepare("UPDATE stationq1 SET qtype = 'echelle', question = 'Où avez-vous souvent entendu parler du sigle LGBTI+ / LGBTQIA+ ?' WHERE id = 3;");
 			$stmt->execute();
 			
 			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
