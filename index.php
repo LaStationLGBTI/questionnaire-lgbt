@@ -759,7 +759,7 @@ echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 									sondage. </i></p>
 							<form method="POST" class="u-clearfix u-form-spacing-32  u-inner-form" style="padding: 10px;">
 								<div class="u-form-group u-form-name u-form-partition-factor-2">
-									<h3 style="margin:0;">Reconnaissez-vous dans l'un des genres suivants ?</h3><br>
+									<h3 style="margin:0;">Te reconnais-tu dans l'un des genres suivants ?</h3><br>
 									<div style="display: flex;  align-items: center; gap:10px;">
 										<p style="margin:0;"> Sélectionnez la description qui vous convient</p>
 										<select style="margin:0; padding-left:0;" id="name-bb9b" name="genre"
@@ -775,26 +775,9 @@ echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 											<option value="8">Je ne souhaite pas répondre.</option>
 										</select>
 									</div>
-
-									<label for="" class="u-label">
-										L'identité de genre, c'est comment une personne se voit elle-même.
-										Cela peut être différent du sexe donné à la naissance.
-										Il existe plusieurs catégories d'identités de genre:<br>
-										<b>Cisgenre : </b> une personne dont l'identité de genre correspond à son sexe assigné à
-										la naissance. (Homme, Femme)<br>
-										<b>Transgenre : </b> une personne dont l'identité de genre diffère de son sexe assigné à
-										la naissance. (Femme transgenre, Homme transgenre)<br>
-										<b>Non-binaire : </b> une personne qui ne se reconnaît pas exclusivement dans les
-										catégories homme ou femme. (Ni totalement homme ni totalement femme)<br>
-										<b>Genre fluide : </b> une personne dont l'identité de genre peut changer avec le
-										temps.<br>
-										<b>Intersexe : </b> une personne née avec des caractéristiques sexuelles (chromosomes,
-										organes génitaux ou hormones) qui ne correspondent pas complètement aux catégories
-										typiques de "masculin" ou "féminin".<br></label>
-
 								</div>
 								<div class="u-form-email u-form-group u-form-partition-factor-2">
-									<h3 style="margin:0;">Reconnaissez-vous dans l'une des orientations sexuelles suivantes ?
+									<h3 style="margin:0;">Te reconnais-tu dans l'une des orientations sexuelles suivantes ?
 									</h3><br>
 									<div style="display: flex;  align-items: center; gap:10px;">
 										<p style="margin:0;"> Sélectionnez la description qui vous convient</p>
@@ -812,17 +795,6 @@ echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 
 										</select>
 									</div>
-									<label for="" class="u-label">L'orientation sexuelle, c'est l'attirance que quelqu'un
-										ressent pour d'autres personnes. Cette attirance peut être émotionnelle, romantique ou
-										sexuelle. Il existe plusieurs types d'orientations sexuelles: <br>
-										<b>Hétérosexualité :</b> attirance envers une personne du sexe opposé.<br>
-										<b>Homosexualité :</b> attirance envers une personne du même sexe (ex. gay,
-										lesbienne).<br>
-										<b>Bisexualité :</b> attirance envers des personnes de plusieurs sexes ou genres.<br>
-										<b>Pansexualité :</b> attirance indépendante du genre ou du sexe de la personne.<br>
-										<b>Asexualité :</b> absence ou faible niveau d'attirance sexuelle envers
-										autrui.<br></label>
-
 								</div>
 								<div class="u-align-right u-form-group u-form-submit">
 									<button type="submit" name="acc"
