@@ -796,6 +796,11 @@ echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 										</select>
 									</div>
 								</div>
+								<div class="u-form-email u-form-group u-form-partition-factor-2">
+									<label>Entrez votre adresse email si vous souhaitez recevoir les résultats de vos réponses</label>
+									<input name="e_mm"	class="u-radius-50 u-text-hover-white">
+
+								</div>
 								<div class="u-align-right u-form-group u-form-submit">
 									<button type="submit" name="acc"
 										class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">Envoyer
