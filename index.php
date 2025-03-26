@@ -2,7 +2,6 @@
 ini_set('session.gc_maxlifetime', 31536000);
 session_start(); 
 
-echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 ?>
 <?php require_once 'conf.php'; ?>
 <html style="font-size: 16px;" lang="fr">
@@ -662,8 +661,6 @@ echo explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]];
 				echo "Erreur connection: " . $e->getMessage();
 			}
 
-			$stmt = $conn->prepare("UPDATE stationq1 SET qtype = 'echelle', question = 'Où avez-vous souvent entendu parler du sigle LGBTI+ / LGBTQIA+ ?' WHERE id = 3;");
-			$stmt->execute();
 			
 			$stmt = $conn->prepare("SELECT * FROM stationq1 WHERE level = 101 ORDER BY `id` ASC");
 
