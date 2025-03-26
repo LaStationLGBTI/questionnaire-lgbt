@@ -37,7 +37,7 @@ session_start();
 			margin: 0;
 			height: 100%;
 			background-image: url('images/background.png');
-  			background-size: 105% auto;
+  			background-size: cover;
 			background-repeat: no-repeat; 
 		}
 
