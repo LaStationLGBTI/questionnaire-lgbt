@@ -40,7 +40,7 @@ session_start();
 			background-size: cover;
 			background-position: center; 
     			background-repeat: no-repeat; 
-			background-size: auto 120%;
+			background-size: auto 150%;
 		}
 
 		.u-container-layout.u-container-layout-1 {
