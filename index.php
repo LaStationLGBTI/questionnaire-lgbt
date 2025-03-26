@@ -36,6 +36,10 @@ session_start();
 		.u-container-style.u-expanded-width.u-grey-10 {
 			margin: 0;
 			height: 100%;
+			background-image: url('images/background.png');
+			background-size: cover;
+			background-position: center; 
+    			background-repeat: no-repeat; 
 		}
 
 		.u-container-layout.u-container-layout-1 {
