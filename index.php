@@ -755,7 +755,7 @@ session_start();
 							<?php echo $currentQuestion; ?>
 						</p>
 					</b>
-					<div style="flex-direction: row; display: flex; justify-content: space-between; margin-top:1em; gap: 10px; "
+					<div style="flex-direction: row; display: flex; justify-content: space-between; margin-top:1em; gap: 10px; width: 80%; margin: auto; "
 						id="quest_list">
 
 					</div>
