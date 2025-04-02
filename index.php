@@ -161,6 +161,28 @@ session_start();
 			background-color: #d32f2f;
 		}
 	</style>
+		<script>
+        function changeRandomImage() {
+            const randomNum = Math.floor(Math.random() * 9) + 1;
+            const imageName = `an_${randomNum}`;
+            const imagePath = `images/${imageName}.png`;
+            const imgElement = document.getElementById('randomImage');
+            
+            if (imgElement) {
+                imgElement.src = imagePath;
+                imgElement.alt = `Random image ${imageName}`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            changeRandomImage();
+            
+            const image = document.getElementById('randomImage');
+            if (image) {
+                image.addEventListener('click', changeRandomImage);
+            }
+        });
+    </script>
 	<script type="text/javascript">
 		function changeToSecond() {
 			var section2 = document.getElementById("sec-089e2");
@@ -206,7 +228,7 @@ session_start();
 		var selectedCells = [];
 		const connections = [];
 		function startQuestion() {
-
+			changeRandomImage();
 			parentDiv = document.getElementById("quest_list");
 			var xhr2 = new XMLHttpRequest();
 			xhr2.open("POST", "StartQuestions.php", true);
@@ -740,11 +762,8 @@ session_start();
 				</div>
 			</div>
 										<div class="u-align-right u-form-group u-form-submit">
-			<?php
-    $randomNum = rand(1, 9);
-    $imagePath = "images/an_$randomNum.png";
-    ?>
-<img src="<?php echo $imagePath; ?>" width="100em" alt="Random image an_<?php echo $randomNum; ?>">
+
+<img id="randomImage" src="" width="200em" alt="">
 							</div>
 		</section>
 
@@ -889,6 +908,7 @@ session_start();
 		let xhr = new XMLHttpRequest();
 		let cd = 3000;
 		function updateQuestion(buttonIndex) {
+			changeRandomImage();
 			if (timeout == false) {
 				xhr.open("POST", "updateQuestion2.php", true);
 				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
