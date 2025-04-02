@@ -740,7 +740,13 @@ session_start();
 				</div>
 			</div>
 		</section>
-
+							<div class="u-align-right u-form-group u-form-submit">
+			<?php
+    $randomNum = rand(1, 9);
+    $imagePath = "images/an_$randomNum.png";
+    ?>
+<img src="<?php echo $imagePath; ?>" width="100em" alt="Random image an_<?php echo $randomNum; ?>">
+							</div>
 
 		<?php
 		if (!isset($_SESSION["finish"])) {
