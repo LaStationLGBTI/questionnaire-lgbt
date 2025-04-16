@@ -19,9 +19,9 @@
         }
 
         .chart-box {
-            width: 18em;
-            height: 30em;
-			margin-bottom: 3em;
+            width: 22em; /* Увеличена ширина для длинных текстов */
+            height: 35em; /* Увеличена высота для вмещения текста */
+            margin-bottom: 3em;
         }
 
         .legend-container {
@@ -33,12 +33,20 @@
         }
 
         .legend-item {
-            display: flex; /* Изменили на flex вместо inline-flex */
+            display: flex;
             align-items: center;
-            margin: 2px 0; /* Уменьшенный вертикальный отступ */
+            margin: 2px 0;
             font-size: 14px;
-            width: 100%; /* Занимаем всю ширину для центрирования */
-            justify-content: center; /* Центрируем содержимое внутри */
+            width: 100%;
+            justify-content: center;
+            text-align: center; /* Центрируем текст */
+        }
+
+        .legend-label {
+            flex: 1; /* Позволяет тексту занимать доступное пространство */
+            word-wrap: break-word; /* Перенос длинных слов */
+            white-space: normal; /* Разрешаем перенос строк */
+            max-width: 18em; /* Ограничиваем ширину текста для переноса */
         }
 
         .legend-color {
@@ -46,6 +54,12 @@
             height: 15px;
             margin-right: 5px;
             display: inline-block;
+            flex-shrink: 0; /* Предотвращаем сжатие цветного блока */
+        }
+
+        .count {
+            margin-left: 5px;
+            flex-shrink: 0; /* Предотвращаем сжатие счетчика */
         }
     </style>
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="fr" style="height:100%">
@@ -168,13 +182,13 @@
                 legendItem.appendChild(colorBox);
 
                 let label = document.createElement("span");
+                label.className = "legend-label";
                 label.textContent = response.length > 20 ? response.slice(0, 20) + "..." : response;
                 legendItem.appendChild(label);
 
                 let countSpan = document.createElement("span");
                 countSpan.className = "count";
                 countSpan.textContent = `(${chart.data.datasets[0].data[index + 1]})`; // Initial count (0)
-                countSpan.style.marginLeft = "5px";
                 legendItem.appendChild(countSpan);
 
                 legendContainer.appendChild(legendItem);
@@ -191,7 +205,7 @@
             canvas.id = "chart_" + chartIndex;
             let div = document.createElement("div");
             let questionLabel = document.createElement("div");
-            questionLabel.textContent = `Question: ${question}`; // Исправлены кавычки
+            questionLabel.textContent = `Question: ${question}`;
             questionLabel.style.textAlign = "center";
             div.appendChild(questionLabel);
             div.className = "chart-box";
