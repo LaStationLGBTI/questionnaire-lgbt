@@ -20,8 +20,16 @@
 
         .chart-box {
             width: 22em;
-            height: 35em;
+            height: 40em; /* Увеличена высота, чтобы вместить диаграмму и легенду */
             margin-bottom: 3em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chart-box canvas {
+            max-height: 15em !important; /* Ограничиваем высоту диаграммы */
+            width: 100% !important;
         }
 
         .legend-container {
@@ -270,7 +278,7 @@
 
                 let countSpan = document.createElement("span");
                 countSpan.className = "count";
-                countSpan.textContent = `(0)`; // Initial count
+                countSpan.textContent = `(0)`;
                 legendItem.appendChild(countSpan);
 
                 legendContainer.appendChild(legendItem);
