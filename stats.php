@@ -52,6 +52,7 @@
 
                 data.answers.forEach((item, index) => {
 
+			console.log(item);
                     let questionId = item.question;
                     let responseId = item.response;
                     let chart = chartInstances[parseInt(questionId)];
