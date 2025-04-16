@@ -51,13 +51,11 @@
                 });
 
                 data.answers.forEach((item, index) => {
-
-			console.log(item);
                     let questionId = item.question;
                     let responseId = item.response;
                     let chart = chartInstances[parseInt(questionId)];
                     if (!responseId) {
-                        if (chart) {
+                        if (chart && item.subresponse && item.subquestion) {
                             let newSubResponses = item.subresponse.split(",");
                             let newSubQuestion = item.subquestion.split(",");
 
