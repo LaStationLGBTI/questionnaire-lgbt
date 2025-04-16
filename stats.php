@@ -19,8 +19,8 @@
         }
 
         .chart-box {
-            width: 22em; /* Увеличена ширина для длинных текстов */
-            height: 35em; /* Увеличена высота для вмещения текста */
+            width: 22em;
+            height: 35em;
             margin-bottom: 3em;
         }
 
@@ -28,8 +28,8 @@
             margin-top: 10px;
             text-align: center;
             display: flex;
-            flex-direction: column; /* Отображаем элементы в столбец */
-            align-items: center; /* Центрируем элементы по горизонтали */
+            flex-direction: column;
+            align-items: center;
         }
 
         .legend-item {
@@ -39,14 +39,14 @@
             font-size: 14px;
             width: 100%;
             justify-content: center;
-            text-align: center; /* Центрируем текст */
+            text-align: center;
         }
 
         .legend-label {
-            flex: 1; /* Позволяет тексту занимать доступное пространство */
-            word-wrap: break-word; /* Перенос длинных слов */
-            white-space: normal; /* Разрешаем перенос строк */
-            max-width: 18em; /* Ограничиваем ширину текста для переноса */
+            flex: 1;
+            word-wrap: break-word;
+            white-space: normal;
+            max-width: 18em;
         }
 
         .legend-color {
@@ -54,12 +54,12 @@
             height: 15px;
             margin-right: 5px;
             display: inline-block;
-            flex-shrink: 0; /* Предотвращаем сжатие цветного блока */
+            flex-shrink: 0;
         }
 
         .count {
             margin-left: 5px;
-            flex-shrink: 0; /* Предотвращаем сжатие счетчика */
+            flex-shrink: 0;
         }
     </style>
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="fr" style="height:100%">
@@ -104,17 +104,25 @@
                             });
 
                             chart.update();
+
+                            // Update legend counts for StackedBarChart
+                            let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
+                            legendItems.forEach((item, idx) => {
+                                let total = chart.data.datasets[idx].data.reduce((sum, val) => sum + val, 0);
+                                let countSpan = item.querySelector(".count");
+                                countSpan.textContent = `(${total})`;
+                            });
                         }
                     }
                     else if (chart) {
                         chart.data.datasets[0].data[responseId] += 1;
                         chart.update();
 
-                        // Update the legend with the new counts
+                        // Update the legend with the new counts for PieChart
                         let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
                         legendItems.forEach((item, idx) => {
                             let countSpan = item.querySelector(".count");
-                            countSpan.textContent = `(${chart.data.datasets[0].data[idx + 1]})`; // idx + 1 to skip the question data
+                            countSpan.textContent = `(${chart.data.datasets[0].data[idx + 1]})`;
                         });
                     }
                 });
@@ -178,7 +186,7 @@
                 
                 let colorBox = document.createElement("span");
                 colorBox.className = "legend-color";
-                colorBox.style.backgroundColor = backgroundColors[index + 1]; // Skip the first color (for question)
+                colorBox.style.backgroundColor = backgroundColors[index + 1];
                 legendItem.appendChild(colorBox);
 
                 let label = document.createElement("span");
@@ -188,7 +196,7 @@
 
                 let countSpan = document.createElement("span");
                 countSpan.className = "count";
-                countSpan.textContent = `(${chart.data.datasets[0].data[index + 1]})`; // Initial count (0)
+                countSpan.textContent = `(${chart.data.datasets[0].data[index + 1]})`;
                 legendItem.appendChild(countSpan);
 
                 legendContainer.appendChild(legendItem);
@@ -214,7 +222,7 @@
             container.appendChild(div);
             let datasets = responses.map((response, index) => ({
                 label: response.slice(0, 32) + "...",
-                data: response.slice(0, 32) === "null" ? subQuestions.map(() => 0) : subQuestions.map(() => 0),
+                data: subQuestions.map(() => 0),
                 backgroundColor: `hsl(${index * 137.508}, 70%, 50%)`
             }));
 
@@ -242,6 +250,33 @@
                 }
             });
             chartInstances[chartIndex] = chart;
+
+            // Create legend for StackedBarChart
+            let legendContainer = document.createElement("div");
+            legendContainer.className = "legend-container";
+            responses.forEach((response, index) => {
+                let legendItem = document.createElement("div");
+                legendItem.className = "legend-item";
+                
+                let colorBox = document.createElement("span");
+                colorBox.className = "legend-color";
+                colorBox.style.backgroundColor = datasets[index].backgroundColor;
+                legendItem.appendChild(colorBox);
+
+                let label = document.createElement("span");
+                label.className = "legend-label";
+                label.textContent = response.length > 20 ? response.slice(0, 20) + "..." : response;
+                legendItem.appendChild(label);
+
+                let countSpan = document.createElement("span");
+                countSpan.className = "count";
+                countSpan.textContent = `(0)`; // Initial count
+                legendItem.appendChild(countSpan);
+
+                legendContainer.appendChild(legendItem);
+            });
+
+            div.appendChild(legendContainer);
         }
     </script>
 	<script>
