@@ -191,7 +191,7 @@
             canvas.id = "chart_" + chartIndex;
             let div = document.createElement("div");
             let questionLabel = document.createElement("div");
-            questionLabel.textContent = `Question: ${question}`; // Исправлены кавычки
+            questionLabel.textContent = «Question: ${question}»;
             questionLabel.style.textAlign = "center";
             div.appendChild(questionLabel);
             div.className = "chart-box";
@@ -213,7 +213,7 @@
                 options: {
                     scales: {
                         x: { beginAtZero: true, stacked: true },
-                        y: { beginAtZero: true, stacked: true }
+                        y: {beginAtZero: true, stacked: true}
                     },
                     interaction: {
                         mode: 'nearest'
