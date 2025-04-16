@@ -14,26 +14,27 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 20px;
-            margin-top: 20px;
+            gap: 10px; /* Уменьшенный отступ между диаграммами */
+            margin-top: 10px;
         }
 
         .chart-box {
-            width: 22em;
-            height: 40em; /* Увеличена высота, чтобы вместить диаграмму и легенду */
-            margin-bottom: 3em;
+            width: 18em; /* Уменьшена ширина для более компактного размещения */
+            height: auto; /* Высота адаптируется к содержимому */
+            min-height: 20em; /* Минимальная высота для предотвращения слишком маленьких контейнеров */
+            margin-bottom: 2em; /* Уменьшенный отступ снизу */
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
         .chart-box canvas {
-            max-height: 15em !important; /* Ограничиваем высоту диаграммы */
+            max-height: 12em !important; /* Уменьшена высота диаграммы */
             width: 100% !important;
         }
 
         .legend-container {
-            margin-top: 10px;
+            margin-top: 5px; /* Уменьшен отступ сверху */
             text-align: center;
             display: flex;
             flex-direction: column;
@@ -43,8 +44,8 @@
         .legend-item {
             display: flex;
             align-items: center;
-            margin: 2px 0;
-            font-size: 14px;
+            margin: 1px 0; /* Уменьшен отступ между элементами легенды */
+            font-size: 12px; /* Уменьшен размер шрифта */
             width: 100%;
             justify-content: center;
             text-align: center;
@@ -54,19 +55,19 @@
             flex: 1;
             word-wrap: break-word;
             white-space: normal;
-            max-width: 18em;
+            max-width: 14em; /* Уменьшена максимальная ширина текста */
         }
 
         .legend-color {
-            width: 15px;
-            height: 15px;
-            margin-right: 5px;
+            width: 12px; /* Уменьшен размер цветного блока */
+            height: 12px;
+            margin-right: 4px;
             display: inline-block;
             flex-shrink: 0;
         }
 
         .count {
-            margin-left: 5px;
+            margin-left: 4px;
             flex-shrink: 0;
         }
     </style>
