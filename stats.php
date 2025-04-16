@@ -27,13 +27,18 @@
         .legend-container {
             margin-top: 10px;
             text-align: center;
+            display: flex;
+            flex-direction: column; /* Отображаем элементы в столбец */
+            align-items: center; /* Центрируем элементы по горизонтали */
         }
 
         .legend-item {
-            display: inline-flex;
+            display: flex; /* Изменили на flex вместо inline-flex */
             align-items: center;
-            margin: 5px 10px;
+            margin: 2px 0; /* Уменьшенный вертикальный отступ */
             font-size: 14px;
+            width: 100%; /* Занимаем всю ширину для центрирования */
+            justify-content: center; /* Центрируем содержимое внутри */
         }
 
         .legend-color {
@@ -186,7 +191,7 @@
             canvas.id = "chart_" + chartIndex;
             let div = document.createElement("div");
             let questionLabel = document.createElement("div");
-            questionLabel.textContent = `Question: ${question}`;
+            questionLabel.textContent = «Question: ${question}»;
             questionLabel.style.textAlign = "center";
             div.appendChild(questionLabel);
             div.className = "chart-box";
