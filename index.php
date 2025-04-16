@@ -781,17 +781,17 @@ session_start();
 						<div class="u-clearfix u-sheet u-sheet-1">
 							<p style="margin:0;" class="u-text u-text-default u-text-1"><i><b>Avertissement concernant la
 										question finale</b><br>
-									Les dernières questions du sondage sont plus personnelles et portent sur votre identité de
-									genre et votre orientation sexuelle. Nous comprenons que ces thématiques peuvent être
+									Les dernières questions du sondage sont plus personnelles et portent sur ton identité de
+									genre et ton orientation sexuelle. Nous comprenons que ces thématiques peuvent être
 									perçues comme sensibles ou intrusives.<br>
-									Il n'y a aucune obligation de réponse : vous êtes libre de ne pas répondre à ces questions
-									si vous ne vous sentez pas à l’aise. Cela n’affectera en rien votre participation au
+									Il n'y a aucune obligation de réponse : tu es libre de ne pas répondre à ces questions
+									si tu ne te sens pas à l’aise. Cela n’affectera en rien ta participation au
 									sondage. </i></p>
 							<form method="POST" class="u-clearfix u-form-spacing-32  u-inner-form" style="padding: 10px;">
 								<div class="u-form-group u-form-name u-form-partition-factor-2">
 									<h3 style="margin:0;">Te reconnais-tu dans l'un des genres suivants ?</h3><br>
 									<div style="display: flex;  align-items: center; gap:10px;">
-										<p style="margin:0;"> Sélectionnez la description qui vous convient</p>
+										<p style="margin:0;"> Sélectionne la description qui te convient</p>
 										<select style="margin:0; padding-left:0;" id="name-bb9b" name="genre"
 											class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2"
 											required>
@@ -810,7 +810,7 @@ session_start();
 									<h3 style="margin:0;">Te reconnais-tu dans l'une des orientations sexuelles suivantes ?
 									</h3><br>
 									<div style="display: flex;  align-items: center; gap:10px;">
-										<p style="margin:0;"> Sélectionnez la description qui vous convient</p>
+										<p style="margin:0;">Sélectionne la description qui te convient</p>
 										<select style="margin:0; padding-left:0;" id="email-bb9b" name="orient"
 											class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2"
 											required>
@@ -827,7 +827,7 @@ session_start();
 									</div>
 								</div>
 								<div class="u-form-email u-form-group u-form-partition-factor-2">
-									<label>Entrez votre adresse email si vous souhaitez recevoir les résultats de vos réponses</label>
+									<label>Entre ton adresse email si tu souhaites recevoir les résultats de l'enquête.</label>
 									<input name="e_mm"	class="u-radius-50 u-text-hover-white">
 
 								</div>
