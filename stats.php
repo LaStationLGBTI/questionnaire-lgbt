@@ -23,9 +23,28 @@
             height: 30em;
 			margin-bottom: 3em;
         }
+
+        .legend-container {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            margin: 5px 10px;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+            display: inline-block;
+        }
     </style>
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="fr" style="height:100%">
-	<section  id="sec-089e">
+	<section id="sec-089e">
 		<div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
 			<div class="u-container-layout u-container-layout-1">
 				<div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
@@ -59,7 +78,6 @@
                             let newSubResponses = item.subresponse.split(",");
                             let newSubQuestion = item.subquestion.split(",");
 
-
                             let dataRep = newSubResponses.map(Number);
                             let dataQuest = newSubQuestion.map(Number);
                             dataQuest.forEach((questF, index) => {
@@ -69,13 +87,10 @@
                             chart.update();
                         }
                     }
-                    else
-                        if (chart) {
-                            chart.data.datasets[0].data[responseId] += 1;
-                            chart.update();
-                        }
-
-
+                    else if (chart) {
+                        chart.data.datasets[0].data[responseId] += 1;
+                        chart.update();
+                    }
                 });
             })
             .catch(error => console.error('Error:', error));
@@ -85,21 +100,27 @@
             let container = document.getElementById("chartsContainer");
             let div = document.createElement("div");
             div.className = "chart-box";
+            
+            // Add question label
             let questionLabel = document.createElement("div");
             questionLabel.textContent = `Question: ${question}`;
             questionLabel.style.textAlign = "center";
             div.appendChild(questionLabel);
+
+            // Add canvas for chart
             let canvas = document.createElement("canvas");
             canvas.id = "chart_" + chartIndex;
             div.appendChild(canvas);
-            container.appendChild(div);
+
+            // Create chart
+            const backgroundColors = ["Blue", "#FF0080", "Yellow", "Orange", "Red"];
             const chart = new Chart(canvas, {
                 type: 'pie',
                 data: {
                     labels: [question, ...validResponses],
                     datasets: [{
                         data: [0, ...validResponses.map(() => 0)],
-                        backgroundColor: ["Blue", "#FF0080", "Yellow", "Orange", "Red"]
+                        backgroundColor: backgroundColors
                     }]
                 },
                 options: {
@@ -121,7 +142,30 @@
                 }
             });
             chartInstances[chartIndex] = chart;
+
+            // Create legend
+            let legendContainer = document.createElement("div");
+            legendContainer.className = "legend-container";
+            validResponses.forEach((response, index) => {
+                let legendItem = document.createElement("div");
+                legendItem.className = "legend-item";
+                
+                let colorBox = document.createElement("span");
+                colorBox.className = "legend-color";
+                colorBox.style.backgroundColor = backgroundColors[index + 1]; // Skip the first color (for question)
+                legendItem.appendChild(colorBox);
+
+                let label = document.createElement("span");
+                label.textContent = response.length > 20 ? response.slice(0, 20) + "..." : response;
+                legendItem.appendChild(label);
+
+                legendContainer.appendChild(legendItem);
+            });
+
+            div.appendChild(legendContainer);
+            container.appendChild(div);
         }
+
         function createStackedBarChart(subQuestions, responses, chartIndex, question) {
             const validResponses = responses.filter(response => response !== "null");
             let container = document.getElementById("chartsContainer");
@@ -149,7 +193,6 @@
                     datasets: datasets
                 },
                 options: {
-
                     scales: {
                         x: { beginAtZero: true, stacked: true },
                         y: {beginAtZero: true, stacked: true}
@@ -167,7 +210,6 @@
                 }
             });
             chartInstances[chartIndex] = chart;
-
         }
     </script>
 	<script>
@@ -183,7 +225,6 @@
 				});
 		}, 100); 
 	</script>
-
 
 </body>
 
