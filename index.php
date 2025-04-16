@@ -789,7 +789,7 @@ session_start();
 									sondage. </i></p><br><br>
 							<form method="POST" class="u-clearfix u-form-spacing-32  u-inner-form" style="padding: 10px;">
 								<div class="u-form-group u-form-name u-form-partition-factor-2">
-									<h3 style="margin:0;">Te reconnais-tu dans l'un des genres suivants ?</h3><br><br>
+									<h3 style="margin:0;">Te reconnais-tu dans l'un des genres suivants ?</h3><br>
 									<div style="display: flex;  align-items: center; gap:10px;">
 										<p style="margin:0;"> Sélectionne la description qui te convient</p>
 										<select style="margin:0; padding-left:0;" id="name-bb9b" name="genre"
@@ -803,12 +803,12 @@ session_start();
 											<option value="6">Aucun </option>
 											<option value="7">Autre </option>
 											<option value="8">Je ne souhaite pas répondre.</option>
-										</select><br><br>
+										</select>
 									</div>
-								</div>
+								</div><br><br>
 								<div class="u-form-email u-form-group u-form-partition-factor-2">
 									<h3 style="margin:0;">Te reconnais-tu dans l'une des orientations sexuelles suivantes ?
-									</h3><br><br>
+									</h3><br>
 									<div style="display: flex;  align-items: center; gap:10px;">
 										<p style="margin:0;">Sélectionne la description qui te convient</p>
 										<select style="margin:0; padding-left:0;" id="email-bb9b" name="orient"
@@ -823,9 +823,9 @@ session_start();
 											<option value="7">Autre </option>
 											<option value="8">Je ne souhaite pas répondre.</option>
 
-										</select><br><br>
+										</select>
 									</div>
-								</div>
+								</div><br><br>
 								<div class="u-form-email u-form-group u-form-partition-factor-2">
 									<label>Entre ton adresse email si tu souhaites recevoir les résultats de l'enquête.</label>
 									<input name="e_mm"	class="u-radius-50 u-text-hover-white">
