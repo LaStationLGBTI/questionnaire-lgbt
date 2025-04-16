@@ -90,6 +90,13 @@
                     else if (chart) {
                         chart.data.datasets[0].data[responseId] += 1;
                         chart.update();
+
+                        // Update the legend with the new counts
+                        let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
+                        legendItems.forEach((item, idx) => {
+                            let countSpan = item.querySelector(".count");
+                            countSpan.textContent = `(${chart.data.datasets[0].data[idx + 1]})`; // idx + 1 to skip the question data
+                        });
                     }
                 });
             })
@@ -158,6 +165,12 @@
                 let label = document.createElement("span");
                 label.textContent = response.length > 20 ? response.slice(0, 20) + "..." : response;
                 legendItem.appendChild(label);
+
+                let countSpan = document.createElement("span");
+                countSpan.className = "count";
+                countSpan.textContent = `(${chart.data.datasets[0].data[index + 1]})`; // Initial count (0)
+                countSpan.style.marginLeft = "5px";
+                legendItem.appendChild(countSpan);
 
                 legendContainer.appendChild(legendItem);
             });
