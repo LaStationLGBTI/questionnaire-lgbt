@@ -706,11 +706,11 @@ $lang = $_SESSION['language'];
                             <div class="language-selector">
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="language" value="fr">
-                                    <input type="image" src="images/france.png" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                                    <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                                 </form>
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="language" value="de">
-                                    <input type="image" src="images/germany.png" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                                    <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                                 </form>
                             </div>
 
@@ -728,49 +728,50 @@ $lang = $_SESSION['language'];
         </section>
 
     <?php } else if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) {
-        if (!isset($_SESSION["start"])) {
-            try {
-                $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            } catch (PDOException $e) {
-                echo "Erreur connection: " . $e->getMessage();
-            }
+if (!isset($_SESSION["start"])) {
+    try {
+        $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    } catch (PDOException $e) {
+        echo "Erreur connection: " . $e->getMessage();
+    }
 
-            $table = $lang === 'de' ? 'stationq2' : 'stationq1';
-            $stmt = $conn->prepare("SELECT * FROM $table WHERE level = 101 ORDER BY `id` ASC");
-            $stmt->execute();
-            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $_SESSION["QuestionToUse"] = "Questions";
-            $_SESSION["Rep1"] = "Reponses1";
-            $_SESSION["Rep2"] = "Reponses2";
-            $_SESSION["Rep3"] = "Reponses3";
-            $_SESSION["Rep4"] = "Reponses4";
-            $_SESSION["Rep5"] = "Reponses5";
-            $_SESSION["IdInUse"] = "id";
-            $_SESSION["answer"] = "answer";
-            $_SESSION["qtype"] = "qtype";
-            if ($results) {
-                foreach ($results as $row) {
-                    $_SESSION["QuestionToUse"] .= "__" . $row["question"];
-                    $_SESSION["Rep1"] .= "__" . $row["rep1"];
-                    $_SESSION["Rep2"] .= "__" . $row["rep2"];
-                    $_SESSION["Rep3"] .= "__" . $row["rep3"];
-                    $_SESSION["Rep4"] .= "__" . $row["rep4"];
-                    $_SESSION["Rep5"] .= "__" . $row["rep5"];
-                    $_SESSION["IdInUse"] .= "__" . $row["id"];
-                    $_SESSION["answer"] .= "__" . $row["answer"];
-                    $_SESSION["qtype"] .= "__" . $row["qtype"];
-                }
-                $ids = explode("__", $_SESSION["IdInUse"]);
-                $_SESSION["TotalQuestions"] = count($ids) - 1;
-                $_SESSION["start"] = 1;
-                $_SESSION["LastQuestion"] = "1";
-            } else {
-                echo $lang === 'de' ? "Fehlende Daten für die gewählte Stufe. Bitte kontaktieren Sie 'La STATION'" : "Manque des données pour le niveau choisi. Veuillez contacter 'La STATION'";
-                exit();
-            }
+    // Выбор таблицы в зависимости от языка
+    $table = $lang === 'de' ? 'stationq2' : 'stationq1';
+    $stmt = $conn->prepare("SELECT * FROM $table WHERE level = 101 ORDER BY `id` ASC");
+    $stmt->execute();
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $_SESSION["QuestionToUse"] = "Questions";
+    $_SESSION["Rep1"] = "Reponses1";
+    $_SESSION["Rep2"] = "Reponses2";
+    $_SESSION["Rep3"] = "Reponses3";
+    $_SESSION["Rep4"] = "Reponses4";
+    $_SESSION["Rep5"] = "Reponses5";
+    $_SESSION["IdInUse"] = "id";
+    $_SESSION["answer"] = "answer";
+    $_SESSION["qtype"] = "qtype";
+    if ($results) {
+        foreach ($results as $row) {
+            $_SESSION["QuestionToUse"] .= "__" . $row["question"];
+            $_SESSION["Rep1"] .= "__" . $row["rep1"];
+            $_SESSION["Rep2"] .= "__" . $row["rep2"];
+            $_SESSION["Rep3"] .= "__" . $row["rep3"];
+            $_SESSION["Rep4"] .= "__" . $row["rep4"];
+            $_SESSION["Rep5"] .= "__" . $row["rep5"];
+            $_SESSION["IdInUse"] .= "__" . $row["id"];
+            $_SESSION["answer"] .= "__" . $row["answer"];
+            $_SESSION["qtype"] .= "__" . $row["qtype"];
         }
+        $ids = explode("__", $_SESSION["IdInUse"]);
+        $_SESSION["TotalQuestions"] = count($ids) - 1;
+        $_SESSION["start"] = 1;
+        $_SESSION["LastQuestion"] = "1";
+    } else {
+        echo $lang === 'de' ? "Fehlende Daten für die gewählte Stufe. Bitte kontaktieren Sie 'La STATION'" : "Manque des données pour le niveau choisi. Veuillez contacter 'La STATION'";
+        exit();
+    }
+}
         if (isset(explode("__", $_SESSION["QuestionToUse"])[$_SESSION["LastQuestion"]])) {
             $currentQuestion = explode("__", $_SESSION["QuestionToUse"])[$_SESSION["LastQuestion"]];
             $currentRep1 = explode("__", $_SESSION["Rep1"])[$_SESSION["LastQuestion"]];
