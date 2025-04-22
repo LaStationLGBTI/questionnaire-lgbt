@@ -913,7 +913,6 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 
     <?php } ?>
 
-    <?php // include 'pages/footer.php'; ?>
     <script>
         setTimeout(() => {
             const section = document.querySelector('section');
@@ -1110,7 +1109,6 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 											console.error(`Malformed pair: "${pair}"`);
 										}
 									});
-									// Create the table rows
 									for (let i = 0; i < data1.length; i++) {
 										let row = document.createElement('tr');
 
@@ -1154,7 +1152,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 									document.querySelectorAll('.show-info-btn').forEach(button => {
 										button.addEventListener('click', function () {
 											const rowNum = button.getAttribute('data-row');
-											const decodedText = button.getAttribute('data-cell2-decoded'); // content of cell
+											const decodedText = button.getAttribute('data-cell2-decoded'); 
 											selectedR = rowNum;
 											selectedRText = decodedText;
 											if (document.getElementsByClassName("popup")[0] == null) {
@@ -1177,7 +1175,6 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 
 													optionItem.setAttribute('data-row', i + 1);
 													optionItem.setAttribute('data-cell2', data1[i]);
-													//optionItem.setAttribute('data-cell2-decoded', data2[i]);
 													optionItem.classList.add('popup-option', 'tQ');
 													optionItem.style.cursor = "pointer";
 													popupOptionsList.appendChild(optionItem);
@@ -1191,7 +1188,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 														if (selectedQ && selectedR) {
 															var connection = "";
 															var goodconnection = "";
-															if (R[selectedQ - 1] == (selectedR)) //correct
+															if (R[selectedQ - 1] == (selectedR)) 
 															{
 																connection = `${"<span style='color: green;'>" + selectedQText} -> ${"</span><span style='color: green;'>" + selectedRText + "</span><br>"}`;
 															}
@@ -1216,15 +1213,11 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 															const decodedPhrase = decodeHTML(selectedRText);
 															if (decodedTexts.every(text => !text.includes(decodedPhrase))) {
 																if (index !== -1) {
-																	//connections.splice(index, 1);
 																} else {
 																	connections.push(connection);
 																	if (goodconnection != "")
 																		connections.push(goodconnection);
 																	localStorage.setItem('lastationlienvar', localStorage.getItem('lastationlienvar') + "&&Q@" + selectedQ + "|R@" + selectedR);
-																	//	document.getElementById('button_next').onclick = function () {
-																	//		updateQuestion(1);
-																	//	};
 																}
 															}
 
@@ -1247,8 +1240,8 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 										document.getElementsByClassName("popup")[0].style.display = "none";
 
 									});
-									const updatedString = localStorage.getItem('lastationlienvar').slice(1); // "&&Q1|R1&&Q1|R2"
-									const parts = updatedString.split('&&'); // ["Q1|R1", "Q1|R2"]
+									const updatedString = localStorage.getItem('lastationlienvar').slice(1);
+									const parts = updatedString.split('&&'); 
 									const QQ = [];
 									const RR = [];
 									parts.forEach(part => {
@@ -1309,7 +1302,6 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 									let data3 = response[3];
 									let data4 = response[4];
 									let data5 = response[5];
-									//document.getElementById('QuestionN').insertAdjacentHTML('afterend', '<button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1  u-radius  u-btn-4"  style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next">Continuer</button>');
 									for (let i = 0; i < data1.length; i++) {
 										let row = document.createElement('tr');
 										let cell1 = document.createElement('td');
@@ -1370,7 +1362,6 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 												});
 											}
 											cell.classList.add('selected');
-											//selectedCells.push();
 											document.getElementById('button_next').onclick = function () {
 												updateQuestion(cell);
 											};
