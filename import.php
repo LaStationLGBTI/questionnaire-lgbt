@@ -48,7 +48,7 @@
             <button type="submit" name="submit">Загрузить и импортировать</button>
         </form>
 
-<?php
+        <?php
 require_once 'conf.php'; 
 $host = $DB_HOSTNAME;
 $user = $DB_USERNAME;
@@ -60,6 +60,7 @@ error_reporting(E_ALL);
 
         if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
             try {
+
 
                 // Проверка загруженного файла
                 $file = $_FILES['sql_file'];
@@ -79,45 +80,41 @@ error_reporting(E_ALL);
                     throw new Exception("Ошибка чтения файла: " . $file['name']);
                 }
 
-                // Подключение к базе данных
-                $conn = new mysqli($host, $user, $password, $database);
-                if ($conn->connect_error) {
-                    throw new Exception("Ошибка подключения: " . $conn->connect_error);
-                }
+                // Подключение к базе данных через PDO
+                $dsn = "mysql:host=$host;dbname=$database;charset=utf8mb4";
+                $pdo = new PDO($dsn, $user, $password);
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // Выполнение SQL-запросов
-                if ($conn->multi_query($sql)) {
-                    do {
-                        if ($conn->more_results()) {
-                            $conn->next_result();
-                        }
-                    } while ($conn->more_results());
-                } else {
-                    throw new Exception("Ошибка при выполнении SQL: " . $conn->error);
+                // Разделение SQL-файла на отдельные команды
+                $queries = array_filter(array_map('trim', explode(';', $sql)), function($query) {
+                    return !empty($query) && !preg_match('/^\s*(--|\/\*)/', $query);
+                });
+
+                // Выполнение каждой команды
+                foreach ($queries as $query) {
+                    $pdo->exec($query);
                 }
 
                 // Проверка создания таблицы stationq2
-                $result = $conn->query("SHOW TABLES LIKE 'stationq2'");
-                if ($result->num_rows === 0) {
+                $stmt = $pdo->query("SHOW TABLES LIKE 'stationq2'");
+                if ($stmt->rowCount() === 0) {
                     throw new Exception("Таблица stationq2 не была создана.");
                 }
 
                 // Проверка количества записей в таблице
-                $result = $conn->query("SELECT COUNT(*) AS count FROM stationq2");
-                $row = $result->fetch_assoc();
+                $stmt = $pdo->query("SELECT COUNT(*) AS count FROM stationq2");
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 $recordCount = $row['count'];
 
                 // Проверка содержимого (например, первый вопрос)
-                $result = $conn->query("SELECT question FROM stationq2 WHERE id = 1");
-                $row = $result->fetch_assoc();
+                $stmt = $pdo->query("SELECT question FROM stationq2 WHERE id = 1");
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
                 $firstQuestion = $row['question'] ?? '';
 
                 // Вывод результата
                 echo "<p class='success'>Таблица stationq2 успешно импортирована!</p>";
                 echo "<p>Количество записей в таблице: $recordCount</p>";
                 echo "<p>Первый вопрос: " . htmlspecialchars($firstQuestion) . "</p>";
-
-                $conn->close();
 
             } catch (Exception $e) {
                 echo "<p class='error'>Ошибка: " . htmlspecialchars($e->getMessage()) . "</p>";
