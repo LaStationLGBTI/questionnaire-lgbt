@@ -394,7 +394,9 @@ function startQuestion() {
                     localStorage.setItem('lastationlienvar', response[8]);
                 }
 let table_preset = `<p id="connections" style="width:50vw; font-size:14px;">${texts[lang].corrections} ${texts[lang].none}</p><div style="background-color: #fff0; width:100%; margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">${texts[lang].popup_title}</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>`;                let data2 = response[2].split("--");
-                let data3 = response[3].split('_');
+                let data1 = response[1].split("--");
+		let data2 = response[2].split("--");
+		let data3 = response[3].split('_');
                 const Q = [];
                 const R = [];
                 data3.forEach(pair => {
