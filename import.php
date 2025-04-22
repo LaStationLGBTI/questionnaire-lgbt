@@ -58,6 +58,27 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+try {
+    // Подключение к базе данных
+    $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // SQL-запрос для добавления колонки lang
+    $sql = "ALTER TABLE `stationr1` ADD `lang` VARCHAR(10) NOT NULL DEFAULT 'fr' AFTER `reponse`";
+
+    // Выполнение запроса
+    $conn->exec($sql);
+    echo "Колонка `lang` успешно добавлена в таблицу `stationr1`.";
+
+} catch (PDOException $e) {
+    // Вывод ошибки, если что-то пошло не так
+    echo "Ошибка: " . $e->getMessage();
+}
+
+// Закрытие соединения
+$conn = null;
+
+
         if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
             try {
 
