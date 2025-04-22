@@ -1136,7 +1136,7 @@ if (!isset($_SESSION["start"])) {
 										button.classList.add('u-active-palette-2-light-1', 'u-align-center', 'u-border-none', 'u-btn-round', 'u-button-style', 'u-hover-palette-2-light-1', 'u-palette-2-light-2', 'u-radius', 'u-text-palette-2-dark-1', 'u-btn-4'); button.classList.add('show-info-btn');
 										button.style.padding = "calc(0.2vh + 0.2vw)";
 										button.style.margin = 0;
-										button.innerHTML = "CHOISIR";
+										button.innerHTML = texts[lang].continue;
 										button.style.cursor = "pointer";
 										button.style.fontSize = "12px";
 										button.setAttribute('data-row', i + 1);
