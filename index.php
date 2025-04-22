@@ -79,7 +79,8 @@ $texts = [
         'popup_prompt' => 'Wähle eine Option aus der Liste:',
         'popup_close' => 'Schließen',
         'corrections' => 'Korrekturen:',
-        'none' => 'Keine'
+        'none' => 'Keine',
+	'question_label' => 'Question'
     ]
 ];
 $lang = $_SESSION['language'];
@@ -341,8 +342,8 @@ function startQuestion() {
                 const innerAnswers = item.querySelector('p#rep');
                 innerAnswers.innerHTML = response[index + 1];
             });
-            document.getElementById("QuestionN").innerHTML = "Question " + response[6];
-            // Исправленная привязка обработчика
+		document.getElementById("QuestionN").innerHTML = (lang === 'de' ? "Frage " : "Question ") + response[6];
+		
             document.getElementById('button_next').onclick = function () {
                 updateQuestion(-1);
             };
