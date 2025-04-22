@@ -9,8 +9,6 @@ if (!isset($_SESSION['language'])) {
 
 if (isset($_POST['language'])) {
     $_SESSION['language'] = $_POST['language'] === 'de' ? 'de' : 'fr';
-    header('Location: index.php');
-    exit();
 }
 
 $texts = [
@@ -385,7 +383,6 @@ $lang = $_SESSION['language'];
                         });
                         if (localStorage.getItem('lastationlienvar')) {
                             if (localStorage.getItem('lastationlienvar')[0] != response[8]) {
-                                console.log("not same");
                                 localStorage.clear();
                                 localStorage.setItem('lastationlienvar', response[8]);
                             }
@@ -406,8 +403,6 @@ $lang = $_SESSION['language'];
                                 const [q, r] = parts;
                                 Q.push(q.replace('Q', ''));
                                 R.push(r.replace('R', ''));
-                            } else {
-                                console.error(`Malformed pair: "${pair}"`);
                             }
                         });
                         for (let i = 0; i < data1.length; i++) {
@@ -512,7 +507,6 @@ $lang = $_SESSION['language'];
                                                 const decodedPhrase = decodeHTML(selectedRText);
                                                 if (decodedTexts.every(text => !text.includes(decodedPhrase))) {
                                                     if (index !== -1) {
-                                                        // connections.splice(index, 1);
                                                     } else {
                                                         connections.push(connection);
                                                         if (goodconnection != "")
@@ -562,8 +556,6 @@ $lang = $_SESSION['language'];
                                         const [q, r] = parts;
                                         Q.push(q.replace('Q', ''));
                                         R.push(r.replace('R', ''));
-                                    } else {
-                                        console.error(`Malformed pair: "${pair}"`);
                                     }
                                 });
                                 var indexrep = R.indexOf(String(RR[index]));
@@ -578,7 +570,6 @@ $lang = $_SESSION['language'];
                         }
                     } else if (response[7] == "mct") {
                         ismultiple = true;
-                        console.log(localStorage.getItem('lastationlienvar'));
                         localStorage.clear();
                         localStorage.setItem('lastationlienvar', response[8]);
                         if (document.getElementsByClassName("popup")[0] != null)
@@ -657,8 +648,6 @@ $lang = $_SESSION['language'];
                                 document.getElementById('button_next').onclick = function () {
                                     updateQuestion(cell);
                                 };
-                                if (cellType === 'Q') selectedQ = cell;
-                                if (cellType === 'R') selectedR = cell;
                                 const selectedElements = document.querySelectorAll('.selected');
                                 let resultString = '';
                                 selectedElements.forEach(element => {
@@ -667,7 +656,6 @@ $lang = $_SESSION['language'];
                                     resultString += `&&Q@${dataRow}|R@${dataId}`;
                                 });
                                 localStorage.setItem('lastationlienvar', response[8] + resultString);
-                                console.log(localStorage.getItem('lastationlienvar'));
                             });
                         });
                     }
@@ -680,10 +668,10 @@ $lang = $_SESSION['language'];
 
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
 
-    <?php echo $_POST["start"];
+    <?php
     if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
         <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
-            <form method="POST">
+            <form method="POST" action="">
                 <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
                     <div class="u-container-layout u-container-layout-1">
                         <div class="u-clearfix u-sheet u-sheet-1">
@@ -718,11 +706,11 @@ $lang = $_SESSION['language'];
                             <div class="language-selector">
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="language" value="fr">
-                                    <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                                    <input type="image" src="images/france.png" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                                 </form>
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="language" value="de">
-                                    <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                                    <input type="image" src="images/germany.png" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                                 </form>
                             </div>
 
@@ -974,7 +962,7 @@ $lang = $_SESSION['language'];
                             });
                             setTimeout(function () {
                                 timeout = false;
-                                window.location.href = window.location.href;
+                                changeToSecond();
                             }, 3000);
                         } else {
                             timeout = true;
@@ -1076,7 +1064,6 @@ $lang = $_SESSION['language'];
                                     });
                                     if (localStorage.getItem('lastationlienvar')) {
                                         if (localStorage.getItem('lastationlienvar')[0] != response[10]) {
-                                            console.log("not same");
                                             localStorage.clear();
                                             localStorage.setItem('lastationlienvar', response[10]);
                                         }
@@ -1097,8 +1084,6 @@ $lang = $_SESSION['language'];
                                             const [q, r] = parts;
                                             Q.push(q.replace('Q', ''));
                                             R.push(r.replace('R', ''));
-                                        } else {
-                                            console.error(`Malformed pair: "${pair}"`);
                                         }
                                     });
                                     for (let i = 0; i < data1.length; i++) {
@@ -1201,7 +1186,6 @@ $lang = $_SESSION['language'];
                                                             const decodedPhrase = decodeHTML(selectedRText);
                                                             if (decodedTexts.every(text => !text.includes(decodedPhrase))) {
                                                                 if (index !== -1) {
-                                                                    // connections.splice(index, 1);
                                                                 } else {
                                                                     connections.push(connection);
                                                                     if (goodconnection != "")
@@ -1251,8 +1235,6 @@ $lang = $_SESSION['language'];
                                                     const [q, r] = parts;
                                                     Q.push(q.replace('Q', ''));
                                                     R.push(r.replace('R', ''));
-                                                } else {
-                                                    console.error(`Malformed pair: "${pair}"`);
                                                 }
                                             });
                                             var indexrep = R.indexOf(String(RR[index]));
@@ -1267,7 +1249,6 @@ $lang = $_SESSION['language'];
                                     }
                                 } else if (response[8] == "mct") {
                                     ismultiple = true;
-                                    console.log(localStorage.getItem('lastationlienvar'));
                                     localStorage.clear();
                                     localStorage.setItem('lastationlienvar', response[10]);
                                     if (document.getElementsByClassName("popup")[0] != null)
@@ -1324,4 +1305,22 @@ $lang = $_SESSION['language'];
                                             cell5.setAttribute("data-row", i + 1);
                                             cell5.setAttribute("data-id", 4);
                                             cell5.textContent = data5;
-                                            row.append
+                                            row.appendChild(cell5);
+                                        }
+                                        document.querySelector('tbody').appendChild(row);
+                                    }
+                                    document.querySelectorAll('td[data-type]').forEach(cell => {
+                                        cell.addEventListener('click', function () {
+                                            const cellType = cell.dataset.type;
+                                            const cellRow = cell.dataset.row;
+                                            if (cell.classList.contains('selected')) {
+                                                cell.classList.remove('selected');
+                                                if (cellType === 'Q') selectedQ = null;
+                                                if (cellType === 'R') selectedR = null;
+                                            } else {
+                                                const rowCells = document.querySelectorAll(`[data-row='${cellRow}']:not([data-type='first'])`);
+                                                rowCells.forEach(rowCell => {
+                                                    if (rowCell !== cell) rowCell.classList.remove('selected');
+                                                });
+                                            }
+                                            cell.class
