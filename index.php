@@ -671,62 +671,62 @@ $lang = $_SESSION['language'];
 
     <?php
     if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
-        <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
-            <form method="POST" action="">
-                <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
-                    <div class="u-container-layout u-container-layout-1">
-                        <div class="u-clearfix u-sheet u-sheet-1">
-                            <p class="u-text u-text-default u-text-1" style="text-align:center;margin:auto; font-size:24px;">
-                                <b><?php echo $texts[$lang]['project_title']; ?></b>
-                            </p>
-                            <p style="margin:0; font-size:16px;">
-                                <?php echo $texts[$lang]['project_desc']; ?><br><br>
+<section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
+    <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
+        <div class="u-container-layout u-container-layout-1">
+            <div class="u-clearfix u-sheet u-sheet-1">
+                <p class="u-text u-text-default u-text-1" style="text-align:center;margin:auto; font-size:24px;">
+                    <b><?php echo $texts[$lang]['project_title']; ?></b>
+                </p>
+                <p style="margin:0; font-size:16px;">
+                    <?php echo $texts[$lang]['project_desc']; ?><br><br>
 
-                                <b><?php echo $texts[$lang]['objectives']; ?></b><br>
-                                <b><?php echo $texts[$lang]['awareness']; ?></b><br>
-                                <b><?php echo $texts[$lang]['inclusion']; ?></b><br>
-                                <b><?php echo $texts[$lang]['engagement']; ?></b><br>
+                    <b><?php echo $texts[$lang]['objectives']; ?></b><br>
+                    <b><?php echo $texts[$lang]['awareness']; ?></b><br>
+                    <b><?php echo $texts[$lang]['inclusion']; ?></b><br>
+                    <b><?php echo $texts[$lang]['engagement']; ?></b><br>
 
-                                <br><b><?php echo $texts[$lang]['why_survey']; ?></b><br>
-                                <?php echo $texts[$lang]['survey_reason']; ?><br>
+                    <br><b><?php echo $texts[$lang]['why_survey']; ?></b><br>
+                    <?php echo $texts[$lang]['survey_reason']; ?><br>
 
-                                <br><b><?php echo $texts[$lang]['impact']; ?></b><br>
-                                <?php echo $texts[$lang]['impact_desc']; ?><br>
-                                <br><?php echo $texts[$lang]['project_note']; ?>
-                            </p>
-                            <p style="margin:1em; padding:1em;border:solid; font-size:14px; border-color:#1400ff;">
-                                <b><?php echo $texts[$lang]['warning_title']; ?></b> <br><br>
+                    <br><b><?php echo $texts[$lang]['impact']; ?></b><br>
+                    <?php echo $texts[$lang]['impact_desc']; ?><br>
+                    <br><?php echo $texts[$lang]['project_note']; ?>
+                </p>
+                <p style="margin:1em; padding:1em;border:solid; font-size:14px; border-color:#1400ff;">
+                    <b><?php echo $texts[$lang]['warning_title']; ?></b> <br><br>
 
-                                <b><?php echo $texts[$lang]['anonymity']; ?></b><br>
-                                <b><?php echo $texts[$lang]['voluntary']; ?></b><br>
-                                <b><?php echo $texts[$lang]['results']; ?></b><br><br>
+                    <b><?php echo $texts[$lang]['anonymity']; ?></b><br>
+                    <b><?php echo $texts[$lang]['voluntary']; ?></b><br>
+                    <b><?php echo $texts[$lang]['results']; ?></b><br><br>
 
-                                <i><?php echo $texts[$lang]['thanks']; ?></i>
-                            </p>
+                    <i><?php echo $texts[$lang]['thanks']; ?></i>
+                </p>
 
-                            <div class="language-selector">
-                                <form method="POST" style="display: inline;">
-                                    <input type="hidden" name="language" value="fr">
-                                    <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
-                                </form>
-                                <form method="POST" style="display: inline;">
-                                    <input type="hidden" name="language" value="de">
-                                    <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
-                                </form>
-                            </div>
-
-                            <div class="u-align-right u-form-group u-form-submit">
-                                <button style="margin-top:1vh;" value="1" name="start" type="submit"
-                                    class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
-                                    <?php echo $texts[$lang]['continue']; ?>
-                                </button>
-                                <p style="font-size:10px;"><?php echo $texts[$lang]['footer']; ?></p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="language-selector">
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="language" value="fr">
+                        <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                    </form>
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="language" value="de">
+                        <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                    </form>
                 </div>
-            </form>
-        </section>
+
+                <form method="POST" action="">
+                    <div class="u-align-right u-form-group u-form-submit">
+                        <button style="margin-top:1vh;" value="1" name="start" type="submit"
+                            class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
+                            <?php echo $texts[$lang]['continue']; ?>
+                        </button>
+                        <p style="font-size:10px;"><?php echo $texts[$lang]['footer']; ?></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
 
     <?php } else if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) {
 if (!isset($_SESSION["start"])) {
