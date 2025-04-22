@@ -4,7 +4,9 @@ $host = $DB_HOSTNAME;
 $user = $DB_USERNAME;
 $password = $DB_PASSWORD;
 $database = $DB_NAME;
-
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 $conn = new mysqli($host, $user, $password, $database);
 if ($conn->connect_error) {
     die("err: " . $conn->connect_error);
