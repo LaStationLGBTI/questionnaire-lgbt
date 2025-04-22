@@ -718,11 +718,11 @@ $lang = $_SESSION['language'];
                             <div class="language-selector">
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="language" value="fr">
-                                    <input type="image" src="images/france.png" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                                    <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                                 </form>
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="language" value="de">
-                                    <input type="image" src="images/germany.png" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                                    <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                                 </form>
                             </div>
 
