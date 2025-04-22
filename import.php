@@ -63,9 +63,12 @@ try {
     $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // SQL-запрос для добавления колонки lang
-    $sql = "ALTER TABLE `stationr2` ADD `lang` VARCHAR(10) NOT NULL DEFAULT 'fr' AFTER `reponse`";
+    
+    $sql = "TRUNCATE TABLE `stationr2`";
 
+    // Выполнение запроса
+    $conn->exec($sql);
+    echo "Таблица `stationr2` успешно очищена.";
     // Выполнение запроса
     $conn->exec($sql);
     echo "Колонка `lang` успешно добавлена в таблицу `stationr2`.";
