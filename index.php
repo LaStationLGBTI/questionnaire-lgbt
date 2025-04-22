@@ -9,12 +9,84 @@ if (!isset($_SESSION['language'])) {
 
 if (isset($_POST['language'])) {
     $_SESSION['language'] = $_POST['language'] === 'de' ? 'de' : 'fr';
-    header('Location: index.php'); 
+    header('Location: index.php');
     exit();
 }
+
+$texts = [
+    'fr' => [
+        'project_title' => 'Projet solidaire d’un élève du Collège international Vauban de Strasbourg, avec le soutien de la STATION, centre LGBTQIA+ de Strasbourg.',
+        'project_desc' => 'Présentation du Projet Solidaire d’un élève du Collège international Vauban à Strasbourg, a lancé un projet remarquable visant à sensibiliser ses camarades de classe aux questions LGBTQIA+. À travers une enquête en ligne qu’il a soigneusement conçue, Luc invite ses pairs à réfléchir sur des thématiques essentielles telles que l’identité de genre, l’orientation sexuelle et le respect de la diversité.',
+        'objectives' => 'Objectifs du projet :',
+        'awareness' => 'Sensibilisation : Encourager les élèves à mieux comprendre les réalités et les défis auxquels font face les personnes LGBTQIA+.',
+        'inclusion' => 'Inclusion : Promouvoir un climat scolaire respectueux, où chacun se sent accepté, peu importe son identité ou son orientation.',
+        'engagement' => 'Engagement citoyen : Montrer comment des actions concrètes peuvent contribuer à faire évoluer les mentalités et renforcer les valeurs de respect et de solidarité.',
+        'why_survey' => 'Pourquoi une enquête en ligne ?',
+        'survey_reason' => 'Luc a choisi ce format interactif pour permettre à ses camarades de participer anonymement et de s’exprimer librement. Les résultats de l’enquête serviront de base à des discussions en classe, des ateliers de sensibilisation, ou encore des initiatives pour améliorer l’inclusion au sein de l’établissement.',
+        'impact' => 'L’impact attendu :',
+        'impact_desc' => 'En impliquant ses pairs dans ce processus participatif, Luc fait bien plus que sensibiliser : il agit comme un vecteur de changement en les encourageant à adopter des comportements inclusifs et à devenir eux-mêmes des ambassadeurs du respect.',
+        'project_note' => 'Ce projet, à la fois éducatif et solidaire, s’inscrit pleinement dans les valeurs portées par le Collège international Vauban et témoigne de l’engagement d’un élève inspirant pour construire un monde plus juste et tolérant.',
+        'warning_title' => 'Avertissement concernant le sondage',
+        'anonymity' => 'Anonymat garanti : Toutes vos réponses sont recueillies de manière anonyme. Aucune information personnelle ne sera associée à vos réponses.',
+        'voluntary' => 'Participation libre : La participation à ce sondage est entièrement facultative. Vous pouvez choisir de ne pas répondre à certaines questions si vous ne le souhaitez pas.',
+        'results' => 'Résultats disponibles : Si vous souhaitez recevoir un résumé des résultats une fois l’enquête terminée, vous pouvez laisser votre adresse e-mail à la fin du sondage. Cette étape est totalement optionnelle et ne compromet pas l’anonymat de vos réponses.',
+        'thanks' => 'Merci pour votre participation à ce projet qui contribue à sensibiliser et à promouvoir le respect et l’inclusion au sein de notre communauté scolaire.',
+        'continue' => 'Continuer',
+        'footer' => 'Conception de la page : R. (Hex) ; maître de stage : Gérald Schlemminger, (c) 2025 La STATION / Collège international Vauban.',
+        'final_warning' => 'Avertissement concernant la question finale',
+        'final_warning_desc' => 'Les dernières questions du sondage sont plus personnelles et portent sur ton identité de genre et ton orientation sexuelle. Nous comprenons que ces thématiques peuvent être perçues comme sensibles ou intrusives. Il n’y a aucune obligation de réponse : tu es libre de ne pas répondre à ces questions si tu ne te sens pas à l’aise. Cela n’affectera en rien ta participation au sondage.',
+        'gender_question' => 'Te reconnais-tu dans l’un des genres suivants ?',
+        'gender_prompt' => 'Sélectionne la description qui te convient',
+        'sexuality_question' => 'Te reconnais-tu dans l’une des orientations sexuelles suivantes ?',
+        'sexuality_prompt' => 'Sélectionne la description qui te convient',
+        'email_prompt' => 'Entre ton adresse email si tu souhaites recevoir les résultats de l’enquête.',
+        'submit' => 'Envoyer et terminer le questionnaire',
+        'thank_you' => 'Merci !',
+        'popup_title' => 'Définition',
+        'popup_prompt' => 'Choisissez une option dans la liste :',
+        'popup_close' => 'Close',
+        'corrections' => 'Corrections :',
+        'none' => 'Aucun'
+    ],
+    'de' => [
+        'project_title' => 'Solidarisches Projekt eines Schülers des Collège international Vauban in Straßburg, unterstützt von der STATION, dem LGBTQIA+-Zentrum in Straßburg.',
+        'project_desc' => 'Vorstellung des solidarischen Projekts: Ein Schüler des Collège international Vauban in Straßburg hat ein bemerkenswertes Projekt ins Leben gerufen, um seine Mitschüler für LGBTQIA+-Themen zu sensibilisieren. Mit einer sorgfältig gestalteten Online-Umfrage lädt Luc seine Altersgenossen ein, über wesentliche Themen wie Geschlechtsidentität, sexuelle Orientierung und Respekt vor Vielfalt nachzudenken.',
+        'objectives' => 'Ziele des Projekts:',
+        'awareness' => 'Sensibilisierung: Die Schüler dazu ermutigen, die Realitäten und Herausforderungen von LGBTQIA+-Personen besser zu verstehen.',
+        'inclusion' => 'Inklusion: Förderung eines respektvollen Schulklima, in dem sich jede Person unabhängig von ihrer Identität oder Orientierung akzeptiert fühlt.',
+        'engagement' => 'Bürgerschaftliches Engagement: Zeigen, wie konkrete Maßnahmen dazu beitragen können, Einstellungen zu verändern und Werte wie Respekt und Solidarität zu stärken.',
+        'why_survey' => 'Warum eine Online-Umfrage?',
+        'survey_reason' => 'Luc hat dieses interaktive Format gewählt, um seinen Mitschülern eine anonyme Teilnahme und freie Meinungsäußerung zu ermöglichen. Die Ergebnisse der Umfrage dienen als Grundlage für Klassendiskussionen, Sensibilisierungsworkshops oder Initiativen zur Verbesserung der Inklusion in der Schule.',
+        'impact' => 'Erwartete Wirkung:',
+        'impact_desc' => 'Durch die Einbindung seiner Mitschüler in diesen partizipativen Prozess geht Luc weit über Sensibilisierung hinaus: Er wirkt als Katalysator für Veränderung, indem er sie dazu ermutigt, inklusive Verhaltensweisen anzunehmen und selbst zu Botschaftern für Respekt zu werden.',
+        'project_note' => 'Dieses sowohl pädagogische als auch solidarische Projekt steht ganz im Einklang mit den Werten des Collège international Vauban und zeigt das Engagement eines inspirierenden Schülers, eine gerechtere und tolerantere Welt zu schaffen.',
+        'warning_title' => 'Hinweis zur Umfrage',
+        'anonymity' => 'Garantierte Anonymität: Alle Ihre Antworten werden anonym erfasst. Es werden keine persönlichen Informationen mit Ihren Antworten verknüpft.',
+        'voluntary' => 'Freiwillige Teilnahme: Die Teilnahme an dieser Umfrage ist völlig freiwillig. Sie können entscheiden, bestimmte Fragen nicht zu beantworten, wenn Sie dies nicht möchten.',
+        'results' => 'Verfügbare Ergebnisse: Wenn Sie nach Abschluss der Umfrage eine Zusammenfassung der Ergebnisse erhalten möchten, können Sie am Ende der Umfrage Ihre E-Mail-Adresse hinterlassen. Dieser Schritt ist völlig optional und beeinträchtigt nicht die Anonymität Ihrer Antworten.',
+        'thanks' => 'Vielen Dank für Ihre Teilnahme an diesem Projekt, das dazu beiträgt, das Bewusstsein zu schärfen und Respekt sowie Inklusion in unserer Schulgemeinschaft zu fördern.',
+        'continue' => 'Weiter',
+        'footer' => 'Seitengestaltung: R. (Hex); Praktikumsbetreuer: Gérald Schlemminger, (c) 2025 La STATION / Collège international Vauban.',
+        'final_warning' => 'Hinweis zur abschließenden Frage',
+        'final_warning_desc' => 'Die letzten Fragen der Umfrage sind persönlicher und betreffen deine Geschlechtsidentität und sexuelle Orientierung. Wir verstehen, dass diese Themen als sensibel oder aufdringlich empfunden werden können. Es besteht keine Verpflichtung zu antworten: Du kannst frei entscheiden, diese Fragen nicht zu beantworten, wenn du dich unwohl fühlst. Dies hat keinen Einfluss auf deine Teilnahme an der Umfrage.',
+        'gender_question' => 'Erkennst du dich in einem der folgenden Geschlechter wieder?',
+        'gender_prompt' => 'Wähle die Beschreibung, die zu dir passt',
+        'sexuality_question' => 'Erkennst du dich in einer der folgenden sexuellen Orientierungen wieder?',
+        'sexuality_prompt' => 'Wähle die Beschreibung, die zu dir passt',
+        'email_prompt' => 'Gib deine E-Mail-Adresse ein, wenn du die Ergebnisse der Umfrage erhalten möchtest.',
+        'submit' => 'Absenden und die Umfrage beenden',
+        'thank_you' => 'Danke!',
+        'popup_title' => 'Definition',
+        'popup_prompt' => 'Wähle eine Option aus der Liste:',
+        'popup_close' => 'Schließen',
+        'corrections' => 'Korrekturen:',
+        'none' => 'Keine'
+    ]
+];
+$lang = $_SESSION['language'];
 ?>
 <?php require_once 'conf.php'; ?>
-<html style="font-size: 16px;" lang="<?php echo $_SESSION['language']; ?>">
+<html style="font-size: 16px;" lang="<?php echo $lang; ?>">
 
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -320,7 +392,7 @@ if (isset($_POST['language'])) {
                         } else {
                             localStorage.setItem('lastationlienvar', response[8]);
                         }
-                        let table_preset = '<p id="connections" style="width:50vw; font-size:14px;">Corrections: None</p><div style="background-color: #fff0; width:100%; margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">Définition</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>';
+                        let table_preset = `<p id="connections" style="width:50vw; font-size:14px;">${texts[lang].corrections} ${texts[lang].none}</p><div style="background-color: #fff0; width:100%; margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">${texts[lang].popup_title}</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>`;
                         parentDiv.insertAdjacentHTML("beforeend", table_preset);
 
                         let data1 = response[1].split("--");
@@ -366,7 +438,7 @@ if (isset($_POST['language'])) {
                             button.classList.add('show-info-btn');
                             button.style.padding = "calc(0.2vh + 0.2vw)";
                             button.style.margin = 0;
-                            button.innerHTML = "CHOISIR";
+                            button.innerHTML = lang === 'de' ? 'AUSWÄHLEN' : 'CHOISIR';
                             button.style.cursor = "pointer";
                             button.style.fontSize = "12px";
                             button.setAttribute('data-row', i + 1);
@@ -390,10 +462,10 @@ if (isset($_POST['language'])) {
                                     popup.classList.add('popup');
                                     popup.innerHTML = `
                 <div class="popup-content">
-                    <h3>Définition</h3>
-                    <p>Choisissez une option dans la liste :</p>
+                    <h3>${texts[lang].popup_title}</h3>
+                    <p>${texts[lang].popup_prompt}</p>
                     <ul id="popup-options-list"></ul>
-                    <button class="close-popup">Close</button>
+                    <button class="close-popup">${texts[lang].popup_close}</button>
                 </div>
             `;
                                     document.body.appendChild(popup);
@@ -449,7 +521,7 @@ if (isset($_POST['language'])) {
                                                     }
                                                 }
 
-                                                document.getElementById('connections').innerHTML = `Corrections:<br>${connections}`;
+                                                document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
                                                 selectedQ = null;
                                                 selectedR = null;
                                             }
@@ -502,7 +574,7 @@ if (isset($_POST['language'])) {
                                 goodconnection = `${"<span style='color: green;'>" + element2.innerHTML} -> ${"</span><span style='color: green;'>" + element.innerHTML + "</span><br>"}`;
                                 connections.push(goodconnection);
                             });
-                            document.getElementById('connections').innerHTML = `Corrections:<br>${connections}`;
+                            document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
                         }
                     } else if (response[7] == "mct") {
                         ismultiple = true;
@@ -606,7 +678,7 @@ if (isset($_POST['language'])) {
         }
     </script>
 
-<body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $_SESSION['language']; ?>" style="height:100%">
+<body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
 
     <?php
     if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
@@ -616,71 +688,50 @@ if (isset($_POST['language'])) {
                     <div class="u-container-layout u-container-layout-1">
                         <div class="u-clearfix u-sheet u-sheet-1">
                             <p class="u-text u-text-default u-text-1" style="text-align:center;margin:auto; font-size:24px;">
-                                <b>Projet solidaire d'un élève du Collège international Vauban de Strasbourg,<br> avec le soutien de la STATION, centre LGBTQIA+ de Strasbourg.</b>
+                                <b><?php echo $texts[$lang]['project_title']; ?></b>
                             </p>
                             <p style="margin:0; font-size:16px;">
-                                Présentation du Projet Solidaire d'un élève du Collège international Vauban à Strasbourg, a lancé un projet 
-                                remarquable visant à sensibiliser ses camarades de classe aux questions LGBTQIA+. À travers
-                                une enquête en ligne qu’il a soigneusement conçue, Luc invite ses pairs à réfléchir sur des
-                                thématiques essentielles telles que l'identité de genre, l'orientation sexuelle et le
-                                respect de la diversité.<br><br>
+                                <?php echo $texts[$lang]['project_desc']; ?><br><br>
 
-                                <b>Objectifs du projet :</b><br>
-                                <b>Sensibilisation :</b> Encourager les élèves à mieux comprendre les réalités et les défis
-                                auxquels font face les personnes LGBTQIA+.<br>
-                                <b>Inclusion :</b> Promouvoir un climat scolaire respectueux, où chacun se sent accepté, peu
-                                importe son identité ou son orientation.<br>
-                                <b>Engagement citoyen :</b> Montrer comment des actions concrètes peuvent contribuer à faire
-                                évoluer les mentalités et renforcer les valeurs de respect et de solidarité.<br>
+                                <b><?php echo $texts[$lang]['objectives']; ?></b><br>
+                                <b><?php echo $texts[$lang]['awareness']; ?></b><br>
+                                <b><?php echo $texts[$lang]['inclusion']; ?></b><br>
+                                <b><?php echo $texts[$lang]['engagement']; ?></b><br>
 
-                                <br><b>Pourquoi une enquête en ligne ?</b><br>
-                                Luc a choisi ce format interactif pour permettre à ses camarades de participer anonymement
-                                et de s’exprimer librement. Les résultats de l’enquête serviront de base à des discussions
-                                en classe, des ateliers de sensibilisation, ou encore des initiatives pour améliorer
-                                l’inclusion au sein de l’établissement.<br>
+                                <br><b><?php echo $texts[$lang]['why_survey']; ?></b><br>
+                                <?php echo $texts[$lang]['survey_reason']; ?><br>
 
-                                <br><b>L’impact attendu :</b><br>
-                                En impliquant ses pairs dans ce processus participatif, Luc fait bien plus que sensibiliser
-                                : il agit comme un vecteur de changement en les encourageant à adopter des comportements
-                                inclusifs et à devenir eux-mêmes des ambassadeurs du respect.<br>
-                                <br>Ce projet, à la fois éducatif et solidaire, s’inscrit pleinement dans les valeurs
-                                portées par le Collège international Vauban et témoigne de l’engagement d’un élève inspirant
-                                pour construire un monde plus juste et tolérant. 
+                                <br><b><?php echo $texts[$lang]['impact']; ?></b><br>
+                                <?php echo $texts[$lang]['impact_desc']; ?><br>
+                                <br><?php echo $texts[$lang]['project_note']; ?>
                             </p>
                             <p style="margin:1em; padding:1em;border:solid; font-size:14px; border-color:#1400ff;">
-                                <b>Avertissement concernant le sondage</b> <br><br>
+                                <b><?php echo $texts[$lang]['warning_title']; ?></b> <br><br>
 
-                                <b>Anonymat garanti :</b> Toutes vos réponses sont recueillies de manière anonyme. Aucune
-                                information personnelle ne sera associée à vos réponses.<br>
-                                <b>Participation libre :</b> La participation à ce sondage est entièrement facultative. Vous
-                                pouvez choisir de ne pas répondre à certaines questions si vous ne le souhaitez pas.<br>
-                                <b>Résultats disponibles :</b> Si vous souhaitez recevoir un résumé des résultats une fois
-                                l’enquête terminée, vous pouvez laisser votre adresse e-mail à la fin du sondage. Cette
-                                étape est totalement optionnelle et ne compromet pas l’anonymat de vos réponses.<br><br>
+                                <b><?php echo $texts[$lang]['anonymity']; ?></b><br>
+                                <b><?php echo $texts[$lang]['voluntary']; ?></b><br>
+                                <b><?php echo $texts[$lang]['results']; ?></b><br><br>
 
-                                <i>Merci pour votre participation à ce projet qui contribue à sensibiliser et à promouvoir
-                                    le respect et l’inclusion au sein de notre communauté scolaire.</i>
+                                <i><?php echo $texts[$lang]['thanks']; ?></i>
                             </p>
-
 
                             <div class="language-selector">
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="language" value="fr">
-                                    <input type="image" src="images/france.png" alt="Français" class="language-flag <?php echo $_SESSION['language'] === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                                    <input type="image" src="images/france.png" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                                 </form>
                                 <form method="POST" style="display: inline;">
                                     <input type="hidden" name="language" value="de">
-                                    <input type="image" src="images/germany.png" alt="Deutsch" class="language-flag <?php echo $_SESSION['language'] === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                                    <input type="image" src="images/germany.png" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                                 </form>
                             </div>
 
                             <div class="u-align-right u-form-group u-form-submit">
                                 <button style="margin-top:1vh;" value="1" name="start" type="submit"
                                     class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
-                                    Continuer
+                                    <?php echo $texts[$lang]['continue']; ?>
                                 </button>
-                                <p style="font-size:10px;">Conception de la page : R. (Hex) ; maître de stage : Gérald
-                                    Schlemminger, (c) 2025 La STATION / Collège international Vauban. </p>
+                                <p style="font-size:10px;"><?php echo $texts[$lang]['footer']; ?></p>
                             </div>
                         </div>
                     </div>
@@ -697,7 +748,7 @@ if (isset($_POST['language'])) {
                 echo "Erreur connection: " . $e->getMessage();
             }
 
-            $table = $_SESSION['language'] === 'de' ? 'stationq2' : 'stationq1';
+            $table = $lang === 'de' ? 'stationq2' : 'stationq1';
             $stmt = $conn->prepare("SELECT * FROM $table WHERE level = 101 ORDER BY `id` ASC");
             $stmt->execute();
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -728,7 +779,7 @@ if (isset($_POST['language'])) {
                 $_SESSION["start"] = 1;
                 $_SESSION["LastQuestion"] = "1";
             } else {
-                echo "Manque des données pour le niveau choisi. Veuillez contacter 'La STATION'";
+                echo $lang === 'de' ? "Fehlende Daten für die gewählte Stufe. Bitte kontaktieren Sie 'La STATION'" : "Manque des données pour le niveau choisi. Veuillez contacter 'La STATION'";
                 exit();
             }
         }
@@ -741,7 +792,7 @@ if (isset($_POST['language'])) {
             $currentRep5 = explode("__", $_SESSION["Rep5"])[$_SESSION["LastQuestion"]];
             $qtype = explode("__", $_SESSION["qtype"])[$_SESSION["LastQuestion"]];
         } else {
-            echo "Erreur lors de la sélection de la question, veuillez contacter 'La STATION'";
+            echo $lang === 'de' ? "Fehler bei der Auswahl der Frage, bitte kontaktieren Sie 'La STATION'" : "Erreur lors de la sélection de la question, veuillez contacter 'La STATION'";
         }
         ?>
         <section style="height:auto;" class="u-align-center u-clearfix u-container-align-center u-palette-2-light-3 u-section-2" id="qcm">
@@ -751,7 +802,7 @@ if (isset($_POST['language'])) {
                         Question <?php echo $_SESSION["LastQuestion"]; ?>
                     </h5>
                     <button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4" style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next">
-                        Continuer
+                        <?php echo $texts[$lang]['continue']; ?>
                     </button>
                     <b>
                         <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9;">
@@ -776,53 +827,49 @@ if (isset($_POST['language'])) {
                 <div class="u-container-layout u-container-layout-1">
                     <div class="u-clearfix u-sheet u-sheet-1">
                         <p style="margin:0;" class="u-text u-text-default u-text-1">
-                            <i><b>Avertissement concernant la question finale</b><br>
-                            Les dernières questions du sondage sont plus personnelles et portent sur ton identité de
-                            genre et ton orientation sexuelle. Nous comprenons que ces thématiques peuvent être
-                            perçues comme sensibles ou intrusives.<br>
-                            Il n'y a aucune obligation de réponse : tu es libre de ne pas répondre à ces questions
-                            si tu ne te sens pas à l’aise. Cela n’affectera en rien ta participation au sondage.</i>
+                            <i><b><?php echo $texts[$lang]['final_warning']; ?></b><br>
+                            <?php echo $texts[$lang]['final_warning_desc']; ?></i>
                         </p><br><br>
                         <form method="POST" class="u-clearfix u-form-spacing-32 u-inner-form" style="padding: 10px;">
                             <div class="u-form-group u-form-name u-form-partition-factor-2">
-                                <h3 style="margin:0;">Te reconnais-tu dans l'un des genres suivants ?</h3><br>
+                                <h3 style="margin:0;"><?php echo $texts[$lang]['gender_question']; ?></h3><br>
                                 <div style="display: flex; align-items: center; gap:10px;">
-                                    <p style="margin:0;">Sélectionne la description qui te convient</p>
+                                    <p style="margin:0;"><?php echo $texts[$lang]['gender_prompt']; ?></p>
                                     <select style="margin:0; padding-left:0;" id="name-bb9b" name="genre" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                        <option value="1">Cisgenre</option>
-                                        <option value="2">Transgenre</option>
-                                        <option value="3">Non-binaire</option>
-                                        <option value="4">Genre fluide</option>
-                                        <option value="5">Intersexe</option>
-                                        <option value="6">Aucun</option>
-                                        <option value="7">Autre</option>
-                                        <option value="8">Je ne souhaite pas répondre.</option>
+                                        <option value="1"><?php echo $lang === 'de' ? 'Cisgender' : 'Cisgenre'; ?></option>
+                                        <option value="2"><?php echo $lang === 'de' ? 'Transgender' : 'Transgenre'; ?></option>
+                                        <option value="3"><?php echo $lang === 'de' ? 'Nicht-binär' : 'Non-binaire'; ?></option>
+                                        <option value="4"><?php echo $lang === 'de' ? 'Genderfluid' : 'Genre fluide'; ?></option>
+                                        <option value="5"><?php echo $lang === 'de' ? 'Intersex' : 'Intersexe'; ?></option>
+                                        <option value="6"><?php echo $lang === 'de' ? 'Keines' : 'Aucun'; ?></option>
+                                        <option value="7"><?php echo $lang === 'de' ? 'Andere' : 'Autre'; ?></option>
+                                        <option value="8"><?php echo $lang === 'de' ? 'Ich möchte nicht antworten.' : 'Je ne souhaite pas répondre.'; ?></option>
                                     </select>
                                 </div>
                             </div><br><br>
                             <div class="u-form-email u-form-group u-form-partition-factor-2">
-                                <h3 style="margin:0;">Te reconnais-tu dans l'une des orientations sexuelles suivantes ?</h3><br>
+                                <h3 style="margin:0;"><?php echo $texts[$lang]['sexuality_question']; ?></h3><br>
                                 <div style="display: flex; align-items: center; gap:10px;">
-                                    <p style="margin:0;">Sélectionne la description qui te convient</p>
+                                    <p style="margin:0;"><?php echo $texts[$lang]['sexuality_prompt']; ?></p>
                                     <select style="margin:0; padding-left:0;" id="email-bb9b" name="orient" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                        <option value="1">Hétérosexualité</option>
-                                        <option value="2">Homosexualité</option>
-                                        <option value="3">Bisexualité</option>
-                                        <option value="4">Pansexualité</option>
-                                        <option value="5">Asexualité</option>
-                                        <option value="6">Aucun</option>
-                                        <option value="7">Autre</option>
-                                        <option value="8">Je ne souhaite pas répondre.</option>
+                                        <option value="1"><?php echo $lang === 'de' ? 'Heterosexualität' : 'Hétérosexualité'; ?></option>
+                                        <option value="2"><?php echo $lang === 'de' ? 'Homosexualität' : 'Homosexualité'; ?></option>
+                                        <option value="3"><?php echo $lang === 'de' ? 'Bisexualität' : 'Bisexualité'; ?></option>
+                                        <option value="4"><?php echo $lang === 'de' ? 'Pansexualität' : 'Pansexualité'; ?></option>
+                                        <option value="5"><?php echo $lang === 'de' ? 'Asexualität' : 'Asexualité'; ?></option>
+                                        <option value="6"><?php echo $lang === 'de' ? 'Keines' : 'Aucun'; ?></option>
+                                        <option value="7"><?php echo $lang === 'de' ? 'Andere' : 'Autre'; ?></option>
+                                        <option value="8"><?php echo $lang === 'de' ? 'Ich möchte nicht antworten.' : 'Je ne souhaite pas répondre.'; ?></option>
                                     </select>
                                 </div>
                             </div><br><br>
                             <div class="u-form-email u-form-group u-form-partition-factor-2">
-                                <label>Entre ton adresse email si tu souhaites recevoir les résultats de l'enquête.</label>
+                                <label><?php echo $texts[$lang]['email_prompt']; ?></label>
                                 <input name="e_mm" class="u-radius-50 u-text-hover-white">
                             </div>
                             <div class="u-align-right u-form-group u-form-submit">
                                 <button type="submit" name="acc" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
-                                    Envoyer et terminer le questionnaire
+                                    <?php echo $texts[$lang]['submit']; ?>
                                 </button>
                             </div>
                         </form>
@@ -860,7 +907,7 @@ if (isset($_POST['language'])) {
             <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
                 <div class="u-container-layout u-container-layout-1">
                     <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                        <p class="u-text u-text-default u-text-1" style="margin: auto;"> Merci!</p>
+                        <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
                         <img src="images/drap.png" alt="" style="margin: auto;">
                     </div>
                 </div>
@@ -1036,7 +1083,7 @@ if (isset($_POST['language'])) {
                                     } else {
                                         localStorage.setItem('lastationlienvar', response[10]);
                                     }
-                                    let table_preset = '<p id="connections" style="width:50vw; font-size:14px;">Corrections: None</p><div style="background-color: #fff0; width:100%; margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">Définition</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>';
+                                    let table_preset = `<p id="connections" style="width:50vw; font-size:14px;">${texts[lang].corrections} ${texts[lang].none}</p><div style="background-color: #fff0; width:100%; margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">${texts[lang].popup_title}</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>`;
                                     parentDiv.insertAdjacentHTML("beforeend", table_preset);
 
                                     let data1 = response[1].split("--");
@@ -1081,7 +1128,7 @@ if (isset($_POST['language'])) {
                                         button.classList.add('show-info-btn');
                                         button.style.padding = "calc(0.2vh + 0.2vw)";
                                         button.style.margin = 0;
-                                        button.innerHTML = "CHOISIR";
+                                        button.innerHTML = lang === 'de' ? 'AUSWÄHLEN' : 'CHOISIR';
                                         button.style.cursor = "pointer";
                                         button.style.fontSize = "12px";
                                         button.setAttribute('data-row', i + 1);
@@ -1105,10 +1152,10 @@ if (isset($_POST['language'])) {
                                                 popup.classList.add('popup');
                                                 popup.innerHTML = `
                 <div class="popup-content">
-                    <h3>Définition</h3>
-                    <p>Choisissez une option dans la liste :</p>
+                    <h3>${texts[lang].popup_title}</h3>
+                    <p>${texts[lang].popup_prompt}</p>
                     <ul id="popup-options-list"></ul>
-                    <button class="close-popup">Close</button>
+                    <button class="close-popup">${texts[lang].popup_close}</button>
                 </div>
             `;
                                                 document.body.appendChild(popup);
@@ -1163,7 +1210,7 @@ if (isset($_POST['language'])) {
                                                                 }
                                                             }
 
-                                                            document.getElementById('connections').innerHTML = `Corrections:<br>${connections}`;
+                                                            document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
                                                             selectedQ = null;
                                                             selectedR = null;
                                                         }
@@ -1216,7 +1263,7 @@ if (isset($_POST['language'])) {
                                             goodconnection = `${"<span style='color: green;'>" + element2.innerHTML} -> ${"</span><span style='color: green;'>" + element.innerHTML + "</span><br>"}`;
                                             connections.push(goodconnection);
                                         });
-                                        document.getElementById('connections').innerHTML = `Corrections:<br>${connections}`;
+                                        document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
                                     }
                                 } else if (response[8] == "mct") {
                                     ismultiple = true;
@@ -1277,56 +1324,4 @@ if (isset($_POST['language'])) {
                                             cell5.setAttribute("data-row", i + 1);
                                             cell5.setAttribute("data-id", 4);
                                             cell5.textContent = data5;
-                                            row.appendChild(cell5);
-                                        }
-                                        document.querySelector('tbody').appendChild(row);
-                                    }
-                                    document.querySelectorAll('td[data-type]').forEach(cell => {
-                                        cell.addEventListener('click', function () {
-                                            const cellType = cell.dataset.type;
-                                            const cellRow = cell.dataset.row;
-                                            if (cell.classList.contains('selected')) {
-                                                cell.classList.remove('selected');
-                                                if (cellType === 'Q') selectedQ = null;
-                                                if (cellType === 'R') selectedR = null;
-                                            } else {
-                                                const rowCells = document.querySelectorAll(`[data-row='${cellRow}']:not([data-type='first'])`);
-                                                rowCells.forEach(rowCell => {
-                                                    if (rowCell !== cell) rowCell.classList.remove('selected');
-                                                });
-                                            }
-                                            cell.classList.add('selected');
-                                            document.getElementById('button_next').onclick = function () {
-                                                updateQuestion(cell);
-                                            };
-                                            if (cellType === 'Q') selectedQ = cell;
-                                            if (cellType === 'R') selectedR = cell;
-                                            const selectedElements = document.querySelectorAll('.selected');
-                                            let resultString = '';
-                                            selectedElements.forEach(element => {
-                                                let dataRow = element.getAttribute('data-row');
-                                                let dataId = element.getAttribute('data-id');
-                                                resultString += `&&Q@${dataRow}|R@${dataId}`;
-                                            });
-                                            localStorage.setItem('lastationlienvar', response[10] + resultString);
-                                            console.log(localStorage.getItem('lastationlienvar'));
-                                        });
-                                    });
-                                }
-                                resize_questions();
-                            }, cd);
-                        }
-                    };
-                    if (ismultiple == true) {
-                        let temptext = String(localStorage.getItem('lastationlienvar'));
-                        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                        console.log(temptext);
-                        xhr.send("choise=" + encodeURIComponent(temptext));
-                    } else {
-                        xhr.send("choise=" + buttonIndex);
-                    }
-                }
-            };
-        </script>
-</body>
-</html>
+                                            row.append
