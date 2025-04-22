@@ -5,15 +5,9 @@ header('Content-Type: application/json');
 try {
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    // Получение вопросов из stationq1
     $stmt = $pdo->query("SELECT * FROM stationq1");
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Получение языка из GET-параметра (fr, de или all)
     $lang = isset($_GET['lang']) ? $_GET['lang'] : 'all';
-
-    // Формирование SQL-запроса для stationr2 с учетом фильтра по языку
     $query = "SELECT * FROM stationr2";
     if ($lang !== 'all') {
         $query .= " WHERE lang = :lang";
@@ -28,8 +22,6 @@ try {
 
     $QuestionsR = [];
     $formattedData = [];
-
-    // Обработка ответов
     foreach ($reponsesdb as $row) {
         $responseString = $row['reponse'];
         $responseString = str_replace('&amp;', '&', $responseString);
@@ -72,7 +64,6 @@ try {
         }
     }
 
-    // Форматирование вопросов
     foreach ($questions as $row) {
         $qtype = $row['qtype'];
         $qid = $row['id'];
@@ -118,7 +109,6 @@ try {
         }
     }
 
-    // Формирование ответа
     $response = [
         "formattedData" => $formattedData,
         "answers" => isset($QuestionsR) ? $QuestionsR : []
