@@ -783,27 +783,27 @@ if (!isset($_SESSION["start"])) {
             echo $lang === 'de' ? "Fehler bei der Auswahl der Frage, bitte kontaktieren Sie 'La STATION'" : "Erreur lors de la sélection de la question, veuillez contacter 'La STATION'";
         }
         ?>
-        <section style="height:auto;" class="u-align-center u-clearfix u-container-align-center u-palette-2-light-3 u-section-2" id="qcm">
-            <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
-                <div class="u-container-layout u-container-layout-1">
-                    <h5 id="QuestionN" class="u-align-center" style="margin-top:1vh; margin-bottom:0;">
-                        Question <?php echo $_SESSION["LastQuestion"]; ?>
-                    </h5>
-                    <button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4" style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next">
-                        <?php echo $texts[$lang]['continue']; ?>
-                    </button>
-                    <b>
-                        <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9;">
-                            <?php echo $currentQuestion; ?>
-                        </p>
-                    </b>
-                    <div style="flex-direction: row; display: flex; justify-content: space-between; margin-top:1em; gap: 10px; width: 80%; margin: auto;" id="quest_list"></div>
-                </div>
-            </div>
-            <div class="u-align-right u-form-group u-form-submit">
-                <img id="randomImage" src="" width="200em" alt="">
-            </div>
-        </section>
+<section style="height:auto;" class="u-align-center u-clearfix u-container-align-center u-palette-2-light-3 u-section-2" id="qcm">
+    <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
+        <div class="u-container-layout u-container-layout-1">
+            <h5 id="QuestionN" class="u-align-center" style="margin-top:1vh; margin-bottom:0;">
+                Question <?php echo $_SESSION["LastQuestion"]; ?>
+            </h5>
+            <button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4" style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next" onclick="updateQuestion(-1)">
+                <?php echo $texts[$lang]['continue']; ?>
+            </button>
+            <b>
+                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9;">
+                    <?php echo $currentQuestion; ?>
+                </p>
+            </b>
+            <div style="flex-direction: row; display: flex; justify-content: space-between; margin-top:1em; gap: 10px; width: 80%; margin: auto;" id="quest_list"></div>
+        </div>
+    </div>
+    <div class="u-align-right u-form-group u-form-submit">
+        <img id="randomImage" src="" width="200em" alt="">
+    </div>
+</section>
 
         <?php
         if (!isset($_SESSION["finish"])) {
