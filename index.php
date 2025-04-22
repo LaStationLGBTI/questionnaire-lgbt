@@ -680,7 +680,7 @@ $lang = $_SESSION['language'];
 
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
 
-    <?php
+    <?php echo $_POST["start"];
     if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
         <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
             <form method="POST">
