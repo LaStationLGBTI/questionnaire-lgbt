@@ -45,7 +45,8 @@ $texts = [
         'popup_prompt' => 'Choisissez une option dans la liste :',
         'popup_close' => 'Close',
         'corrections' => 'Corrections :',
-        'none' => 'Aucun'
+        'none' => 'Aucun',
+	'question_choise' => "CHOISIR"
     ],
     'de' => [
         'project_title' => 'Solidarisches Projekt eines Schülers des Collège international Vauban in Straßburg, unterstützt von der STATION, dem LGBTQIA+-Zentrum in Straßburg.',
@@ -80,6 +81,7 @@ $texts = [
         'popup_close' => 'Schließen',
         'corrections' => 'Korrekturen:',
         'none' => 'Keine',
+	'question_choise' => "AUSWÄHLEN"
     ]
 ];
 $lang = $_SESSION['language'];
@@ -436,7 +438,7 @@ for (let i = 0; i < data1.length; i++) {
                     button.classList.add('show-info-btn');
                     button.style.padding = "calc(0.2vh + 0.2vw)";
                     button.style.margin = 0;
-                    button.innerHTML = lang === 'de' ? 'AUSWÄHLEN' : 'CHOISIR';
+		    button.innerHTML = texts[lang].question_choise;
                     button.style.cursor = "pointer";
                     button.style.fontSize = "12px";
                     button.setAttribute('data-row', i + 1);
@@ -1136,7 +1138,7 @@ if (!isset($_SESSION["start"])) {
 										button.classList.add('u-active-palette-2-light-1', 'u-align-center', 'u-border-none', 'u-btn-round', 'u-button-style', 'u-hover-palette-2-light-1', 'u-palette-2-light-2', 'u-radius', 'u-text-palette-2-dark-1', 'u-btn-4'); button.classList.add('show-info-btn');
 										button.style.padding = "calc(0.2vh + 0.2vw)";
 										button.style.margin = 0;
-										button.innerHTML = texts[lang].continue;
+										button.innerHTML = texts[lang].question_choise;
 										button.style.cursor = "pointer";
 										button.style.fontSize = "12px";
 										button.setAttribute('data-row', i + 1);
