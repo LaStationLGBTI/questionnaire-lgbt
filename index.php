@@ -2,14 +2,15 @@
 <?php 
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
-
 if (!isset($_SESSION['language'])) {
-    $_SESSION['language'] = 'fr';
+    $_SESSION['language'] = isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr']) ? $_POST['language'] : 'fr';
 }
 
-if (isset($_POST['language'])) {
-    $_SESSION['language'] = $_POST['language'] === 'de' ? 'de' : 'fr';
+if (isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr'])) {
+    $_SESSION['language'] = $_POST['language'];
 }
+
+$lang = $_SESSION['language'];
 
 $texts = [
     'fr' => [
@@ -735,8 +736,6 @@ if (!isset($_SESSION["start"])) {
     } catch (PDOException $e) {
         echo "Erreur connection: " . $e->getMessage();
     }
-
-    // Выбор таблицы в зависимости от языка
     $table = $lang === 'de' ? 'stationq2' : 'stationq1';
     $stmt = $conn->prepare("SELECT * FROM $table WHERE level = 101 ORDER BY `id` ASC");
     $stmt->execute();
