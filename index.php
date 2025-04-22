@@ -924,406 +924,486 @@ if (!isset($_SESSION["start"])) {
                 });
         }, 100); 
     </script>
-    <script>
-        let timeout = false;
-        let xhr = new XMLHttpRequest();
-        let cd = 3000;
-        function updateQuestion(buttonIndex) {
-            changeRandomImage();
-            if (timeout == false) {
-                xhr.open("POST", "updateQuestion2.php", true);
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.onreadystatechange = function () {
-                    if (xhr.readyState == 4 && xhr.status == 200) {
-                        var response = xhr.responseText.split("__");
-                        var answersarray = findAllBlocks();
-                        if (response[0] == "fin") {
-                            timeout = true;
-                            answersarray.forEach(function (item, index) {
-                                if (item.element != null) {
-                                    const innerAnswers = item.querySelector('div#question_container');
-                                    if (innerAnswers != null) {
-                                        innerAnswers.classList.remove('fade-to-green');
-                                        innerAnswers.classList.remove('fade-to-red');
-                                        innerAnswers.classList.remove('fade-to-white');
-                                    }
-                                }
-                            });
-                            answersarray.forEach(function (item, index) {
-                                if (item.element != null) {
-                                    const innerAnswers = item.element.querySelectorAll('div#question_container');
-                                    if (innerAnswers != null) {
-                                        innerAnswers.forEach(function (innerAnswer) {
-                                            if (index === parseInt(response[1], 10) - 1) {
-                                                innerAnswer.classList.add("fade-to-green");
-                                            } else {
-                                                innerAnswer.classList.add("fade-to-red");
-                                            }
-                                        });
-                                    }
-                                }
-                            });
-                            setTimeout(function () {
-                                timeout = false;
-                                changeToSecond();
-                            }, 3000);
-                        } else {
-                            timeout = true;
-                            answersarray.forEach(function (item, index) {
-                                const innerAnswers = item.querySelector('div#question_container');
-                                if (innerAnswers != null) {
-                                    innerAnswers.classList.remove('fade-to-green');
-                                    innerAnswers.classList.remove('fade-to-red');
-                                    innerAnswers.classList.remove('fade-to-white');
-                                }
-                            });
-                            answersarray.forEach(function (item, index) {
-                                const innerAnswers = item.querySelectorAll('div#question_container');
-                                if (response[9] == "qcm") {
-                                    innerAnswers.forEach(function (innerAnswer) {
-                                        if (index === parseInt(response[7], 10) - 1) {
-                                            innerAnswer.classList.add("fade-to-green");
-                                        } else {
-                                            innerAnswer.classList.add("fade-to-red");
-                                        }
-                                    });
-                                } else if (response[9] == "lien") {
-                                    const blocks = document.querySelectorAll('div[id^="reponse_"]');
-                                    blocks.forEach(block => {
-                                        block.remove();
-                                    });
-                                    document.getElementById("connections").remove();
-                                } else if (response[9] == "mct") {
-                                    const blocks = document.querySelectorAll('div[id^="reponse_"]');
-                                    blocks.forEach(block => {
-                                        block.remove();
-                                    });
-                                }
-                            });
+	<script>
 
-                            setTimeout(function () {
-                                timeout = false;
-                                document.getElementById("Question").innerHTML = response[0];
-                                answersarray.forEach(function (item, index) {
-                                    const innerAnswers = item.querySelector('div#question_container');
-                                    if (innerAnswers != null) {
-                                        innerAnswers.classList.remove('fade-to-green');
-                                        innerAnswers.classList.remove('fade-to-red');
-                                        innerAnswers.classList.remove('fade-to-white');
-                                        innerAnswers.classList.add('fade-to-white');
-                                    }
-                                });
-                                answersarray.forEach(function (item, index) {
-                                    const innerAnswers = item.querySelector('p#rep');
-                                    if (innerAnswers != null) {
-                                        innerAnswers.innerHTML = response[index + 1];
-                                    }
-                                });
-                                document.getElementById("QuestionN").innerHTML = "Question " + response[6];
-                                document.getElementById('button_next').onclick = function () {
-                                    updateQuestion(-1);
-                                };
-                                if (response[8] == "qcm" || response[8] == "echelle") {
-                                    ismultiple = false;
-                                    localStorage.clear();
-                                    if (document.getElementsByClassName("popup")[0] != null)
-                                        document.getElementsByClassName("popup")[0].remove();
-                                    cd = 3000;
-                                    deleteAllBlocks();
-                                    for (let i = 1; i <= 5; i++) {
-                                        if (response[i] != "null") {
-                                            let repo = document.querySelector("#reponse_" + i);
-                                            if (repo == null) {
-                                                if (response[8] == "echelle") {
-                                                    cd = 0;
-                                                    parentDiv.style.flexDirection = "row";
-                                                    parentDiv.insertAdjacentHTML("beforeend", newDivHTMLechelle);
-                                                } else if (response[8] == "qcm") {
-                                                    parentDiv.insertAdjacentHTML("beforeend", newDivHTML);
-                                                    parentDiv.style.flexDirection = "column";
-                                                }
-                                                let reponse_elem = document.getElementById("reponse_");
-                                                reponse_elem.id = "reponse_" + i;
-                                                let button = reponse_elem.querySelector("#button_choix");
-                                                let p_elem = reponse_elem.querySelector("#rep");
-                                                const parser = new DOMParser();
-                                                const decodedString = parser.parseFromString(response[i], "text/html").documentElement.textContent;
-                                                p_elem.innerText = decodedString;
-                                                button.addEventListener("click", function () { updateQuestion(i); });
-                                            }
-                                        }
-                                        if (response[i] == "null") {
-                                            let reponse_elem = document.getElementById("reponse_5");
-                                            if (reponse_elem != null) {
-                                                reponse_elem.remove();
-                                            }
-                                        }
-                                    }
-                                } else if (response[8] == "lien") {
-                                    ismultiple = true;
-                                    const blocks = document.querySelectorAll('div[id^="reponse_"]');
-                                    blocks.forEach(block => {
-                                        block.remove();
-                                    });
-                                    if (localStorage.getItem('lastationlienvar')) {
-                                        if (localStorage.getItem('lastationlienvar')[0] != response[10]) {
-                                            localStorage.clear();
-                                            localStorage.setItem('lastationlienvar', response[10]);
-                                        }
-                                    } else {
-                                        localStorage.setItem('lastationlienvar', response[10]);
-                                    }
-                                    let table_preset = `<p id="connections" style="width:50vw; font-size:14px;">${texts[lang].corrections} ${texts[lang].none}</p><div style="background-color: #fff0; width:100%; margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">${texts[lang].popup_title}</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>`;
-                                    parentDiv.insertAdjacentHTML("beforeend", table_preset);
+		let timeout = false;
+		let xhr = new XMLHttpRequest();
+		let cd = 3000;
+		function updateQuestion(buttonIndex) {
+			changeRandomImage();
+			if (timeout == false) {
+				xhr.open("POST", "updateQuestion2.php", true);
+				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+				xhr.onreadystatechange = function () {
+					if (xhr.readyState == 4 && xhr.status == 200) {
 
-                                    let data1 = response[1].split("--");
-                                    let data2 = response[2].split("--");
-                                    let data3 = response[3].split('_');
-                                    const Q = [];
-                                    const R = [];
-                                    data3.forEach(pair => {
-                                        const parts = pair.split('-');
-                                        if (parts.length === 2) {
-                                            const [q, r] = parts;
-                                            Q.push(q.replace('Q', ''));
-                                            R.push(r.replace('R', ''));
-                                        }
-                                    });
-                                    for (let i = 0; i < data1.length; i++) {
-                                        let row = document.createElement('tr');
-                                        let cell1 = document.createElement('td');
-                                        cell1.classList.add("tnum");
-                                        cell1.style.fontSize = "16px";
-                                        cell1.textContent = i + 1;
+						var response = xhr.responseText.split("__");
+						var answersarray = findAllBlocks();
+						if (response[0] == "fin") {
+							timeout = true;
+							answersarray.forEach(function (item, index) {
+								if (item.element != null) {
+									const innerAnswers = item.querySelector('div#question_container');
+									if (innerAnswers != null) {
+										innerAnswers.classList.remove('fade-to-green');
+										innerAnswers.classList.remove('fade-to-red');
+										innerAnswers.classList.remove('fade-to-white');
+									}
+								}
+							});
+							answersarray.forEach(function (item, index) {
+								if (item.element != null) {
+									const innerAnswers = item.element.querySelectorAll('div#question_container');
+									if (innerAnswers != null) {
+										innerAnswers.forEach(function (innerAnswer) {
+											if (index === parseInt(response[1], 10) - 1) {
+												innerAnswer.classList.add("fade-to-green");
+											} else {
+												innerAnswer.classList.add("fade-to-red");
+											}
+										})
+									}
+								}
+							});
+							setTimeout(function () {
+								timeout = false;
+								window.location.href = window.location.href;
+							}, 3000);
+						}
+						else {
+							timeout = true;
+							answersarray.forEach(function (item, index) {
+								const innerAnswers = item.querySelector('div#question_container');
+								if (innerAnswers != null) {
 
-                                        let cell2 = document.createElement('td');
-                                        cell2.classList.add("tQ");
-                                        cell2.setAttribute("data-type", "Q");
-                                        cell2.setAttribute("data-row", i + 1);
-                                        cell2.textContent = data1[i];
+									innerAnswers.classList.remove('fade-to-green');
+									innerAnswers.classList.remove('fade-to-red');
+									innerAnswers.classList.remove('fade-to-white');
+								}
+							});
+							answersarray.forEach(function (item, index) {
+								const innerAnswers = item.querySelectorAll('div#question_container');
+								if (response[9] == "qcm") {
+									innerAnswers.forEach(function (innerAnswer) {
 
-                                        let cell3 = document.createElement('td');
-                                        cell3.classList.add("tR");
-                                        cell3.setAttribute("data-type", "R");
-                                        cell3.setAttribute("data-row", i + 1);
-                                        const parser = new DOMParser();
-                                        const decodedString = parser.parseFromString(data2[i], "text/html").documentElement.textContent;
-                                        cell3.textContent = decodedString;
+										if (index === parseInt(response[7], 10) - 1) {
+											innerAnswer.classList.add("fade-to-green");
+										} else {
+											innerAnswer.classList.add("fade-to-red");
+										}
+									});
+								}
+								else if (response[9] == "lien") {
+									const blocks = document.querySelectorAll('div[id^="reponse_"]');
+									blocks.forEach(block => {
+										block.remove();
+									});
+									document.getElementById("connections").remove();
+								}
+								else if (response[9] == "mct") {
+									const blocks = document.querySelectorAll('div[id^="reponse_"]');
+									blocks.forEach(block => {
+										block.remove();
+									});
+								}
+							});
 
-                                        let cell4 = document.createElement('td');
-                                        let button = document.createElement('button');
-                                        button.classList.add('u-active-palette-2-light-1', 'u-align-center', 'u-border-none', 'u-btn-round', 'u-button-style', 'u-hover-palette-2-light-1', 'u-palette-2-light-2', 'u-radius', 'u-text-palette-2-dark-1', 'u-btn-4');
-                                        button.classList.add('show-info-btn');
-                                        button.style.padding = "calc(0.2vh + 0.2vw)";
-                                        button.style.margin = 0;
-                                        button.innerHTML = lang === 'de' ? 'AUSWÄHLEN' : 'CHOISIR';
-                                        button.style.cursor = "pointer";
-                                        button.style.fontSize = "12px";
-                                        button.setAttribute('data-row', i + 1);
-                                        button.setAttribute('data-cell2-decoded', decodedString);
-                                        cell4.appendChild(button);
+							setTimeout(function () {
+								timeout = false;
+								document.getElementById("Question").innerHTML = response[0];
+								answersarray.forEach(function (item, index) {
+									const innerAnswers = item.querySelector('div#question_container');
+									if (innerAnswers != null) {
+										innerAnswers.classList.remove('fade-to-green');
+										innerAnswers.classList.remove('fade-to-red');
+										innerAnswers.classList.remove('fade-to-white');
+										innerAnswers.classList.add('fade-to-white');
+									}
+								});
+								answersarray.forEach(function (item, index) {
+									const innerAnswers = item.querySelector('p#rep');
 
-                                        row.appendChild(cell1);
-                                        row.appendChild(cell3);
-                                        row.appendChild(cell4);
-                                        document.querySelector('tbody').appendChild(row);
-                                    }
+									if (innerAnswers != null) {
+										innerAnswers.innerHTML = response[index + 1];
+									}
+								});
+								document.getElementById("QuestionN").innerHTML = "Question " + response[6];
+								document.getElementById('button_next').onclick = function () {
+									updateQuestion(-1);
+								};
+								if (response[8] == "qcm" || response[8] == "echelle") {
 
-                                    document.querySelectorAll('.show-info-btn').forEach(button => {
-                                        button.addEventListener('click', function () {
-                                            const rowNum = button.getAttribute('data-row');
-                                            const decodedText = button.getAttribute('data-cell2-decoded');
-                                            selectedR = rowNum;
-                                            selectedRText = decodedText;
-                                            if (document.getElementsByClassName("popup")[0] == null) {
-                                                const popup = document.createElement('div');
-                                                popup.classList.add('popup');
-                                                popup.innerHTML = `
-                <div class="popup-content">
-                    <h3>${texts[lang].popup_title}</h3>
-                    <p>${texts[lang].popup_prompt}</p>
-                    <ul id="popup-options-list"></ul>
-                    <button class="close-popup">${texts[lang].popup_close}</button>
-                </div>
-            `;
-                                                document.body.appendChild(popup);
+									ismultiple = false;
+									localStorage.clear();
+									if (document.getElementsByClassName("popup")[0] != null)
+										document.getElementsByClassName("popup")[0].remove();
+									cd = 3000;
 
-                                                let popupOptionsList = popup.querySelector("#popup-options-list");
-                                                for (let i = 0; i < data1.length; i++) {
-                                                    let optionItem = document.createElement('li');
-                                                    optionItem.textContent = data1[i];
-                                                    optionItem.setAttribute('data-row', i + 1);
-                                                    optionItem.setAttribute('data-cell2', data1[i]);
-                                                    optionItem.classList.add('popup-option', 'tQ');
-                                                    optionItem.style.cursor = "pointer";
-                                                    popupOptionsList.appendChild(optionItem);
-                                                }
-                                                popup.querySelectorAll('.popup-option').forEach(option => {
-                                                    option.addEventListener('click', function () {
-                                                        const selectedOption = option.getAttribute('data-cell2');
-                                                        const rowIndex = option.getAttribute('data-row');
-                                                        selectedQText = selectedOption;
-                                                        selectedQ = rowIndex;
-                                                        if (selectedQ && selectedR) {
-                                                            var connection = "";
-                                                            var goodconnection = "";
-                                                            if (R[selectedQ - 1] == (selectedR)) {
-                                                                connection = `${"<span style='color: green;'>" + selectedQText} -> ${"</span><span style='color: green;'>" + selectedRText + "</span><br>"}`;
-                                                            } else {
-                                                                connection = `${"<span style='color: red;'>" + selectedQText} -> ${"</span><span style='color: red;'>" + selectedRText + "</span><br>"}`;
-                                                                var indexrep = R.indexOf(selectedR);
-                                                                var indexrep2 = Q[indexrep];
-                                                                var indexrep3 = R[indexrep];
-                                                                var element = document.querySelector(`.tR[data-row="${indexrep3}"]`);
-                                                                var element2 = document.querySelector(`.tQ[data-row="${indexrep2}"]`);
-                                                                goodconnection = `${"<span style='color: green;'>" + element2.innerHTML} -> ${"</span><span style='color: green;'>" + element.innerHTML + "</span><br>"}`;
-                                                            }
+									deleteAllBlocks();
+									for (let i = 1; i <= 5; i++) {
+										if (response[i] != "null") {
 
-                                                            const index = connections.indexOf(connection);
-                                                            const decodeHTML = str => {
-                                                                const parser = new DOMParser();
-                                                                const dom = parser.parseFromString(str, 'text/html');
-                                                                return dom.documentElement.textContent;
-                                                            };
-                                                            const decodedTexts = connections.map(decodeHTML);
-                                                            const decodedPhrase = decodeHTML(selectedRText);
-                                                            if (decodedTexts.every(text => !text.includes(decodedPhrase))) {
-                                                                if (index !== -1) {
-                                                                } else {
-                                                                    connections.push(connection);
-                                                                    if (goodconnection != "")
-                                                                        connections.push(goodconnection);
-                                                                    localStorage.setItem('lastationlienvar', localStorage.getItem('lastationlienvar') + "&&Q@" + selectedQ + "|R@" + selectedR);
-                                                                }
-                                                            }
+											let repo = document.querySelector("#reponse_" + i);
+											if (repo == null) {
+												if (response[8] == "echelle") {
+													cd = 0;
+													parentDiv.style.flexDirection = "row";
+													parentDiv.insertAdjacentHTML("beforeend", newDivHTMLechelle);
 
-                                                            document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
-                                                            selectedQ = null;
-                                                            selectedR = null;
-                                                        }
-                                                        popup.style.display = "none";
-                                                    });
-                                                });
-                                                popup.querySelector('.close-popup').addEventListener('click', function () {
-                                                    popup.style.display = "none";
-                                                });
-                                            } else {
-                                                document.getElementsByClassName("popup")[0].style.display = "flex";
-                                            }
-                                        });
-                                        button.click();
-                                        document.getElementsByClassName("popup")[0].style.display = "none";
-                                    });
-                                    const updatedString = localStorage.getItem('lastationlienvar').slice(1);
-                                    const parts = updatedString.split('&&');
-                                    const QQ = [];
-                                    const RR = [];
-                                    parts.forEach(part => {
-                                        const subParts = part.split('|');
-                                        subParts.forEach(subPart => {
-                                            if (subPart.startsWith('Q@')) {
-                                                QQ.push(Number(subPart.slice(2)));
-                                            } else if (subPart.startsWith('R@')) {
-                                                RR.push(Number(subPart.slice(2)));
-                                            }
-                                        });
-                                    });
-                                    if (QQ.length > 0) {
-                                        QQ.forEach((element, index) => {
-                                            const Q = [];
-                                            const R = [];
-                                            data3.forEach(pair => {
-                                                const parts = pair.split('-');
-                                                if (parts.length === 2) {
-                                                    const [q, r] = parts;
-                                                    Q.push(q.replace('Q', ''));
-                                                    R.push(r.replace('R', ''));
-                                                }
-                                            });
-                                            var indexrep = R.indexOf(String(RR[index]));
-                                            var indexrep2 = Q[indexrep];
-                                            var indexrep3 = R[indexrep];
-                                            var element = document.querySelector(`.tR[data-row="${indexrep3}"]`);
-                                            var element2 = document.querySelector(`.tQ[data-row="${indexrep2}"]`);
-                                            goodconnection = `${"<span style='color: green;'>" + element2.innerHTML} -> ${"</span><span style='color: green;'>" + element.innerHTML + "</span><br>"}`;
-                                            connections.push(goodconnection);
-                                        });
-                                        document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
-                                    }
-                                } else if (response[8] == "mct") {
-                                    ismultiple = true;
-                                    localStorage.clear();
-                                    localStorage.setItem('lastationlienvar', response[10]);
-                                    if (document.getElementsByClassName("popup")[0] != null)
-                                        document.getElementsByClassName("popup")[0].remove();
-                                    const blocks = document.querySelectorAll('div[id^="reponse_"]');
-                                    blocks.forEach(block => {
-                                        block.remove();
-                                    });
-                                    let table_preset = '<div style="background-color: #fff0; width:100%; margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="width:100%;" border="1" id="myTable"><thead></thead><tbody></tbody></table></div>';
-                                    parentDiv.insertAdjacentHTML("beforeend", table_preset);
-                                    let data1 = response[1].split("--");
-                                    let data2 = response[2];
-                                    let data3 = response[3];
-                                    let data4 = response[4];
-                                    let data5 = response[5];
-                                    for (let i = 0; i < data1.length; i++) {
-                                        let row = document.createElement('tr');
-                                        let cell1 = document.createElement('td');
-                                        cell1.classList.add("tnum");
-                                        cell1.style.fontSize = "16px";
-                                        cell1.textContent = data1[i];
-                                        row.appendChild(cell1);
-                                        if (data2 != "null") {
-                                            let cell2 = document.createElement('td');
-                                            cell2.classList.add("tQ");
-                                            cell2.setAttribute("data-type", "Q");
-                                            cell2.setAttribute("data-row", i + 1);
-                                            cell2.setAttribute("data-id", 1);
-                                            cell2.textContent = data2;
-                                            row.appendChild(cell2);
-                                        }
-                                        if (data3 != "null") {
-                                            let cell3 = document.createElement('td');
-                                            cell3.classList.add("tR");
-                                            cell3.setAttribute("data-type", "R");
-                                            cell3.setAttribute("data-row", i + 1);
-                                            cell3.setAttribute("data-id", 2);
-                                            cell3.textContent = data3;
-                                            row.appendChild(cell3);
-                                        }
-                                        if (data4 != "null") {
-                                            let cell4 = document.createElement('td');
-                                            cell4.classList.add("tQ");
-                                            cell4.setAttribute("data-type", "R");
-                                            cell4.setAttribute("data-row", i + 1);
-                                            cell4.setAttribute("data-id", 3);
-                                            cell4.textContent = data4;
-                                            row.appendChild(cell4);
-                                        }
-                                        if (data5 != "null") {
-                                            let cell5 = document.createElement('td');
-                                            cell5.classList.add("tR");
-                                            cell5.setAttribute("data-type", "R");
-                                            cell5.setAttribute("data-row", i + 1);
-                                            cell5.setAttribute("data-id", 4);
-                                            cell5.textContent = data5;
-                                            row.appendChild(cell5);
-                                        }
-                                        document.querySelector('tbody').appendChild(row);
-                                    }
-                                    document.querySelectorAll('td[data-type]').forEach(cell => {
-                                        cell.addEventListener('click', function () {
-                                            const cellType = cell.dataset.type;
-                                            const cellRow = cell.dataset.row;
-                                            if (cell.classList.contains('selected')) {
-                                                cell.classList.remove('selected');
-                                                if (cellType === 'Q') selectedQ = null;
-                                                if (cellType === 'R') selectedR = null;
-                                            } else {
-                                                const rowCells = document.querySelectorAll(`[data-row='${cellRow}']:not([data-type='first'])`);
-                                                rowCells.forEach(rowCell => {
-                                                    if (rowCell !== cell) rowCell.classList.remove('selected');
-                                                });
-                                            }
-                                            cell.class
+												}
+												else if (response[8] == "qcm") {
+													parentDiv.insertAdjacentHTML("beforeend", newDivHTML);
+													parentDiv.style.flexDirection = "column";
+												}
+												let reponse_elem = document.getElementById("reponse_");
+												reponse_elem.id = "reponse_" + i;
+												let button = reponse_elem.querySelector("#button_choix");
+												let p_elem = reponse_elem.querySelector("#rep");
+												const parser = new DOMParser();
+												const decodedString = parser.parseFromString(response[i], "text/html").documentElement.textContent;
+												p_elem.innerText = decodedString;
+												button.addEventListener("click", function () { updateQuestion(i); });
+											}
+										}
+										if (response[i] == "null") {
+											let reponse_elem = document.getElementById("reponse_5");
+											if (reponse_elem != null) {
+												reponse_elem.remove();
+											}
+										}
+									}
+								}
+								else if (response[8] == "lien") {
+									ismultiple = true;
+
+									const blocks = document.querySelectorAll('div[id^="reponse_"]');
+									blocks.forEach(block => {
+										block.remove();
+									});
+									if (localStorage.getItem('lastationlienvar')) {
+										if (localStorage.getItem('lastationlienvar')[0] != response[10]) {
+											console.log("not same");
+											localStorage.clear();
+											localStorage.setItem('lastationlienvar', response[10]);
+										}
+									}
+									else {
+										localStorage.setItem('lastationlienvar', response[10]);
+									}
+									let table_preset = '<p id="connections" style="width:50vw; font-size:14px;">Corrections: None</p><div style="background-color: #fff0; width:100%;  margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="margin-left:auto; width:80%; margin-right:1em;" border="1" id="myTable"><thead><tr><th style="background-color: #b3ffff;">N</th><th style="background-color: #ffa096;">Définition</th><th style="background-color: #b3ffff;">Action</th></tr></thead><tbody></tbody></table></div>';
+									parentDiv.insertAdjacentHTML("beforeend", table_preset);
+
+									let data1 = response[1].split("--");
+									let data2 = response[2].split("--");
+									let data3 = response[3].split('_');
+									const Q = [];
+									const R = [];
+									data3.forEach(pair => {
+										const parts = pair.split('-');
+										if (parts.length === 2) {
+											const [q, r] = parts;
+											Q.push(q.replace('Q', ''));
+											R.push(r.replace('R', ''));
+										} else {
+											console.error(`Malformed pair: "${pair}"`);
+										}
+									});
+									// Create the table rows
+									for (let i = 0; i < data1.length; i++) {
+										let row = document.createElement('tr');
+
+										let cell1 = document.createElement('td');
+										cell1.classList.add("tnum");
+										cell1.style.fontSize = "16px";
+										cell1.textContent = i + 1;
+
+										let cell2 = document.createElement('td');
+										cell2.classList.add("tQ");
+										cell2.setAttribute("data-type", "Q");
+										cell2.setAttribute("data-row", i + 1);
+										cell2.textContent = data1[i];
+
+										let cell3 = document.createElement('td');
+										cell3.classList.add("tR");
+										cell3.setAttribute("data-type", "R");
+										cell3.setAttribute("data-row", i + 1);
+										const parser = new DOMParser();
+										const decodedString = parser.parseFromString(data2[i], "text/html").documentElement.textContent;
+										cell3.textContent = decodedString;
+
+										let cell4 = document.createElement('td');
+										let button = document.createElement('button');
+										button.classList.add('u-active-palette-2-light-1', 'u-align-center', 'u-border-none', 'u-btn-round', 'u-button-style', 'u-hover-palette-2-light-1', 'u-palette-2-light-2', 'u-radius', 'u-text-palette-2-dark-1', 'u-btn-4'); button.classList.add('show-info-btn');
+										button.style.padding = "calc(0.2vh + 0.2vw)";
+										button.style.margin = 0;
+										button.innerHTML = "CHOISIR";
+										button.style.cursor = "pointer";
+										button.style.fontSize = "12px";
+										button.setAttribute('data-row', i + 1);
+										button.setAttribute('data-cell2-decoded', decodedString);
+										cell4.appendChild(button);
+
+										row.appendChild(cell1);
+										row.appendChild(cell3);
+										row.appendChild(cell4);
+										document.querySelector('tbody').appendChild(row);
+									}
+
+									document.querySelectorAll('.show-info-btn').forEach(button => {
+										button.addEventListener('click', function () {
+											const rowNum = button.getAttribute('data-row');
+											const decodedText = button.getAttribute('data-cell2-decoded'); // content of cell
+											selectedR = rowNum;
+											selectedRText = decodedText;
+											if (document.getElementsByClassName("popup")[0] == null) {
+												const popup = document.createElement('div');
+												popup.classList.add('popup');
+												popup.innerHTML = `
+				<div class="popup-content">
+					<h3>Définition</h3>
+					<p>Choisissez une option dans la liste :</p>
+					<ul id="popup-options-list"></ul>
+					<button class="close-popup">Close</button>
+				</div>
+			`;
+												document.body.appendChild(popup);
+
+												let popupOptionsList = popup.querySelector("#popup-options-list");
+												for (let i = 0; i < data1.length; i++) {
+													let optionItem = document.createElement('li');
+													optionItem.textContent = data1[i];
+
+													optionItem.setAttribute('data-row', i + 1);
+													optionItem.setAttribute('data-cell2', data1[i]);
+													//optionItem.setAttribute('data-cell2-decoded', data2[i]);
+													optionItem.classList.add('popup-option', 'tQ');
+													optionItem.style.cursor = "pointer";
+													popupOptionsList.appendChild(optionItem);
+												}
+												popup.querySelectorAll('.popup-option').forEach(option => {
+													option.addEventListener('click', function () {
+														const selectedOption = option.getAttribute('data-cell2');
+														const rowIndex = option.getAttribute('data-row');
+														selectedQText = selectedOption;
+														selectedQ = rowIndex;
+														if (selectedQ && selectedR) {
+															var connection = "";
+															var goodconnection = "";
+															if (R[selectedQ - 1] == (selectedR)) //correct
+															{
+																connection = `${"<span style='color: green;'>" + selectedQText} -> ${"</span><span style='color: green;'>" + selectedRText + "</span><br>"}`;
+															}
+															else {
+																connection = `${"<span style='color: red;'>" + selectedQText} -> ${"</span><span style='color: red;'>" + selectedRText + "</span><br>"}`;
+																var indexrep = R.indexOf(selectedR);
+																var indexrep2 = Q[indexrep];
+																var indexrep3 = R[indexrep];
+
+																var element = document.querySelector(`.tR[data-row="${indexrep3}"]`);
+																var element2 = document.querySelector(`.tQ[data-row="${indexrep2}"]`);
+																goodconnection = `${"<span style='color: green;'>" + element2.innerHTML} -> ${"</span><span style='color: green;'>" + element.innerHTML + "</span><br>"}`;
+															}
+
+															const index = connections.indexOf(connection);
+															const decodeHTML = str => {
+																const parser = new DOMParser();
+																const dom = parser.parseFromString(str, 'text/html');
+																return dom.documentElement.textContent;
+															};
+															const decodedTexts = connections.map(decodeHTML);
+															const decodedPhrase = decodeHTML(selectedRText);
+															if (decodedTexts.every(text => !text.includes(decodedPhrase))) {
+																if (index !== -1) {
+																	//connections.splice(index, 1);
+																} else {
+																	connections.push(connection);
+																	if (goodconnection != "")
+																		connections.push(goodconnection);
+																	localStorage.setItem('lastationlienvar', localStorage.getItem('lastationlienvar') + "&&Q@" + selectedQ + "|R@" + selectedR);
+																	//	document.getElementById('button_next').onclick = function () {
+																	//		updateQuestion(1);
+																	//	};
+																}
+															}
+
+															document.getElementById('connections').innerHTML = `Corrections:<br>${connections}`;
+															selectedQ = null;
+															selectedR = null;
+														}
+														popup.style.display = "none";
+													});
+												});
+												popup.querySelector('.close-popup').addEventListener('click', function () {
+													popup.style.display = "none";
+												});
+											}
+											else {
+												document.getElementsByClassName("popup")[0].style.display = "flex";
+											}
+										});
+										button.click();
+										document.getElementsByClassName("popup")[0].style.display = "none";
+
+									});
+									const updatedString = localStorage.getItem('lastationlienvar').slice(1); // "&&Q1|R1&&Q1|R2"
+									const parts = updatedString.split('&&'); // ["Q1|R1", "Q1|R2"]
+									const QQ = [];
+									const RR = [];
+									parts.forEach(part => {
+										const subParts = part.split('|');
+										subParts.forEach(subPart => {
+											if (subPart.startsWith('Q@')) {
+												QQ.push(Number(subPart.slice(2)));
+											} else if (subPart.startsWith('R@')) {
+												RR.push(Number(subPart.slice(2)));
+											}
+										});
+									});
+									if (QQ.length > 0) {
+										QQ.forEach((element, index) => {
+											const Q = [];
+											const R = [];
+
+											data3.forEach(pair => {
+												const parts = pair.split('-');
+												if (parts.length === 2) {
+													const [q, r] = parts;
+													Q.push(q.replace('Q', ''));
+													R.push(r.replace('R', ''));
+												} else {
+													console.error(`Malformed pair: "${pair}"`);
+												}
+											});
+											var indexrep = R.indexOf(String(RR[index]));
+											var indexrep2 = Q[indexrep];
+											var indexrep3 = R[indexrep];
+
+											var element = document.querySelector(`.tR[data-row="${indexrep3}"]`);
+											var element2 = document.querySelector(`.tQ[data-row="${indexrep2}"]`);
+											goodconnection = `${"<span style='color: green;'>" + element2.innerHTML} -> ${"</span><span style='color: green;'>" + element.innerHTML + "</span><br>"}`;
+											connections.push(goodconnection);
+
+										});
+										document.getElementById('connections').innerHTML = `Corrections:<br>${connections}`;
+									}
+								}
+								else if (response[8] == "mct") {
+									ismultiple = true;
+
+									console.log(localStorage.getItem('lastationlienvar'));
+									localStorage.clear();
+									localStorage.setItem('lastationlienvar', response[10]);
+
+									if (document.getElementsByClassName("popup")[0] != null)
+										document.getElementsByClassName("popup")[0].remove();
+									const blocks = document.querySelectorAll('div[id^="reponse_"]');
+									blocks.forEach(block => {
+										block.remove();
+									});
+									let table_preset = '<div style="background-color: #fff0; width:100%;  margin:auto; margin-top:0;" id="reponse_1" class="u-align-center u-container-align-center u-container-align-center-md u-container-align-center-xl u-container-align-center-xs u-container-style u-custom-border u-list-item u-radius u-repeater-item u-shape-round u-white u-list-item-4" data-animation-name="customAnimationIn" data-animation-duration="1750" data-animation-delay="500"><table style="width:100%;" border="1" id="myTable"><thead></thead><tbody></tbody></table></div>';
+									parentDiv.insertAdjacentHTML("beforeend", table_preset);
+									let data1 = response[1].split("--");
+									let data2 = response[2];
+									let data3 = response[3];
+									let data4 = response[4];
+									let data5 = response[5];
+									//document.getElementById('QuestionN').insertAdjacentHTML('afterend', '<button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1  u-radius  u-btn-4"  style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next">Continuer</button>');
+									for (let i = 0; i < data1.length; i++) {
+										let row = document.createElement('tr');
+										let cell1 = document.createElement('td');
+										cell1.classList.add("tnum");
+										cell1.style.fontSize = "16px";
+										cell1.textContent = data1[i];
+										row.appendChild(cell1);
+										if (data2 != "null") {
+											let cell2 = document.createElement('td');
+											cell2.classList.add("tQ");
+											cell2.setAttribute("data-type", "Q");
+											cell2.setAttribute("data-row", i + 1);
+											cell2.setAttribute("data-id", 1);
+											cell2.textContent = data2;
+											row.appendChild(cell2);
+										}
+										if (data3 != "null") {
+											let cell3 = document.createElement('td');
+											cell3.classList.add("tR");
+											cell3.setAttribute("data-type", "R");
+											cell3.setAttribute("data-row", i + 1);
+											cell3.setAttribute("data-id", 2);
+											cell3.textContent = data3;
+											row.appendChild(cell3);
+										}
+										if (data4 != "null") {
+											let cell4 = document.createElement('td');
+											cell4.classList.add("tQ");
+											cell4.setAttribute("data-type", "R");
+											cell4.setAttribute("data-row", i + 1);
+											cell4.setAttribute("data-id", 3);
+											cell4.textContent = data4;
+											row.appendChild(cell4);
+										}
+										if (data5 != "null") {
+											let cell5 = document.createElement('td');
+											cell5.classList.add("tR");
+											cell5.setAttribute("data-type", "R");
+											cell5.setAttribute("data-row", i + 1);
+											cell5.setAttribute("data-id", 4);
+											cell5.textContent = data5;
+											row.appendChild(cell5);
+										}
+										document.querySelector('tbody').appendChild(row);
+									}
+									document.querySelectorAll('td[data-type]').forEach(cell => {
+										cell.addEventListener('click', function () {
+											const cellType = cell.dataset.type;
+											const cellRow = cell.dataset.row;
+											if (cell.classList.contains('selected')) {
+												cell.classList.remove('selected');
+												if (cellType === 'Q') selectedQ = null;
+												if (cellType === 'R') selectedR = null;
+											} else {
+												const rowCells = document.querySelectorAll(`[data-row='${cellRow}']:not([data-type='first'])`);
+												rowCells.forEach(rowCell => {
+													if (rowCell !== cell) rowCell.classList.remove('selected');
+												});
+											}
+											cell.classList.add('selected');
+											//selectedCells.push();
+											document.getElementById('button_next').onclick = function () {
+												updateQuestion(cell);
+											};
+											if (cellType === 'Q') selectedQ = cell;
+											if (cellType === 'R') selectedR = cell;
+											const selectedElements = document.querySelectorAll('.selected');
+											let resultString = '';
+											selectedElements.forEach(element => {
+												let dataRow = element.getAttribute('data-row');
+												let dataId = element.getAttribute('data-id');
+												resultString += `&&Q@${dataRow}|R@${dataId}`;
+											});
+											localStorage.setItem('lastationlienvar', response[10] + resultString);
+											console.log(localStorage.getItem('lastationlienvar'));
+										});
+									});
+								}
+								resize_questions();
+							}, cd);
+
+						}
+					}
+
+				};
+				if (ismultiple == true) {
+					let temptext = String(localStorage.getItem('lastationlienvar'));
+					xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+					console.log(temptext);
+					xhr.send("choise=" + encodeURIComponent(temptext));
+				}
+				else
+					xhr.send("choise=" + buttonIndex);
+			}
+
+		}
+	</script>
+</body>
+</html>
