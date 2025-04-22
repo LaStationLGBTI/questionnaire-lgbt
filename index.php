@@ -80,7 +80,6 @@ $texts = [
         'popup_close' => 'Schließen',
         'corrections' => 'Korrekturen:',
         'none' => 'Keine',
-	'question_label' => 'Question'
     ]
 ];
 $lang = $_SESSION['language'];
@@ -91,7 +90,7 @@ $lang = $_SESSION['language'];
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
-    <title>Question</title>
+    <title><?php echo $lang === 'de' ? 'Frage' : 'Question'; ?></title>
     <link rel="stylesheet" href="nicepage.css" media="screen">
     <link rel="stylesheet" href="Question.css" media="screen">
     <style>
@@ -282,6 +281,7 @@ $lang = $_SESSION['language'];
             section2.style.display = "none";
             section1.style.display = "block";
         }
+	let lang = "<?php echo $lang; ?>";
         let ismultiple = false;
         let parentDiv = null;
         window.onload = resize_questions;
@@ -342,8 +342,7 @@ function startQuestion() {
                 const innerAnswers = item.querySelector('p#rep');
                 innerAnswers.innerHTML = response[index + 1];
             });
-		document.getElementById("QuestionN").innerHTML = (lang === 'de' ? "Frage " : "Question ") + response[6];
-		
+	 document.getElementById("QuestionN").innerHTML = (lang === 'de' ? "Frage " : "Question ") + response[6];		
             document.getElementById('button_next').onclick = function () {
                 updateQuestion(-1);
             };
@@ -1028,7 +1027,7 @@ if (!isset($_SESSION["start"])) {
 										innerAnswers.innerHTML = response[index + 1];
 									}
 								});
-								document.getElementById("QuestionN").innerHTML = "Question " + response[6];
+								document.getElementById("QuestionN").innerHTML = (lang === 'de' ? "Frage " : "Question ") + response[6];
 								document.getElementById('button_next').onclick = function () {
 									updateQuestion(-1);
 								};
