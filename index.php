@@ -520,8 +520,8 @@ for (let i = 0; i < data1.length; i++) {
                                             }
                                         }
 
-                                        document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
-                                        selectedQ = null;
+					document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections.join('')}`;
+					selectedQ = null;
                                         selectedR = null;
                                     }
                                     popup.style.display = "none";
@@ -571,8 +571,8 @@ for (let i = 0; i < data1.length; i++) {
                         goodconnection = `${"<span style='color: green;'>" + element2.innerHTML} -> ${"</span><span style='color: green;'>" + element.innerHTML + "</span><br>"}`;
                         connections.push(goodconnection);
                     });
-                    document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
-                }
+		document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections.join('')}`;        
+		}
             } else if (response[7] == "mct") {
                 ismultiple = true;
                 localStorage.clear();
