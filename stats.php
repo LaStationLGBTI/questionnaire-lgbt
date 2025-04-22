@@ -89,9 +89,9 @@
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
                     <div class="language-buttons">
-                        <button onclick="loadStats('fr')" class="lang-btn" data-lang="fr">Французский</button>
-                        <button onclick="loadStats('de')" class="lang-btn" data-lang="de">Немецкий</button>
-                        <button onclick="loadStats('all')" class="lang-btn active" data-lang="all">Все</button>
+                        <button onclick="loadStats('fr')" class="lang-btn" data-lang="fr">Français</button>
+                        <button onclick="loadStats('de')" class="lang-btn" data-lang="de">Deutsch</button>
+                        <button onclick="loadStats('all')" class="lang-btn active" data-lang="all">All</button>
                     </div>
                     <div id="chartsContainer" class="chart-container"></div>
                 </div>
@@ -101,10 +101,7 @@
 
     <script>
         const chartInstances = {};
-
-        // Функция для загрузки статистики с учетом выбранного языка
-        function loadStats(lang) {
-            // Обновление активной кнопки
+        function loadStats(lang) {            
             document.querySelectorAll('.lang-btn').forEach(btn => {
                 btn.classList.remove('active');
                 if (btn.dataset.lang === lang) {
@@ -112,17 +109,14 @@
                 }
             });
 
-            // Очистка контейнера с графиками
             const container = document.getElementById('chartsContainer');
             container.innerHTML = '';
 
-            // Очистка существующих экземпляров графиков
             Object.keys(chartInstances).forEach(key => {
                 chartInstances[key].destroy();
                 delete chartInstances[key];
             });
 
-            // Загрузка данных с указанным языком
             fetch(`stats_getdata.php?lang=${lang}`)
                 .then(response => response.json())
                 .then(data => {
@@ -137,7 +131,6 @@
                         }
                     });
 
-                    // Обработка ответов
                     data.answers.forEach((item, index) => {
                         let questionId = item.question;
                         let responseId = item.response;
@@ -152,7 +145,6 @@
                                     chart.data.datasets[dataRep[index] - 1].data[questF - 1]++;
                                 });
                                 chart.update();
-                                // Обновление легенды для StackedBarChart
                                 let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
                                 legendItems.forEach((item, idx) => {
                                     let total = chart.data.datasets[idx].data.reduce((sum, val) => sum + val, 0);
@@ -163,7 +155,6 @@
                         } else if (chart) {
                             chart.data.datasets[0].data[responseId] += 1;
                             chart.update();
-                            // Обновление легенды для PieChart
                             let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
                             legendItems.forEach((item, idx) => {
                                 let countSpan = item.querySelector(".count");
@@ -175,7 +166,6 @@
                 .catch(error => console.error('Error:', error));
         }
 
-        // Функция для создания круговой диаграммы
         function createPieChart(question, responses, chartIndex) {
             const validResponses = responses.filter(response => response !== "null");
             let container = document.getElementById("chartsContainer");
@@ -232,7 +222,6 @@
             container.appendChild(div);
         }
 
-        // Функция для создания столбчатой диаграммы
         function createStackedBarChart(subQuestions, responses, chartIndex, question) {
             const validResponses = responses.filter(response => response !== "null");
             let container = document.getElementById("chartsContainer");
@@ -291,7 +280,6 @@
             div.appendChild(legendContainer);
         }
 
-        // Инициализация с языком "all"
         loadStats('all');
     </script>
     <script>
