@@ -877,24 +877,25 @@ if (!isset($_SESSION["start"])) {
         $_SESSION["orient"] = isset($_POST['orient']) ? htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8') : '';
         $_SESSION["emailr"] = isset($_POST['e_mm']) ? htmlspecialchars($_POST['e_mm'], ENT_QUOTES, 'UTF-8') : '';
 
-        if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
-            try {
-                $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            } catch (PDOException $e) {
-                echo "Erreur connection: " . $e->getMessage();
-            }
+if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
+    try {
+        $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    } catch (PDOException $e) {
+        echo "Erreur connection: " . $e->getMessage();
+    }
 
-            $query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail WHERE id = :id";
-            $stmt = $conn->prepare($query);
-            $stmt->execute([
-                'genre' => $_SESSION["genre"],
-                'orientation' => $_SESSION["orient"],
-                'id' => $_SESSION["id_user"],
-                'repmail' => $_SESSION["emailr"]
-            ]);
-            unset($_SESSION["id_user"]);
-        }
+    $query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail, lang = :lang WHERE id = :id";
+    $stmt = $conn->prepare($query);
+    $stmt->execute([
+        'genre' => $_SESSION["genre"],
+        'orientation' => $_SESSION["orient"],
+        'repmail' => $_SESSION["emailr"],
+        'lang' => $_SESSION["language"],
+        'id' => $_SESSION["id_user"]
+    ]);
+    unset($_SESSION["id_user"]);
+}
         ?>
         <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
             <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
