@@ -64,11 +64,11 @@ try {
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // SQL-запрос для добавления колонки lang
-    $sql = "ALTER TABLE `stationr1` ADD `lang` VARCHAR(10) NOT NULL DEFAULT 'fr' AFTER `reponse`";
+    $sql = "ALTER TABLE `stationr2` ADD `lang` VARCHAR(10) NOT NULL DEFAULT 'fr' AFTER `reponse`";
 
     // Выполнение запроса
     $conn->exec($sql);
-    echo "Колонка `lang` успешно добавлена в таблицу `stationr1`.";
+    echo "Колонка `lang` успешно добавлена в таблицу `stationr2`.";
 
 } catch (PDOException $e) {
     // Вывод ошибки, если что-то пошло не так
