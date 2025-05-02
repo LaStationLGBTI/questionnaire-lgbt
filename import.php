@@ -115,7 +115,8 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
 
         // Вывод результата
         echo "<p class='success'>Таблица stationq2 успешно импортирована!</p>";
-        echo "<p>Количество записей в таблице: $record 링크된 질문: " . htmlspecialchars($firstQuestion) . "</p>";
+        echo "<p>Количество записей в таблице: $recordCount</p>";
+        echo "<p>Первый вопрос: " . htmlspecialchars($firstQuestion) . "</p>";
 
     } catch (Exception $e) {
         echo "<p class='error'>Ошибка: " . htmlspecialchars($e->getMessage()) . "</p>";
