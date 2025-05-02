@@ -58,94 +58,71 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-try {
-    // Подключение к базе данных
-    $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
+    try {
+        // Подключение к базе данных через PDO
+        $dsn = "mysql:host=$host;dbname=$database;charset=utf8mb4";
+        $pdo = new PDO($dsn, $user, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    
-    $sql = "TRUNCATE TABLE `stationr2`";
-
-    // Выполнение запроса
-    $conn->exec($sql);
-    echo "Таблица `stationr2` успешно очищена.";
-    // Выполнение запроса
-    $conn->exec($sql);
-    echo "Колонка `lang` успешно добавлена в таблицу `stationr2`.";
-
-} catch (PDOException $e) {
-    // Вывод ошибки, если что-то пошло не так
-    echo "Ошибка: " . $e->getMessage();
-}
-
-// Закрытие соединения
-$conn = null;
-
-
-        if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
-            try {
-
-
-                // Проверка загруженного файла
-                $file = $_FILES['sql_file'];
-                if ($file['error'] !== UPLOAD_ERR_OK) {
-                    throw new Exception("Ошибка загрузки файла: " . $file['error']);
-                }
-
-                // Проверка расширения файла
-                $fileExtension = pathinfo($file['name'], PATHINFO_EXTENSION);
-                if (strtolower($fileExtension) !== 'sql') {
-                    throw new Exception("Файл должен иметь расширение .sql");
-                }
-
-                // Чтение SQL-файла
-                $sql = file_get_contents($file['tmp_name']);
-                if ($sql === false) {
-                    throw new Exception("Ошибка чтения файла: " . $file['name']);
-                }
-
-                // Подключение к базе данных через PDO
-                $dsn = "mysql:host=$host;dbname=$database;charset=utf8mb4";
-                $pdo = new PDO($dsn, $user, $password);
-                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-                // Разделение SQL-файла на отдельные команды
-                $queries = array_filter(array_map('trim', explode(';', $sql)), function($query) {
-                    return !empty($query) && !preg_match('/^\s*(--|\/\*)/', $query);
-                });
-
-                // Выполнение каждой команды
-                foreach ($queries as $query) {
-                    $pdo->exec($query);
-                }
-
-                // Проверка создания таблицы stationq2
-                $stmt = $pdo->query("SHOW TABLES LIKE 'stationq2'");
-                if ($stmt->rowCount() === 0) {
-                    throw new Exception("Таблица stationq2 не была создана.");
-                }
-
-                // Проверка количества записей в таблице
-                $stmt = $pdo->query("SELECT COUNT(*) AS count FROM stationq2");
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                $recordCount = $row['count'];
-
-                // Проверка содержимого (например, первый вопрос)
-                $stmt = $pdo->query("SELECT question FROM stationq2 WHERE id = 1");
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-                $firstQuestion = $row['question'] ?? '';
-
-                // Вывод результата
-                echo "<p class='success'>Таблица stationq2 успешно импортирована!</p>";
-                echo "<p>Количество записей в таблице: $recordCount</p>";
-                echo "<p>Первый вопрос: " . htmlspecialchars($firstQuestion) . "</p>";
-
-            } catch (Exception $e) {
-                echo "<p class='error'>Ошибка: " . htmlspecialchars($e->getMessage()) . "</p>";
-                file_put_contents('error.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
-            }
+        // Проверка загруженного файла
+        $file = $_FILES['sql_file'];
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception("Ошибка загрузки файла: " . $file['error']);
         }
-        ?>
+
+        // Проверка расширения файла
+        $fileExtension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        if (strtolower($fileExtension) !== 'sql') {
+            throw new Exception("Файл должен иметь расширение .sql");
+        }
+
+        // Чтение SQL-файла
+        $sql = file_get_contents($file['tmp_name']);
+        if ($sql === false) {
+            throw new Exception("Ошибка чтения файла: " . $file['name']);
+        }
+
+        // Очистка таблицы stationq2 перед импортом
+        $pdo->exec("TRUNCATE TABLE `stationq2`");
+        echo "<p class='success'>Таблица stationq2 успешно очищена.</p>";
+
+        // Разделение SQL-файла на отдельные команды
+        $queries = array_filter(array_map('trim', explode(';', $sql)), function($query) {
+            return !empty($query) && !preg_match('/^\s*(--|\/\*)/', $query);
+        });
+
+        // Выполнение каждой команды
+        foreach ($queries as $query) {
+            $pdo->exec($query);
+        }
+
+        // Проверка создания таблицы stationq2
+        $stmt = $pdo->query("SHOW TABLES LIKE 'stationq2'");
+        if ($stmt->rowCount() === 0) {
+            throw new Exception("Таблица stationq2 не была создана.");
+        }
+
+        // Проверка количества записей в таблице
+        $stmt = $pdo->query("SELECT COUNT(*) AS count FROM stationq2");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $recordCount = $row['count'];
+
+        // Проверка содержимого (например, первый вопрос)
+        $stmt = $pdo->query("SELECT question FROM stationq2 WHERE id = 1");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $firstQuestion = $row['question'] ?? '';
+
+        // Вывод результата
+        echo "<p class='success'>Таблица stationq2 успешно импортирована!</p>";
+        echo "<p>Количество записей в таблице: $record 링크된 질문: " . htmlspecialchars($firstQuestion) . "</p>";
+
+    } catch (Exception $e) {
+        echo "<p class='error'>Ошибка: " . htmlspecialchars($e->getMessage()) . "</p>";
+        file_put_contents('error.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+}
+?>
     </div>
 </body>
 </html>
