@@ -708,16 +708,18 @@ for (let i = 0; i < data1.length; i++) {
                     <i><?php echo $texts[$lang]['thanks']; ?></i>
                 </p>
 
-                <div class="language-selector">
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="language" value="fr">
-                        <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
-                    </form>
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="language" value="de">
-                        <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
-                    </form>
-                </div>
+<div class="language-selector">
+    <span style="align-self: center;">Collège Vauban</span>
+    <form method="POST" style="display: inline;">
+        <input type="hidden" name="language" value="fr">
+        <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+    </form>
+    <form method="POST" style="display: inline;">
+        <input type="hidden" name="language" value="de">
+        <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+    </form>
+    <span style="align-self: center;">Schule Potsdam</span>
+</div>
 
                 <form method="POST" action="">
                     <div class="u-align-right u-form-group u-form-submit">
