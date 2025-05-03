@@ -8,6 +8,20 @@ try {
     $stmt = $pdo->query("SELECT * FROM stationq1");
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $lang = isset($_GET['lang']) ? $_GET['lang'] : 'all';
+    
+    // Подсчет общего количества ответов
+    $query = "SELECT COUNT(*) as total FROM stationr2";
+    if ($lang !== 'all') {
+        $query .= " WHERE lang = :lang";
+    }
+    $stmt = $pdo->prepare($query);
+    if ($lang !== 'all') {
+        $stmt->execute(['lang' => $lang]);
+    } else {
+        $stmt->execute();
+    }
+    $totalResponses = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+
     $query = "SELECT * FROM stationr2";
     if ($lang !== 'all') {
         $query .= " WHERE lang = :lang";
@@ -111,7 +125,8 @@ try {
 
     $response = [
         "formattedData" => $formattedData,
-        "answers" => isset($QuestionsR) ? $QuestionsR : []
+        "answers" => isset($QuestionsR) ? $QuestionsR : [],
+        "totalResponses" => $totalResponses
     ];
     echo json_encode($response);
 
