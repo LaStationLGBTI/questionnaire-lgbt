@@ -205,6 +205,62 @@ function loadStats(lang) {
         .catch(error => console.error('Error:', error));
 }
 
+        function createPieChart(question, responses, chartIndex) {
+            const validResponses = responses.filter(response => response !== "null");
+            let container = document.getElementById("chartsContainer");
+            let div = document.createElement("div");
+            div.className = "chart-box";
+            let questionLabel = document.createElement("div");
+            questionLabel.textContent = `Question: ${question}`;
+            questionLabel.style.textAlign = "center";
+            div.appendChild(questionLabel);
+            let canvas = document.createElement("canvas");
+            canvas.id = "chart_" + chartIndex;
+            div.appendChild(canvas);
+            const backgroundColors = ["Blue", "#FF0080", "Yellow", "Orange", "Red"];
+            const chart = new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: [question, ...validResponses],
+                    datasets: [{
+                        data: [0, ...validResponses.map(() => 0)],
+                        backgroundColor: backgroundColors
+                    }]
+                },
+                options: {
+                    plugins: {
+                        tooltip: { enabled: true }
+                    },
+                    interaction: { mode: 'nearest' },
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+            chartInstances[chartIndex] = chart;
+            let legendContainer = document.createElement("div");
+            legendContainer.className = "legend-container";
+            validResponses.forEach((response, index) => {
+                let legendItem = document.createElement("div");
+                legendItem.className = "legend-item";
+                let colorBox = document.createElement("span");
+                colorBox.className = "legend-color";
+                colorBox.style.backgroundColor = backgroundColors[index + 1];
+                legendItem.appendChild(colorBox);
+                let label = document.createElement("span");
+                label.className = "legend-label";
+                label.textContent = response.length > 20 ? response.slice(0, 20) + "..." : response;
+                legendItem.appendChild(label);
+                let countSpan = document.createElement("span");
+                countSpan.className = "count";
+                countSpan.textContent = `(${chart.data.datasets[0].data[index + 1]})`;
+                legendItem.appendChild(countSpan);
+                legendContainer.appendChild(legendItem);
+            });
+            div.appendChild(legendContainer);
+            container.appendChild(div);
+        }
+
         function createStackedBarChart(subQuestions, responses, chartIndex, question) {
             const validResponses = responses.filter(response => response !== "null");
             let container = document.getElementById("chartsContainer");
