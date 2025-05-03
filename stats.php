@@ -81,90 +81,117 @@
         .language-buttons button.active {
             background-color: #28a745;
         }
+        .count-box {
+    background-color: #f8f9fa;
+    border: 2px solid #007bff;
+    border-radius: 10px;
+    padding: 10px 20px;
+    margin: 10px auto;
+    width: fit-content;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+.count-box:hover {
+    background-color: #e9ecef;
+}
+
+#totalCountText {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
     </style>
 </head>
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="fr" style="height:100%">
     <section id="sec-089e">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
-                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                    <div class="language-buttons">
-                        <button onclick="loadStats('fr')" class="lang-btn" data-lang="fr">Français</button>
-                        <button onclick="loadStats('de')" class="lang-btn" data-lang="de">Deutsch</button>
-                        <button onclick="loadStats('all')" class="lang-btn active" data-lang="all">All</button>
-                    </div>
-                    <div id="chartsContainer" class="chart-container"></div>
-                </div>
+<div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
+    <div class="language-buttons">
+        <button onclick="loadStats('fr')" class="lang-btn" data-lang="fr">Français</button>
+        <button onclick="loadStats('de')" class="lang-btn" data-lang="de">Deutsch</button>
+        <button onclick="loadStats('all')" class="lang-btn active" data-lang="all">All</button>
+    </div>
+    <div id="totalCount" class="count-box">
+        <span id="totalCountText">Total responses: 0</span>
+    </div>
+    <div id="chartsContainer" class="chart-container"></div>
+</div>
             </div>
         </div>
     </section>
 
     <script>
         const chartInstances = {};
-        function loadStats(lang) {            
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.lang === lang) {
-                    btn.classList.add('active');
+function loadStats(lang) {            
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.lang === lang) {
+            btn.classList.add('active');
+        }
+    });
+
+    const container = document.getElementById('chartsContainer');
+    container.innerHTML = '';
+
+    Object.keys(chartInstances).forEach(key => {
+        chartInstances[key].destroy();
+        delete chartInstances[key];
+    });
+
+    fetch(`stats_getdata.php?lang=${lang}`)
+        .then(response => response.json())
+        .then(data => {
+            // Обновление счетчика общего количества ответов
+            const totalResponses = data.totalResponses || 0;
+            document.getElementById('totalCountText').textContent = `Total responses: ${totalResponses} (${lang === 'all' ? 'All' : lang === 'fr' ? 'Français' : 'Deutsch'})`;
+
+            // Создание графиков
+            data.formattedData.forEach((item, index) => {
+                if (item.type === 'qcm' || item.type === 'echelle') {
+                    createPieChart(item.question, item.responses, item.id);
+                } else if (item.type === 'mct') {
+                    createStackedBarChart(item.sub_questions, item.responses, item.id, item.question);
+                } else if (item.type === 'lien') {
+                    createStackedBarChart(item.sub_questions, item.sub_responses, item.id, item.question);
                 }
             });
 
-            const container = document.getElementById('chartsContainer');
-            container.innerHTML = '';
-
-            Object.keys(chartInstances).forEach(key => {
-                chartInstances[key].destroy();
-                delete chartInstances[key];
+            data.answers.forEach((item, index) => {
+                let questionId = item.question;
+                let responseId = item.response;
+                let chart = chartInstances[parseInt(questionId)];
+                if (!responseId) {
+                    if (chart && item.subresponse && item.subquestion) {
+                        let newSubResponses = item.subresponse.split(",");
+                        let newSubQuestion = item.subquestion.split(",");
+                        let dataRep = newSubResponses.map(Number);
+                        let dataQuest = newSubQuestion.map(Number);
+                        dataQuest.forEach((questF, index) => {
+                            chart.data.datasets[dataRep[index] - 1].data[questF - 1]++;
+                        });
+                        chart.update();
+                        let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
+                        legendItems.forEach((item, idx) => {
+                            let total = chart.data.datasets[idx].data.reduce((sum, val) => sum + val, 0);
+                            let countSpan = item.querySelector(".count");
+                            countSpan.textContent = `(${total})`;
+                        });
+                    }
+                } else if (chart) {
+                    chart.data.datasets[0].data[responseId] += 1;
+                    chart.update();
+                    let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
+                    legendItems.forEach((item, idx) => {
+                        let countSpan = item.querySelector(".count");
+                        countSpan.textContent = `(${chart.data.datasets[0].data[idx + 1]})`;
+                    });
+                }
             });
-
-            fetch(`stats_getdata.php?lang=${lang}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Создание графиков
-                    data.formattedData.forEach((item, index) => {
-                        if (item.type === 'qcm' || item.type === 'echelle') {
-                            createPieChart(item.question, item.responses, item.id);
-                        } else if (item.type === 'mct') {
-                            createStackedBarChart(item.sub_questions, item.responses, item.id, item.question);
-                        } else if (item.type === 'lien') {
-                            createStackedBarChart(item.sub_questions, item.sub_responses, item.id, item.question);
-                        }
-                    });
-
-                    data.answers.forEach((item, index) => {
-                        let questionId = item.question;
-                        let responseId = item.response;
-                        let chart = chartInstances[parseInt(questionId)];
-                        if (!responseId) {
-                            if (chart && item.subresponse && item.subquestion) {
-                                let newSubResponses = item.subresponse.split(",");
-                                let newSubQuestion = item.subquestion.split(",");
-                                let dataRep = newSubResponses.map(Number);
-                                let dataQuest = newSubQuestion.map(Number);
-                                dataQuest.forEach((questF, index) => {
-                                    chart.data.datasets[dataRep[index] - 1].data[questF - 1]++;
-                                });
-                                chart.update();
-                                let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
-                                legendItems.forEach((item, idx) => {
-                                    let total = chart.data.datasets[idx].data.reduce((sum, val) => sum + val, 0);
-                                    let countSpan = item.querySelector(".count");
-                                    countSpan.textContent = `(${total})`;
-                                });
-                            }
-                        } else if (chart) {
-                            chart.data.datasets[0].data[responseId] += 1;
-                            chart.update();
-                            let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
-                            legendItems.forEach((item, idx) => {
-                                let countSpan = item.querySelector(".count");
-                                countSpan.textContent = `(${chart.data.datasets[0].data[idx + 1]})`;
-                            });
-                        }
-                    });
-                })
-                .catch(error => console.error('Error:', error));
-        }
+        })
+        .catch(error => console.error('Error:', error));
+}
 
         function createPieChart(question, responses, chartIndex) {
             const validResponses = responses.filter(response => response !== "null");
