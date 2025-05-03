@@ -83,9 +83,12 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
             throw new Exception("Ошибка чтения файла: " . $file['name']);
         }
 
-        // Очистка таблицы stationq2 перед импортом
-        $pdo->exec("TRUNCATE TABLE `stationq2`");
-        echo "<p class='success'>Таблица stationq2 успешно очищена.</p>";
+        // Определение целевой таблицы на основе имени файла
+        $targetTable = (strpos($file['name'], 'stationq1') !== false) ? 'stationq1' : 'stationq2';
+
+        // Очистка таблицы перед импортом
+        $pdo->exec("TRUNCATE TABLE `$targetTable`");
+        echo "<p class='success'>Таблица $targetTable успешно очищена.</p>";
 
         // Разделение SQL-файла на отдельные команды
         $queries = array_filter(array_map('trim', explode(';', $sql)), function($query) {
@@ -97,24 +100,24 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
             $pdo->exec($query);
         }
 
-        // Проверка создания таблицы stationq2
-        $stmt = $pdo->query("SHOW TABLES LIKE 'stationq2'");
+        // Проверка создания таблицы
+        $stmt = $pdo->query("SHOW TABLES LIKE '$targetTable'");
         if ($stmt->rowCount() === 0) {
-            throw new Exception("Таблица stationq2 не была создана.");
+            throw new Exception("Таблица $targetTable не была создана.");
         }
 
         // Проверка количества записей в таблице
-        $stmt = $pdo->query("SELECT COUNT(*) AS count FROM stationq2");
+        $stmt = $pdo->query("SELECT COUNT(*) AS count FROM $targetTable");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $recordCount = $row['count'];
 
         // Проверка содержимого (например, первый вопрос)
-        $stmt = $pdo->query("SELECT question FROM stationq2 WHERE id = 1");
+        $stmt = $pdo->query("SELECT question FROM $targetTable WHERE id = 1");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $firstQuestion = $row['question'] ?? '';
 
         // Вывод результата
-        echo "<p class='success'>Таблица stationq2 успешно импортирована!</p>";
+        echo "<p class='success'>Таблица $targetTable успешно импортирована!</p>";
         echo "<p>Количество записей в таблице: $recordCount</p>";
         echo "<p>Первый вопрос: " . htmlspecialchars($firstQuestion) . "</p>";
 
