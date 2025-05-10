@@ -120,12 +120,6 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
         echo "<p class='success'>Таблица $targetTable успешно импортирована!</p>";
         echo "<p>Количество записей в таблице: $recordCount</p>";
         echo "<p>Первый вопрос: " . htmlspecialchars($firstQuestion) . "</p>";
-
-    } catch (Exception $e) {
-        echo "<p class='error'>Ошибка: " . htmlspecialchars($e->getMessage()) . "</p>";
-        file_put_contents('error.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
-    }
-}
     try {
 
     // Получение всех данных из stationr1
@@ -140,6 +134,12 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
 } catch (PDOException $e) {
     echo "Ошибка: " . $e->getMessage();
 }
+    } catch (Exception $e) {
+        echo "<p class='error'>Ошибка: " . htmlspecialchars($e->getMessage()) . "</p>";
+        file_put_contents('error.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+}
+    
 ?>
     </div>
 </body>
