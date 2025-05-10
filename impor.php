@@ -126,6 +126,20 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
         file_put_contents('error.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
     }
 }
+    try {
+
+    // Получение всех данных из stationr1
+    $sql = "SELECT * FROM stationr1";
+    $stmt = $pdo->query($sql);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo "<pre>";
+    print_r($data);
+    echo "</pre>";
+
+} catch (PDOException $e) {
+    echo "Ошибка: " . $e->getMessage();
+}
 ?>
     </div>
 </body>
