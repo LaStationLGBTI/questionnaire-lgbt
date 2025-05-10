@@ -71,9 +71,9 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
     $stmt = $pdo->query($sql);
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo "<pre>";
-    print_r($data);
-    echo "</pre>";
+    
+    var_dump($data);
+    
         // Проверка загруженного файла
         $file = $_FILES['sql_file'];
         if ($file['error'] !== UPLOAD_ERR_OK) {
