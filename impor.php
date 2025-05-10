@@ -65,6 +65,15 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
         $pdo = new PDO($dsn, $user, $password);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+
+    // Получение всех данных из stationr1
+    $sql = "SELECT * FROM stationr2";
+    $stmt = $pdo->query($sql);
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo "<pre>";
+    print_r($data);
+    echo "</pre>";
         // Проверка загруженного файла
         $file = $_FILES['sql_file'];
         if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -120,20 +129,7 @@ if (isset($_POST['submit']) && isset($_FILES['sql_file'])) {
         echo "<p class='success'>Таблица $targetTable успешно импортирована!</p>";
         echo "<p>Количество записей в таблице: $recordCount</p>";
         echo "<p>Первый вопрос: " . htmlspecialchars($firstQuestion) . "</p>";
-    try {
 
-    // Получение всех данных из stationr1
-    $sql = "SELECT * FROM stationr1";
-    $stmt = $pdo->query($sql);
-    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    echo "<pre>";
-    print_r($data);
-    echo "</pre>";
-
-} catch (PDOException $e) {
-    echo "Ошибка: " . $e->getMessage();
-}
     } catch (Exception $e) {
         echo "<p class='error'>Ошибка: " . htmlspecialchars($e->getMessage()) . "</p>";
         file_put_contents('error.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n", FILE_APPEND);
