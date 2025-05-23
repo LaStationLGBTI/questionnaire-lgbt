@@ -3,7 +3,7 @@
     <div style="display: flex;  align-items: center;" class="u-container-layout u-container-layout-1">
       <p style="margin:0; font-size:32px; color: #b480ff;" class="u-text u-text-1"> La Station LGBTQIA+</p>
       <img src="/images/station.jpg" alt="" style="width:100px; height:100px;">
-      <p style="margin-bottom:1em;margin-right:auto; margin-left:auto; margin-top:auto; text-align:center;  font-size:12px;">Conception de la page : R. (Hex) ; maître de stage : Gérald Schlemminger, (c) 2025 La STATION / Collège international Vauban</p>
+      <p style="margin-bottom:1em;margin-right:auto; margin-left:auto; margin-top:auto; text-align:center;  font-size:12px;">Conception de la page : R. (Hex) ; maître de stage : Gérald Schlemminger, (c) 2025 La STATION</p>
     </div>
   </div>
 </footer>
