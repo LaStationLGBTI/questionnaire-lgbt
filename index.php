@@ -9,7 +9,7 @@ if (!isset($_SESSION['language'])) {
 if (isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr'])) {
     $_SESSION['language'] = $_POST['language'];
 }
-
+$testend = 1;
 $lang = $_SESSION['language'];
 
 $texts = [
@@ -675,7 +675,7 @@ for (let i = 0; i < data1.length; i++) {
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
 
     <?php
-    if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
+    if (!isset($_POST["start"]) && !isset($_SESSION["start"]) && $testend == 0) { ?>
 <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
     <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
         <div class="u-container-layout u-container-layout-1">
@@ -735,7 +735,7 @@ for (let i = 0; i < data1.length; i++) {
     </div>
 </section>
 
-    <?php } else if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) {
+    <?php } else if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1) && $testend == 0) {
 if (!isset($_SESSION["start"])) {
     try {
         $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
@@ -816,7 +816,7 @@ if (!isset($_SESSION["start"])) {
         if (!isset($_SESSION["finish"])) {
             echo '<script type="text/javascript">startQuestion();</script>';
         }
-    } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && !(isset($_POST["acc"]) || isset($_SESSION["acc"]))) { ?>
+    } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && !(isset($_POST["acc"]) || isset($_SESSION["acc"])) && $testend == 0) { ?>
         <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
             <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
                 <div class="u-container-layout u-container-layout-1">
@@ -873,7 +873,7 @@ if (!isset($_SESSION["start"])) {
             </div>
         </section>
 
-    <?php } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && (isset($_POST["acc"]) || isset($_SESSION["acc"]))) {
+    <?php } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && (isset($_POST["acc"]) || isset($_SESSION["acc"])) && $testend == 1) {
         $_SESSION["acc"] = "1";
         $_SESSION["genre"] = isset($_POST['genre']) ? htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8') : '';
         $_SESSION["orient"] = isset($_POST['orient']) ? htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8') : '';
