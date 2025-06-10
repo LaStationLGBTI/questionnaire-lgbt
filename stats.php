@@ -211,7 +211,7 @@ function loadStats(lang) {
             let div = document.createElement("div");
             div.className = "chart-box";
             let questionLabel = document.createElement("div");
-            questionLabel.textContent = `Question: ${question}`;
+            questionLabel.innerHTML = `Question: ${question}`;
             questionLabel.style.textAlign = "center";
             div.appendChild(questionLabel);
             let canvas = document.createElement("canvas");
@@ -268,7 +268,7 @@ function loadStats(lang) {
             canvas.id = "chart_" + chartIndex;
             let div = document.createElement("div");
             let questionLabel = document.createElement("div");
-            questionLabel.textContent = `Question: ${question}`;
+            questionLabel.innerHTML = `Question: ${question}`;
             questionLabel.style.textAlign = "center";
             div.appendChild(questionLabel);
             div.className = "chart-box";
