@@ -11,55 +11,55 @@
     <style>
         .chart-container {
             display: flex;
-            flex-direction: column; /* Располагаем графики вертикально */
-            align-items: center; /* Центрируем их по горизонтали */
-            gap: 30px; /* Увеличиваем отступ между графиками */
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
             margin-top: 20px;
         }
         .chart-box {
-            width: 90%; /* Делаем блок с графиком шире */
-            max-width: 80em; /* Ограничиваем максимальную ширину для больших экранов */
+            width: 90%;
+            max-width: 80em;
             height: auto;
             min-height: 20em;
             margin-bottom: 2em;
             display: flex;
             flex-direction: column;
             align-items: center;
-            border: 1px solid #ddd; /* Добавим рамку для наглядности */
+            border: 1px solid #ddd;
             border-radius: 8px;
             padding: 15px;
         }
         .chart-box canvas {
-            max-height: 20em !important; /* Можно немного увеличить высоту самого графика */
+            max-height: 20em !important;
             width: 100% !important;
         }
         .legend-container {
-            margin-top: 15px; /* Увеличим отступ сверху */
-            text-align: left; /* Выравниваем текст в контейнере по левому краю */
+            margin-top: 15px;
+            text-align: left;
             display: flex;
             flex-direction: column;
-            align-items: flex-start; /* Выравниваем элементы по левому краю */
+            align-items: flex-start;
             width: 100%;
         }
         .legend-item {
             display: flex;
             align-items: center;
             margin: 3px 0;
-            font-size: 14px; /* Немного увеличим шрифт для читаемости */
+            font-size: 14px;
             width: 100%;
-            justify-content: flex-start; /* Выравниваем элементы по левому краю */
+            justify-content: flex-start;
         }
         .legend-label {
             flex-shrink: 1;
             word-wrap: break-word;
             white-space: normal;
-            max-width: none; /* Убираем ограничение на ширину текста */
+            max-width: none;
             text-align: left;
         }
         .legend-color {
             width: 14px;
             height: 14px;
-            margin-right: 8px; /* Увеличим отступ */
+            margin-right: 8px;
             display: inline-block;
             flex-shrink: 0;
         }
@@ -107,6 +107,41 @@
             font-weight: bold;
             color: #333;
         }
+
+        /* --- НОВЫЙ БЛОК: СТИЛИ ДЛЯ ПЕЧАТИ --- */
+        @media print {
+            /* Скрыть ненужные для печати элементы */
+            .language-buttons,
+            #footer-placeholder,
+            .count-box {
+                display: none !important;
+            }
+
+            /* Предотвратить разрыв блока с графиком между страницами */
+            .chart-box {
+                page-break-inside: avoid;
+                box-shadow: none !important; /* Убрать тени для печати */
+                border: 1px solid #ccc !important; /* Сделать рамку тоньше для печати */
+                width: 100% !important; /* Растянуть на всю ширину страницы */
+            }
+
+            /* Убедиться, что цвета графиков и легенды печатаются */
+            body, .chart-box, .legend-color {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact; /* Для совместимости с Chrome/Safari */
+            }
+
+            /* Установить белый фон для печати */
+            body, .u-group-1 .u-container-layout-1 {
+                background-color: #fff !important;
+            }
+            
+            section, .u-container-layout {
+                min-height: auto !important;
+            }
+        }
+        /* --- КОНЕЦ БЛОКА СТИЛЕЙ ДЛЯ ПЕЧАТИ --- */
+
     </style>
 </head>
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="fr" style="height:100%">
@@ -155,7 +190,6 @@
                     const totalResponses = data.totalResponses || 0;
                     document.getElementById('totalCountText').textContent = `${totalText[lang]}: ${totalResponses} (${languageLabel[lang]})`;
 
-                    // 1. Создаем все структуры диаграмм с нулевыми данными
                     data.formattedData.forEach(item => {
                         if (item.type === 'qcm' || item.type === 'echelle') {
                             createPieChart(item.question, item.responses, item.id);
@@ -166,24 +200,23 @@
                         }
                     });
 
-                    // 2. Агрегируем все ответы из базы данных
                     data.answers.forEach(item => {
                         const questionId = parseInt(item.question);
                         const chart = chartInstances[questionId];
                         if (!chart) return;
 
-                        if (item.response) { // Простой ответ (круговая диаграмма)
-                            const dataIndex = parseInt(item.response) - 1; // <--- ИСПРАВЛЕНИЕ: Преобразуем 1-based в 0-based
+                        if (item.response) {
+                            const dataIndex = parseInt(item.response) - 1;
                             if (chart.data.datasets[0].data[dataIndex] !== undefined) {
                                 chart.data.datasets[0].data[dataIndex]++;
                             }
-                        } else if (item.subresponse && item.subquestion) { // Сложный ответ (столбчатая диаграмма)
+                        } else if (item.subresponse && item.subquestion) {
                             const subResponses = item.subresponse.split(",").map(Number);
                             const subQuestions = item.subquestion.split(",").map(Number);
                             
                             subQuestions.forEach((subQuestionIndex, i) => {
-                                const responseIndex = subResponses[i] - 1; // <--- ИСПРАВЛЕНИЕ
-                                const questionIndex = subQuestionIndex - 1; // <--- ИСПРАВЛЕНИЕ
+                                const responseIndex = subResponses[i] - 1;
+                                const questionIndex = subQuestionIndex - 1;
                                 
                                 if (chart.data.datasets[responseIndex] && chart.data.datasets[responseIndex].data[questionIndex] !== undefined) {
                                     chart.data.datasets[responseIndex].data[questionIndex]++;
@@ -192,10 +225,9 @@
                         }
                     });
 
-                    // 3. Обновляем все диаграммы и их легенды в пользовательском интерфейсе один раз
                     Object.keys(chartInstances).forEach(chartId => {
                         const chart = chartInstances[chartId];
-                        chart.update(); // Визуальное обновление диаграммы
+                        chart.update();
 
                         const legendContainer = document.querySelector(`#chart_${chartId} + .legend-container`);
                         if (!legendContainer) return;
@@ -205,7 +237,6 @@
                             legendItems.forEach((legendItem, idx) => {
                                 const countSpan = legendItem.querySelector(".count");
                                 if (countSpan) {
-                                    // Используем правильный индекс `idx` для обновления счетчика
                                     countSpan.textContent = `(${chart.data.datasets[0].data[idx]})`;
                                 }
                             });
