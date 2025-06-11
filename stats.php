@@ -11,62 +11,56 @@
     <style>
         .chart-container {
             display: flex;
-            flex-direction: column; /* Располагаем графики вертикально */
-            align-items: center; /* Центрируем их по горизонтали */
-            gap: 30px; /* Увеличиваем отступ между графиками */
-            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
         }
         .chart-box {
-            width: 90%; /* Делаем блок с графиком шире */
-            max-width: 80em; /* Ограничиваем максимальную ширину для больших экранов */
+            width: 18em;
             height: auto;
             min-height: 20em;
             margin-bottom: 2em;
             display: flex;
             flex-direction: column;
             align-items: center;
-            border: 1px solid #ddd; /* Добавим рамку для наглядности */
-            border-radius: 8px;
-            padding: 15px;
         }
         .chart-box canvas {
-            max-height: 20em !important; /* Можно немного увеличить высоту самого графика */
+            max-height: 12em !important;
             width: 100% !important;
         }
         .legend-container {
-            margin-top: 15px; /* Увеличим отступ сверху */
-            text-align: left; /* Выравниваем текст в контейнере по левому краю */
+            margin-top: 5px;
+            text-align: center;
             display: flex;
             flex-direction: column;
-            align-items: flex-start; /* Выравниваем элементы по левому краю */
-            width: 100%;
+            align-items: center;
         }
         .legend-item {
             display: flex;
             align-items: center;
-            margin: 3px 0;
-            font-size: 14px; /* Немного увеличим шрифт для читаемости */
+            margin: 1px 0;
+            font-size: 12px;
             width: 100%;
-            justify-content: flex-start; /* Выравниваем элементы по левому краю */
+            justify-content: center;
+            text-align: center;
         }
         .legend-label {
-            flex-shrink: 1;
+            flex: 1;
             word-wrap: break-word;
             white-space: normal;
-            max-width: none; /* Убираем ограничение на ширину текста */
-            text-align: left;
+            max-width: 14em;
         }
         .legend-color {
-            width: 14px;
-            height: 14px;
-            margin-right: 8px; /* Увеличим отступ */
+            width: 12px;
+            height: 12px;
+            margin-right: 4px;
             display: inline-block;
             flex-shrink: 0;
         }
         .count {
-            margin-left: 8px;
+            margin-left: 4px;
             flex-shrink: 0;
-            font-weight: bold;
         }
         .language-buttons {
             text-align: center;
@@ -88,42 +82,42 @@
             background-color: #28a745;
         }
         .count-box {
-            background-color: #f8f9fa;
-            border: 2px solid #007bff;
-            border-radius: 10px;
-            padding: 10px 20px;
-            margin: 10px auto;
-            width: fit-content;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s ease;
-        }
+    background-color: #f8f9fa;
+    border: 2px solid #007bff;
+    border-radius: 10px;
+    padding: 10px 20px;
+    margin: 10px auto;
+    width: fit-content;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
 
-        .count-box:hover {
-            background-color: #e9ecef;
-        }
+.count-box:hover {
+    background-color: #e9ecef;
+}
 
-        #totalCountText {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-        }
+#totalCountText {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
     </style>
 </head>
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="fr" style="height:100%">
     <section id="sec-089e">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
-                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                    <div class="language-buttons">
-                        <button onclick="loadStats('fr')" class="lang-btn" data-lang="fr">Français</button>
-                        <button onclick="loadStats('de')" class="lang-btn" data-lang="de">Deutsch</button>
-                        <button onclick="loadStats('all')" class="lang-btn active" data-lang="all">All</button>
-                    </div>
-                    <div id="totalCount" class="count-box">
-                        <span id="totalCountText">Total responses: 0 (All)</span>
-                    </div>
-                    <div id="chartsContainer" class="chart-container"></div>
-                </div>
+<div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
+    <div class="language-buttons">
+        <button onclick="loadStats('fr')" class="lang-btn" data-lang="fr">Français</button>
+        <button onclick="loadStats('de')" class="lang-btn" data-lang="de">Deutsch</button>
+        <button onclick="loadStats('all')" class="lang-btn active" data-lang="all">All</button>
+    </div>
+    <div id="totalCount" class="count-box">
+        <span id="totalCountText">Total responses: 0 (All)</span>
+    </div>
+    <div id="chartsContainer" class="chart-container"></div>
+</div>
             </div>
         </div>
     </section>
@@ -149,6 +143,7 @@ function loadStats(lang) {
     fetch(`stats_getdata.php?lang=${lang}`)
         .then(response => response.json())
         .then(data => {
+            // Определение текста в зависимости от языка
             const totalText = {
                 'fr': 'Réponses totales',
                 'de': 'Gesamtanzahl der Antworten',
@@ -160,9 +155,11 @@ function loadStats(lang) {
                 'all': 'All'
             };
 
+            // Обновление счетчика общего количества ответов
             const totalResponses = data.totalResponses || 0;
             document.getElementById('totalCountText').textContent = `${totalText[lang]}: ${totalResponses} (${languageLabel[lang]})`;
 
+            // Создание графиков
             data.formattedData.forEach((item, index) => {
                 if (item.type === 'qcm' || item.type === 'echelle') {
                     createPieChart(item.question, item.responses, item.id);
@@ -214,9 +211,8 @@ function loadStats(lang) {
             let div = document.createElement("div");
             div.className = "chart-box";
             let questionLabel = document.createElement("div");
-            questionLabel.innerHTML = `<b>Question: ${question}</b>`;
+            questionLabel.innerHTML = `Question: ${question}`;
             questionLabel.style.textAlign = "center";
-            questionLabel.style.marginBottom = "10px";
             div.appendChild(questionLabel);
             let canvas = document.createElement("canvas");
             canvas.id = "chart_" + chartIndex;
@@ -225,9 +221,9 @@ function loadStats(lang) {
             const chart = new Chart(canvas, {
                 type: 'pie',
                 data: {
-                    labels: validResponses, // Убрал question из labels для Pie
+                    labels: [question, ...validResponses],
                     datasets: [{
-                        data: validResponses.map(() => 0), // Инициализируем нули для каждого ответа
+                        data: [0, ...validResponses.map(() => 0)],
                         backgroundColor: backgroundColors
                     }]
                 },
@@ -236,7 +232,7 @@ function loadStats(lang) {
                         tooltip: { enabled: true }
                     },
                     interaction: { mode: 'nearest' },
-                    responsive: true, // Включаем адаптивность
+                    responsive: false,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } }
                 }
@@ -249,16 +245,15 @@ function loadStats(lang) {
                 legendItem.className = "legend-item";
                 let colorBox = document.createElement("span");
                 colorBox.className = "legend-color";
-                colorBox.style.backgroundColor = backgroundColors[index]; // Корректный индекс цвета
+                colorBox.style.backgroundColor = backgroundColors[index + 1];
                 legendItem.appendChild(colorBox);
                 let label = document.createElement("span");
                 label.className = "legend-label";
-                label.textContent = response; // ИЗМЕНЕНИЕ: Убрано усечение текста
+                label.textContent = response.length > 20 ? response.slice(0, 20) + "..." : response;
                 legendItem.appendChild(label);
                 let countSpan = document.createElement("span");
                 countSpan.className = "count";
-                // Начинаем с (0), будем обновлять позже
-                countSpan.textContent = `(0)`;
+                countSpan.textContent = `(${chart.data.datasets[0].data[index + 1]})`;
                 legendItem.appendChild(countSpan);
                 legendContainer.appendChild(legendItem);
             });
@@ -269,19 +264,18 @@ function loadStats(lang) {
         function createStackedBarChart(subQuestions, responses, chartIndex, question) {
             const validResponses = responses.filter(response => response !== "null");
             let container = document.getElementById("chartsContainer");
-            let div = document.createElement("div");
-            div.className = "chart-box";
-            let questionLabel = document.createElement("div");
-            questionLabel.innerHTML = `<b>Question: ${question}</b>`;
-            questionLabel.style.textAlign = "center";
-            questionLabel.style.marginBottom = "10px";
-            div.appendChild(questionLabel);
             let canvas = document.createElement("canvas");
             canvas.id = "chart_" + chartIndex;
+            let div = document.createElement("div");
+            let questionLabel = document.createElement("div");
+            questionLabel.innerHTML = `Question: ${question}`;
+            questionLabel.style.textAlign = "center";
+            div.appendChild(questionLabel);
+            div.className = "chart-box";
             div.appendChild(canvas);
             container.appendChild(div);
             let datasets = responses.map((response, index) => ({
-                label: response, // ИЗМЕНЕНИЕ: Убрано усечение текста
+                label: response.slice(0, 32) + "...",
                 data: subQuestions.map(() => 0),
                 backgroundColor: `hsl(${index * 137.508}, 70%, 50%)`
             }));
@@ -314,7 +308,7 @@ function loadStats(lang) {
                 legendItem.appendChild(colorBox);
                 let label = document.createElement("span");
                 label.className = "legend-label";
-                label.textContent = response; // ИЗМЕНЕНИЕ: Убрано усечение текста
+                label.textContent = response.length > 20 ? response.slice(0, 20) + "..." : response;
                 legendItem.appendChild(label);
                 let countSpan = document.createElement("span");
                 countSpan.className = "count";
