@@ -130,83 +130,98 @@
 
     <script>
         const chartInstances = {};
-function loadStats(lang) {            
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.lang === lang) {
-            btn.classList.add('active');
-        }
-    });
 
-    const container = document.getElementById('chartsContainer');
-    container.innerHTML = '';
-
-    Object.keys(chartInstances).forEach(key => {
-        chartInstances[key].destroy();
-        delete chartInstances[key];
-    });
-
-    fetch(`stats_getdata.php?lang=${lang}`)
-        .then(response => response.json())
-        .then(data => {
-            const totalText = {
-                'fr': 'Réponses totales',
-                'de': 'Gesamtanzahl der Antworten',
-                'all': 'Total responses'
-            };
-            const languageLabel = {
-                'fr': 'Français',
-                'de': 'Deutsch',
-                'all': 'All'
-            };
-
-            const totalResponses = data.totalResponses || 0;
-            document.getElementById('totalCountText').textContent = `${totalText[lang]}: ${totalResponses} (${languageLabel[lang]})`;
-
-            data.formattedData.forEach((item, index) => {
-                if (item.type === 'qcm' || item.type === 'echelle') {
-                    createPieChart(item.question, item.responses, item.id);
-                } else if (item.type === 'mct') {
-                    createStackedBarChart(item.sub_questions, item.responses, item.id, item.question);
-                } else if (item.type === 'lien') {
-                    createStackedBarChart(item.sub_questions, item.sub_responses, item.id, item.question);
+        function loadStats(lang) {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.lang === lang) {
+                    btn.classList.add('active');
                 }
             });
 
-            data.answers.forEach((item, index) => {
-                let questionId = item.question;
-                let responseId = item.response;
-                let chart = chartInstances[parseInt(questionId)];
-                if (!responseId) {
-                    if (chart && item.subresponse && item.subquestion) {
-                        let newSubResponses = item.subresponse.split(",");
-                        let newSubQuestion = item.subquestion.split(",");
-                        let dataRep = newSubResponses.map(Number);
-                        let dataQuest = newSubQuestion.map(Number);
-                        dataQuest.forEach((questF, index) => {
-                            chart.data.datasets[dataRep[index] - 1].data[questF - 1]++;
-                        });
-                        chart.update();
-                        let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
-                        legendItems.forEach((item, idx) => {
-                            let total = chart.data.datasets[idx].data.reduce((sum, val) => sum + val, 0);
-                            let countSpan = item.querySelector(".count");
-                            countSpan.textContent = `(${total})`;
-                        });
-                    }
-                } else if (chart) {
-                    chart.data.datasets[0].data[responseId] += 1;
-                    chart.update();
-                    let legendItems = document.querySelectorAll(`#chart_${parseInt(questionId)} + .legend-container .legend-item`);
-                    legendItems.forEach((item, idx) => {
-                        let countSpan = item.querySelector(".count");
-                        countSpan.textContent = `(${chart.data.datasets[0].data[idx + 1]})`;
+            const container = document.getElementById('chartsContainer');
+            container.innerHTML = '';
+
+            Object.keys(chartInstances).forEach(key => {
+                chartInstances[key].destroy();
+                delete chartInstances[key];
+            });
+
+            fetch(`stats_getdata.php?lang=${lang}`)
+                .then(response => response.json())
+                .then(data => {
+                    const totalText = { 'fr': 'Réponses totales', 'de': 'Gesamtanzahl der Antworten', 'all': 'Total responses' };
+                    const languageLabel = { 'fr': 'Français', 'de': 'Deutsch', 'all': 'All' };
+                    const totalResponses = data.totalResponses || 0;
+                    document.getElementById('totalCountText').textContent = `${totalText[lang]}: ${totalResponses} (${languageLabel[lang]})`;
+
+                    // 1. Создаем все структуры диаграмм с нулевыми данными
+                    data.formattedData.forEach(item => {
+                        if (item.type === 'qcm' || item.type === 'echelle') {
+                            createPieChart(item.question, item.responses, item.id);
+                        } else if (item.type === 'mct') {
+                            createStackedBarChart(item.sub_questions, item.responses, item.id, item.question);
+                        } else if (item.type === 'lien') {
+                            createStackedBarChart(item.sub_questions, item.sub_responses, item.id, item.question);
+                        }
                     });
-                }
-            });
-        })
-        .catch(error => console.error('Error:', error));
-}
+
+                    // 2. Агрегируем все ответы из базы данных
+                    data.answers.forEach(item => {
+                        const questionId = parseInt(item.question);
+                        const chart = chartInstances[questionId];
+                        if (!chart) return;
+
+                        if (item.response) { // Простой ответ (круговая диаграмма)
+                            const dataIndex = parseInt(item.response) - 1; // <--- ИСПРАВЛЕНИЕ: Преобразуем 1-based в 0-based
+                            if (chart.data.datasets[0].data[dataIndex] !== undefined) {
+                                chart.data.datasets[0].data[dataIndex]++;
+                            }
+                        } else if (item.subresponse && item.subquestion) { // Сложный ответ (столбчатая диаграмма)
+                            const subResponses = item.subresponse.split(",").map(Number);
+                            const subQuestions = item.subquestion.split(",").map(Number);
+                            
+                            subQuestions.forEach((subQuestionIndex, i) => {
+                                const responseIndex = subResponses[i] - 1; // <--- ИСПРАВЛЕНИЕ
+                                const questionIndex = subQuestionIndex - 1; // <--- ИСПРАВЛЕНИЕ
+                                
+                                if (chart.data.datasets[responseIndex] && chart.data.datasets[responseIndex].data[questionIndex] !== undefined) {
+                                    chart.data.datasets[responseIndex].data[questionIndex]++;
+                                }
+                            });
+                        }
+                    });
+
+                    // 3. Обновляем все диаграммы и их легенды в пользовательском интерфейсе один раз
+                    Object.keys(chartInstances).forEach(chartId => {
+                        const chart = chartInstances[chartId];
+                        chart.update(); // Визуальное обновление диаграммы
+
+                        const legendContainer = document.querySelector(`#chart_${chartId} + .legend-container`);
+                        if (!legendContainer) return;
+                        const legendItems = legendContainer.querySelectorAll('.legend-item');
+
+                        if (chart.config.type === 'pie') {
+                            legendItems.forEach((legendItem, idx) => {
+                                const countSpan = legendItem.querySelector(".count");
+                                if (countSpan) {
+                                    // Используем правильный индекс `idx` для обновления счетчика
+                                    countSpan.textContent = `(${chart.data.datasets[0].data[idx]})`;
+                                }
+                            });
+                        } else if (chart.config.type === 'bar') {
+                            legendItems.forEach((legendItem, idx) => {
+                                const countSpan = legendItem.querySelector(".count");
+                                if (countSpan && chart.data.datasets[idx]) {
+                                    const total = chart.data.datasets[idx].data.reduce((sum, val) => sum + val, 0);
+                                    countSpan.textContent = `(${total})`;
+                                }
+                            });
+                        }
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        }
 
         function createPieChart(question, responses, chartIndex) {
             const validResponses = responses.filter(response => response !== "null");
@@ -221,24 +236,23 @@ function loadStats(lang) {
             let canvas = document.createElement("canvas");
             canvas.id = "chart_" + chartIndex;
             div.appendChild(canvas);
-            const backgroundColors = ["Blue", "#FF0080", "Yellow", "Orange", "Red"];
+            const backgroundColors = ["Blue", "#FF0080", "Yellow", "Orange", "Red", "Purple", "Green"];
             const chart = new Chart(canvas, {
                 type: 'pie',
                 data: {
-                    labels: validResponses, // Убрал question из labels для Pie
+                    labels: validResponses,
                     datasets: [{
-                        data: validResponses.map(() => 0), // Инициализируем нули для каждого ответа
+                        data: validResponses.map(() => 0),
                         backgroundColor: backgroundColors
                     }]
                 },
                 options: {
-                    plugins: {
-                        tooltip: { enabled: true }
-                    },
-                    interaction: { mode: 'nearest' },
-                    responsive: true, // Включаем адаптивность
+                    responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    }
                 }
             });
             chartInstances[chartIndex] = chart;
@@ -249,15 +263,14 @@ function loadStats(lang) {
                 legendItem.className = "legend-item";
                 let colorBox = document.createElement("span");
                 colorBox.className = "legend-color";
-                colorBox.style.backgroundColor = backgroundColors[index]; // Корректный индекс цвета
+                colorBox.style.backgroundColor = backgroundColors[index % backgroundColors.length];
                 legendItem.appendChild(colorBox);
                 let label = document.createElement("span");
                 label.className = "legend-label";
-                label.textContent = response; // ИЗМЕНЕНИЕ: Убрано усечение текста
+                label.textContent = response;
                 legendItem.appendChild(label);
                 let countSpan = document.createElement("span");
                 countSpan.className = "count";
-                // Начинаем с (0), будем обновлять позже
                 countSpan.textContent = `(0)`;
                 legendItem.appendChild(countSpan);
                 legendContainer.appendChild(legendItem);
@@ -267,7 +280,6 @@ function loadStats(lang) {
         }
 
         function createStackedBarChart(subQuestions, responses, chartIndex, question) {
-            const validResponses = responses.filter(response => response !== "null");
             let container = document.getElementById("chartsContainer");
             let div = document.createElement("div");
             div.className = "chart-box";
@@ -281,7 +293,7 @@ function loadStats(lang) {
             div.appendChild(canvas);
             container.appendChild(div);
             let datasets = responses.map((response, index) => ({
-                label: response, // ИЗМЕНЕНИЕ: Убрано усечение текста
+                label: response,
                 data: subQuestions.map(() => 0),
                 backgroundColor: `hsl(${index * 137.508}, 70%, 50%)`
             }));
@@ -292,11 +304,7 @@ function loadStats(lang) {
                     datasets: datasets
                 },
                 options: {
-                    scales: {
-                        x: { beginAtZero: true, stacked: true },
-                        y: { beginAtZero: true, stacked: true }
-                    },
-                    interaction: { mode: 'nearest' },
+                    scales: { x: { stacked: true }, y: { stacked: true } },
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } }
@@ -314,7 +322,7 @@ function loadStats(lang) {
                 legendItem.appendChild(colorBox);
                 let label = document.createElement("span");
                 label.className = "legend-label";
-                label.textContent = response; // ИЗМЕНЕНИЕ: Убрано усечение текста
+                label.textContent = response;
                 legendItem.appendChild(label);
                 let countSpan = document.createElement("span");
                 countSpan.className = "count";
