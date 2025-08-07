@@ -32,8 +32,8 @@
         }
         .chart-number {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            bottom: 10px; 
+            right: 10px;
             font-size: 16px;
             font-weight: bold;
             color: #333;
@@ -216,11 +216,11 @@
                         chartCounter++;
                         console.log(`Creating chart ${chartCounter} for question ID ${item.id}`);
                         if (item.type === 'qcm' || item.type === 'echelle') {
-                            createPieChart(item.question, item.responses, item.id);
+                            createPieChart(item.question, item.responses, item.id,chartCounter);
                         } else if (item.type === 'mct') {
-                            createStackedBarChart(item.sub_questions, item.responses, item.id, item.question);
+                            createStackedBarChart(item.sub_questions, item.responses, item.id, item.question,chartCounter);
                         } else if (item.type === 'lien') {
-                            createStackedBarChart(item.sub_questions, item.sub_responses, item.id, item.question);
+                            createStackedBarChart(item.sub_questions, item.sub_responses, item.id, item.question,chartCounter);
                         }
                     });
 
@@ -415,6 +415,7 @@
     </script>
 </body>
 </html>
+
 
 
 
