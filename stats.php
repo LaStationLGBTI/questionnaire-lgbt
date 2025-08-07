@@ -156,6 +156,11 @@
             section, .u-container-layout {
                 min-height: auto !important;
             }
+            
+            .chart-number {
+                color: #000 !important;
+                background-color: #fff !important;
+            }
         }
         /* --- КОНЕЦ БЛОКА СТИЛЕЙ ДЛЯ ПЕЧАТИ --- */
 
@@ -407,4 +412,5 @@
     </script>
 </body>
 </html>
+
 
