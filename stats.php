@@ -28,6 +28,23 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             padding: 15px;
+            position: relative;
+        }
+        .chart-number {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+        .chart-number {
+                color: #000 !important;
+                background-color: #fff !important;
         }
         .chart-box canvas {
             max-height: 20em !important;
@@ -165,7 +182,7 @@
 
     <script>
         const chartInstances = {};
-
+        let chartCounter = 0;
         function loadStats(lang) {
             document.querySelectorAll('.lang-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -176,7 +193,7 @@
 
             const container = document.getElementById('chartsContainer');
             container.innerHTML = '';
-
+            chartCounter = 0;
             Object.keys(chartInstances).forEach(key => {
                 chartInstances[key].destroy();
                 delete chartInstances[key];
@@ -191,6 +208,7 @@
                     document.getElementById('totalCountText').textContent = `${totalText[lang]}: ${totalResponses} (${languageLabel[lang]})`;
 
                     data.formattedData.forEach(item => {
+                        chartCounter++;
                         if (item.type === 'qcm' || item.type === 'echelle') {
                             createPieChart(item.question, item.responses, item.id);
                         } else if (item.type === 'mct') {
@@ -254,11 +272,15 @@
                 .catch(error => console.error('Error:', error));
         }
 
-        function createPieChart(question, responses, chartIndex) {
+        function createPieChart(question, responses, chartIndex, chartNumber) {
             const validResponses = responses.filter(response => response !== "null");
             let container = document.getElementById("chartsContainer");
             let div = document.createElement("div");
             div.className = "chart-box";
+            let numberLabel = document.createElement("div");
+            numberLabel.className = "chart-number";
+            numberLabel.textContent = chartNumber;
+            div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
             questionLabel.innerHTML = `<b>Question: ${question}</b>`;
             questionLabel.style.textAlign = "center";
@@ -310,10 +332,14 @@
             container.appendChild(div);
         }
 
-        function createStackedBarChart(subQuestions, responses, chartIndex, question) {
+        function createStackedBarChart(subQuestions, responses, chartIndex, question,chartNumber) {
             let container = document.getElementById("chartsContainer");
             let div = document.createElement("div");
             div.className = "chart-box";
+            let numberLabel = document.createElement("div");
+            numberLabel.className = "chart-number";
+            numberLabel.textContent = chartNumber;
+            div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
             questionLabel.innerHTML = `<b>Question: ${question}</b>`;
             questionLabel.style.textAlign = "center";
@@ -381,3 +407,4 @@
     </script>
 </body>
 </html>
+
