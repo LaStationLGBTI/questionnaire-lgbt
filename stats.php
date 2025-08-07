@@ -214,6 +214,7 @@
 
                     data.formattedData.forEach(item => {
                         chartCounter++;
+                        console.log(`Creating chart ${chartCounter} for question ID ${item.id}`);
                         if (item.type === 'qcm' || item.type === 'echelle') {
                             createPieChart(item.question, item.responses, item.id);
                         } else if (item.type === 'mct') {
@@ -284,7 +285,8 @@
             div.className = "chart-box";
             let numberLabel = document.createElement("div");
             numberLabel.className = "chart-number";
-            numberLabel.textContent = chartNumber;
+            numberLabel.textContent = chartNumber || "N/A"; // Убедимся, что chartNumber отображается
+            console.log(`Adding chart number: ${chartNumber} for chart_${chartIndex}`); // НОВОЕ: Отладочный вывод
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
             questionLabel.innerHTML = `<b>Question: ${question}</b>`;
@@ -343,7 +345,8 @@
             div.className = "chart-box";
             let numberLabel = document.createElement("div");
             numberLabel.className = "chart-number";
-            numberLabel.textContent = chartNumber;
+            numberLabel.textContent = chartNumber || "N/A"; // Убедимся, что chartNumber отображается
+            console.log(`Adding chart number: ${chartNumber} for chart_${chartIndex}`); // НОВОЕ: Отладочный вывод
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
             questionLabel.innerHTML = `<b>Question: ${question}</b>`;
@@ -412,5 +415,6 @@
     </script>
 </body>
 </html>
+
 
 
