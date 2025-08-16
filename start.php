@@ -10,7 +10,7 @@ $error_message = '';
 
 try {
     // Подключаемся к базе данных
-    $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname='GSDatabase';charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+    $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Получаем все уникальные уровни из таблицы вопросов (stationq1 для французской версии)
