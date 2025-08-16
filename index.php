@@ -1,93 +1,43 @@
-<!DOCTYPE html>
+
 <?php
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
+require_once 'conf.php';
 
-// Default language is French, can be changed via POST request
-if (!isset($_SESSION['language'])) {
-    $_SESSION['language'] = isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr']) ? $_POST['language'] : 'fr';
+// Если уровень не передан через GET и не установлен в сессии, перенаправляем на старт
+if (!isset($_GET['level']) && !isset($_SESSION['level'])) {
+    header('Location: start.php');
+    exit();
 }
 
-if (isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr'])) {
-    $_SESSION['language'] = $_POST['language'];
+// Если передан новый уровень, сохраняем его в сессию и сбрасываем прогресс
+if (isset($_GET['level'])) {
+    $_SESSION['level'] = $_GET['level'];
+    // Полный сброс прогресса для нового прохождения
+    unset($_SESSION['start'], $_SESSION['LastQuestion'], $_SESSION['finish'], $_SESSION['acc']);
 }
-$lang = $_SESSION['language'];
 
-// Language-specific text arrays
+$level = $_SESSION['level'];
+
+// Тексты для интерфейса на русском языке
 $texts = [
-    'fr' => [
-        'project_title' => 'Projet solidaire d’un élève du Collège international Vauban de Strasbourg, avec le soutien de la STATION, centre LGBTQIA+ de Strasbourg.',
-        'project_desc' => 'Un élève du Collège international Vauban à Strasbourg, a lancé un projet remarquable visant à sensibiliser ses camarades de classe aux questions LGBTQIA+. À travers une enquête en ligne qu’il a soigneusement conçue, il invite ses pairs à réfléchir sur des thématiques essentielles telles que l’identité de genre, l’orientation sexuelle et le respect de la diversité.',
-        'objectives' => 'Objectifs du projet :',
-        'awareness' => 'Sensibilisation : Encourager les élèves à mieux comprendre les réalités et les défis auxquels font face les personnes LGBTQIA+.',
-        'inclusion' => 'Inclusion : Promouvoir un climat scolaire respectueux, où chacun se sent accepté, peu importe son identité ou son orientation.',
-        'engagement' => 'Engagement citoyen : Montrer comment des actions concrètes peuvent contribuer à faire évoluer les mentalités et renforcer les valeurs de respect et de solidarité.',
-        'why_survey' => 'Pourquoi une enquête en ligne ?',
-        'survey_reason' => 'L’élève a choisi ce format interactif pour permettre à ses camarades de participer anonymement et de s’exprimer librement.',
-        'impact' => 'L’impact attendu :',
-        'impact_desc' => 'En impliquant ses pairs dans ce processus participatif, l’élève fait bien plus que sensibiliser : il agit comme un vecteur de changement en les encourageant à adopter des comportements inclusifs et à devenir eux-mêmes des ambassadeurs du respect.',
-        'project_note' => 'Ce projet, à la fois éducatif et solidaire, s’inscrit pleinement dans les valeurs portées par le Collège international Vauban et témoigne de l’engagement d’un élève inspirant pour construire un monde plus juste et tolérant.',
-        'warning_title' => 'Avertissement concernant le sondage',
-        'anonymity' => 'Anonymat garanti : Toutes vos réponses sont recueillies de manière anonyme. Aucune information personnelle ne sera associée à vos réponses.',
-        'voluntary' => 'Participation libre : La participation à ce sondage est entièrement facultative. Vous pouvez choisir de ne pas répondre à certaines questions si vous ne le souhaitez pas.',
-        'results' => 'Résultats disponibles : Si vous souhaitez recevoir un résumé des résultats une fois l’enquête terminée, vous pouvez laisser votre adresse e-mail à la fin du sondage. Cette étape est totalement optionnelle et ne compromet pas l’anonymat de vos réponses.',
-        'thanks' => 'Merci pour votre participation à ce projet qui contribue à sensibiliser et à promouvoir le respect et l’inclusion au sein de notre communauté scolaire.',
-        'continue' => 'Continuer',
-        'footer' => 'Conception de la page : R. (Hex) ; maître de stage : Gérald Schlemminger, (c) 2025 La STATION',
-        'final_warning' => 'Avertissement concernant la question finale',
-        'final_warning_desc' => 'Les dernières questions du sondage sont plus personnelles et portent sur ton identité de genre et ton orientation sexuelle. Nous comprenons que ces thématiques peuvent être perçues comme sensibles ou intrusives. Il n’y a aucune obligation de réponse : tu es libre de ne pas répondre à ces questions si tu ne te sens pas à l’aise. Cela n’affectera en rien ta participation au sondage.',
-        'gender_question' => 'Te reconnais-tu dans l’un des genres suivants ?',
-        'gender_prompt' => 'Sélectionne la description qui te convient',
-        'sexuality_question' => 'Te reconnais-tu dans l’une des orientations sexuelles suivantes ?',
-        'sexuality_prompt' => 'Sélectionne la description qui te convient',
-        'email_prompt' => 'Entre ton adresse email si tu souhaites recevoir les résultats de l’enquête.',
-        'submit' => 'Envoyer et terminer le questionnaire',
-        'thank_you' => 'Merci !',
-        'popup_title' => 'Définition',
-        'popup_prompt' => 'Choisissez une option dans la liste :',
-        'popup_close' => 'Close',
-        'corrections' => 'Corrections :',
-        'none' => 'Aucun',
-	'question_choise' => "CHOISIR"
-    ],
-    'de' => [
-        'project_title' => 'Solidarisches Projekt eines Schülers des Collège international Vauban in Straßburg, unterstützt von der STATION, dem LGBTQIA+-Zentrum in Straßburg.',
-        'project_desc' => 'Vorstellung des solidarischen Projekts: Ein Schüler des Collège international Vauban in Straßburg hat ein Projekt ins Leben gerufen, um seine Mitschüler/innen für LGBTQIA+-Themen zu sensibilisieren. Mit einer Online-Umfrage Online-Umfrage lädt Luc seine Altersgenossen ein, über wesentliche Themen wie Geschlechtsidentität, sexuelle Orientierung und Respekt vor Vielfalt nachzudenken.',
-        'objectives' => 'Ziele des Projekts:',
-        'awareness' => 'Sensibilisierung: Die Schüler/innen dazu ermutigen, die Realitäten und Herausforderungen von LGBTQIA+-Personen besser zu verstehen.',
-        'inclusion' => 'Inklusion: Förderung eines respektvollen Schulklima, in dem sich jede Person unabhängig von ihrer Identität oder Orientierung akzeptiert fühlt.',
-        'engagement' => 'Bürgerschaftliches Engagement: Zeigen, wie konkrete Maßnahmen dazu beitragen können, Einstellungen zu verändern und Werte wie Respekt und Solidarität zu stärken.',
-        'why_survey' => 'Warum eine Online-Umfrage?',
-        'survey_reason' => 'Luc hat dieses interaktive Format gewählt, um seinen Mitschüler/innen eine anonyme Teilnahme und freie Meinungsäußerung zu ermöglichen. Die Ergebnisse der Umfrage dienen als Grundlage für Klassendiskussionen, Sensibilisierungsworkshops oder Initiativen zur Verbesserung der Inklusion in der Schule.',
-        'impact' => 'Erwartete Wirkung:',
-        'impact_desc' => 'Durch die Einbindung seiner Mitschüler/innen in diesen partizipativen Prozess geht Luc weit über Sensibilisierung hinaus: Er wirkt als Katalysator für Veränderung, indem er sie dazu ermutigt, inklusive Verhaltensweisen anzunehmen und selbst zu Botschaftern für Respekt zu werden.',
-        'project_note' => 'Dieses sowohl pädagogische als auch solidarische Projekt steht ganz im Einklang mit den Werten des Collège international Vauban und zeigt das Engagement eines inspirierenden Schülers, eine gerechtere und tolerantere Welt zu schaffen.',
-        'warning_title' => 'Hinweis zur Umfrage',
-        'anonymity' => 'Garantierte Anonymität: Alle Ihre Antworten werden anonym erfasst. Es werden keine persönlichen Informationen mit Ihren Antworten verknüpft.',
-        'voluntary' => 'Freiwillige Teilnahme: Die Teilnahme an dieser Umfrage ist völlig freiwillig. Du kannst entscheiden, bestimmte Fragen nicht zu beantworten, wenn Sie Dudies nicht möchten.',
-        'results' => 'Verfügbare Ergebnisse: Wenn Sie du nach Abschluss der Umfrage eine Zusammenfassung der Ergebnisse erhalten möchtest, kannst du am Ende der Umfrage Ihre E-Mail-Adresse hinterlassen. Dieser Schritt ist völlig optional und beeinträchtigt nicht die Anonymität deiner Antworten.',
-        'thanks' => 'Vielen Dank für deine Teilnahme an diesem Projekt, das dazu beiträgt, das Bewusstsein zu schärfen und Respekt sowie Inklusion in unserer Schulgemeinschaft zu fördern.',
-        'continue' => 'Weiter',
-        'footer' => 'Seitengestaltung: R. (Hex); Praktikumsbetreuer: Gérald Schlemminger, (c) 2025 La STATION',
-        'final_warning' => 'Hinweis zur abschließenden Fragen',
-        'final_warning_desc' => 'Die letzten Fragen der Umfrage sind persönlicher Art und betreffen deine Geschlechtsidentität und deine sexuelle Orientierung. Wir verstehen, dass diese Themen als sensibel oder aufdringlich empfunden werden können. Es besteht keine Verpflichtung zu antworten: Du kannst frei entscheiden, diese Fragen nicht zu beantworten, wenn du dich unwohl fühlst. Dies hat keinen Einfluss auf deine Teilnahme an der Umfrage.',
-        'gender_question' => 'Erkennst du dich in einem der folgenden Geschlechter wieder?',
-        'gender_prompt' => 'Wähle die Beschreibung, die zu dir passt',
-        'sexuality_question' => 'Erkennst du dich in einer der folgenden sexuellen Orientierungen wieder?',
-        'sexuality_prompt' => 'Wähle die Beschreibung, die zu dir passt',
-        'email_prompt' => 'Gib deine E-Mail-Adresse ein, wenn du die Ergebnisse der Umfrage erhalten möchtest.',
-        'submit' => 'Absenden und die Umfrage beenden',
-        'thank_you' => 'Danke!',
-        'popup_title' => 'Definition',
-        'popup_prompt' => 'Wähle eine Option aus der Liste:',
-        'popup_close' => 'Schließen',
-        'corrections' => 'Korrekturen:',
-        'none' => 'Keine',
-	'question_choise' => "AUSWÄHLEN"
-    ]
+    'continue' => 'Продолжить',
+    'final_warning' => 'Заключительные вопросы',
+    'final_warning_desc' => 'Последние вопросы анкеты носят более личный характер и касаются вашей гендерной идентичности и сексуальной ориентации. Мы понимаем, что эти темы могут восприниматься как деликатные. Отвечать на них не обязательно: вы можете не отвечать на эти вопросы, если чувствуете себя некомфортно. Это никак не повлияет на ваше участие в опросе.',
+    'gender_question' => 'К какому гендеру вы себя относите?',
+    'gender_prompt' => 'Выберите подходящее описание',
+    'sexuality_question' => 'К какой сексуальной ориентации вы себя относите?',
+    'sexuality_prompt' => 'Выберите подходящее описание',
+    'email_prompt' => 'Введите ваш e-mail, если хотите получить результаты.',
+    'submit' => 'Отправить и завершить',
+    'thank_you' => 'Спасибо за участие!',
+    'redirect_message' => 'Вы будете перенаправлены на начальную страницу через 4 секунды.',
+    'redirect_link' => 'Нажмите здесь, если этого не произошло.',
+    'question' => 'Вопрос'
 ];
 ?>
 <?php require_once 'conf.php'; ?>
+<!DOCTYPE html>
 <html style="font-size: 16px;" lang="<?php echo $lang; ?>">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -684,3 +634,4 @@ $texts = [
     </script>
 </body>
 </html>
+
