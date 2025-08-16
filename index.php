@@ -742,8 +742,8 @@ if (!isset($_SESSION["start"])) {
     } catch (PDOException $e) {
         echo "Erreur connection: " . $e->getMessage();
     }
-    $table = $lang === 'de' ? 'stationq2' : 'stationq1';
-    $stmt = $conn->prepare("SELECT * FROM $table WHERE level = 101 ORDER BY `id` ASC");
+    $table = 'GSDatabase';
+    $stmt = $conn->prepare("SELECT * FROM `$table` WHERE level = ? ORDER BY RAND()");
     $stmt->execute();
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -1401,4 +1401,5 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
