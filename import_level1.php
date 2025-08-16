@@ -39,7 +39,7 @@ try {
 
     $rowCount = 0;
     // Читаем файл построчно
-    while (($data = fgetcsv($fileHandle)) !== false) {
+    while (($data = fgetcsv($fileHandle, 1000, ';')) !== false) {
         // Проверяем, что строка не пустая и содержит вопрос
         if (empty($data[1])) {
             continue;
