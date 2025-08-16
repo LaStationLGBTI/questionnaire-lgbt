@@ -1,20 +1,29 @@
-
 <?php
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 require_once 'conf.php';
 
-// Если уровень не передан через GET и не установлен в сессии, перенаправляем на старт
-if (!isset($_GET['level']) && !isset($_SESSION['level'])) {
-    header('Location: start.php');
+// Логика для старта и перезапуска анкеты
+if (isset($_GET['level'])) {
+    // Начинаем новую анкету, только если уровень в URL отличается от сохраненного в сессии
+    // или если сессия для анкеты еще не была начата.
+    if (!isset($_SESSION['level']) || $_SESSION['level'] != $_GET['level']) {
+        $_SESSION['level'] = $_GET['level'];
+        // Сбрасываем все переменные предыдущей анкеты
+        unset($_SESSION['start']);
+        unset($_SESSION['LastQuestion']);
+        unset($_SESSION['finish']);
+        unset($_SESSION['acc']);
+        unset($_SESSION['id_user']); // Также сбрасываем id пользователя
+    }
+
+    header('Location: index.php');
     exit();
 }
 
-// Если передан новый уровень, сохраняем его в сессию и сбрасываем прогресс
-if (isset($_GET['level'])) {
-    $_SESSION['level'] = $_GET['level'];
-    // Полный сброс прогресса для нового прохождения
-    unset($_SESSION['start'], $_SESSION['LastQuestion'], $_SESSION['finish'], $_SESSION['acc']);
+if (!isset($_SESSION['level'])) {
+    header('Location: start.php');
+    exit();
 }
 
 $level = $_SESSION['level'];
@@ -30,9 +39,7 @@ $texts = [
     'sexuality_prompt' => 'Выберите подходящее описание',
     'email_prompt' => 'Введите ваш e-mail, если хотите получить результаты.',
     'submit' => 'Отправить и завершить',
-    'thank_you' => 'Спасибо за участие!',
-    'redirect_message' => 'Вы будете перенаправлены на начальную страницу через 4 секунды.',
-    'redirect_link' => 'Нажмите здесь, если этого не произошло.',
+    'thank_you' => 'Спасибо!',
     'question' => 'Вопрос'
 ];
 ?>
@@ -366,66 +373,153 @@ $texts = [
         }
     </script>
 </head>
-<body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
+<body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="ru" style="height:100%">
     <?php
-    // If a level is selected and the session is not started, initialize the quiz
-    if (isset($_GET['level']) && !isset($_SESSION["start"])) {
-        try {
-            $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            $stmt = $conn->prepare("SELECT * FROM GSDatabase WHERE level = :level ORDER BY `id` ASC");
-            $stmt->bindParam(':level', $_GET['level'], PDO::PARAM_INT);
-            $stmt->execute();
-            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $totalQuestions = isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1;
+    $lastQuestion = isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0;
 
-            if ($results) {
-                $_SESSION["QuestionToUse"] = "Questions"; $_SESSION["Rep1"] = "Reponses1";
-                $_SESSION["Rep2"] = "Reponses2"; $_SESSION["Rep3"] = "Reponses3";
-                $_SESSION["Rep4"] = "Reponses4"; $_SESSION["Rep5"] = "Reponses5";
-                $_SESSION["IdInUse"] = "id"; $_SESSION["answer"] = "answer";
-                $_SESSION["qtype"] = "qtype";
+    // Если анкета завершена, показываем финальную форму
+    if ($lastQuestion > $totalQuestions && !isset($_POST["acc"]) && !isset($_SESSION["acc"])) { ?>
+    <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-final">
+        <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
+            <div class="u-container-layout u-container-layout-1">
+                <div class="u-clearfix u-sheet u-sheet-1">
+                    <p style="margin:0;" class="u-text u-text-default u-text-1">
+                        <i><b><?php echo $texts['final_warning']; ?></b><br>
+                        <?php echo $texts['final_warning_desc']; ?></i>
+                    </p><br><br>
+                    <form method="POST" action="index.php" class="u-clearfix u-form-spacing-32 u-inner-form" style="padding: 10px;">
+                        <div class="u-form-group u-form-name u-form-partition-factor-2">
+                            <h3 style="margin:0;"><?php echo $texts['gender_question']; ?></h3><br>
+                            <div style="display: flex; align-items: center; gap:10px;">
+                                <p style="margin:0;"><?php echo $texts['gender_prompt']; ?></p>
+                                <select style="margin:0; padding-left:0;" name="genre" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
+                                    <option value="1">Цисгендер</option>
+                                    <option value="2">Трансгендер</option>
+                                    <option value="3">Небинарный</option>
+                                    <option value="4">Гендерфлюид</option>
+                                    <option value="5">Интерсекс</option>
+                                    <option value="6">Ни один из вариантов</option>
+                                    <option value="7">Другое</option>
+                                    <option value="8">Предпочитаю не отвечать</option>
+                                </select>
+                            </div>
+                        </div><br><br>
+                        <div class="u-form-email u-form-group u-form-partition-factor-2">
+                            <h3 style="margin:0;"><?php echo $texts['sexuality_question']; ?></h3><br>
+                            <div style="display: flex; align-items: center; gap:10px;">
+                                <p style="margin:0;"><?php echo $texts['sexuality_prompt']; ?></p>
+                                <select style="margin:0; padding-left:0;" name="orient" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
+                                    <option value="1">Гетеросексуальность</option>
+                                    <option value="2">Гомосексуальность</option>
+                                    <option value="3">Бисексуальность</option>
+                                    <option value="4">Пансексуальность</option>
+                                    <option value="5">Асексуальность</option>
+                                    <option value="6">Ни один из вариантов</option>
+                                    <option value="7">Другое</option>
+                                    <option value="8">Предпочитаю не отвечать</option>
+                                </select>
+                            </div>
+                        </div><br><br>
+                        <div class="u-form-email u-form-group u-form-partition-factor-2">
+                            <label><?php echo $texts['email_prompt']; ?></label>
+                            <input name="e_mm" class="u-radius-50 u-text-hover-white">
+                        </div>
+                        <div class="u-align-right u-form-group u-form-submit">
+                            <button type="submit" name="acc" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
+                                <?php echo $texts['submit']; ?>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
 
-                foreach ($results as $row) {
-                    $_SESSION["QuestionToUse"] .= "__" . $row["question"];
-                    $_SESSION["Rep1"] .= "__" . $row["rep1"]; $_SESSION["Rep2"] .= "__" . $row["rep2"];
-                    $_SESSION["Rep3"] .= "__" . $row["rep3"]; $_SESSION["Rep4"] .= "__" . $row["rep4"];
-                    $_SESSION["Rep5"] .= "__" . $row["rep5"]; $_SESSION["IdInUse"] .= "__" . $row["id"];
-                    $_SESSION["answer"] .= "__" . $row["answer"]; $_SESSION["qtype"] .= "__" . $row["qtype"];
-                }
-                
-                $_SESSION["TotalQuestions"] = count($results);
-                $_SESSION["start"] = 1;
-                $_SESSION["LastQuestion"] = 1;
-
-            } else {
-                echo $lang === 'de' ? "Fehlende Daten für die gewählte Stufe. Bitte kontaktieren Sie 'La STATION'" : "Manque des données pour le niveau choisi. Veuillez contacter 'La STATION'";
-                exit();
-            }
-        } catch (PDOException $e) {
-            echo "Erreur connection: " . $e->getMessage();
-            exit();
+    <?php // Если финальная форма отправлена, показываем экран благодарности
+    } else if (isset($_POST["acc"]) || isset($_SESSION["acc"])) {
+        $_SESSION["acc"] = "1";
+        // Записываем данные из POST только один раз
+        if(isset($_POST['genre'])) {
+            $_SESSION["genre"] = htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8');
+            $_SESSION["orient"] = htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8');
+            $_SESSION["emailr"] = htmlspecialchars($_POST['e_mm'], ENT_QUOTES, 'UTF-8');
         }
-    }
-    
-    // Main quiz display logic
-    if (isset($_SESSION["start"]) && $_SESSION["LastQuestion"] <= $_SESSION["TotalQuestions"]) {
-        $currentQuestion = explode("__", $_SESSION["QuestionToUse"])[$_SESSION["LastQuestion"]];
+
+        if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
+            try {
+                $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail, lang = 'ru' WHERE id = :id";
+                $stmt = $conn->prepare($query);
+                $stmt->execute([
+                    'genre' => $_SESSION["genre"],
+                    'orientation' => $_SESSION["orient"],
+                    'repmail' => $_SESSION["emailr"],
+                    'id' => $_SESSION["id_user"]
+                ]);
+                unset($_SESSION["id_user"]); // Сбрасываем ID после использования
+            } catch (PDOException $e) { /* echo "Erreur connection: " . $e->getMessage(); */ }
+        }
+    ?>
+    <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-thankyou">
+        <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
+            <div class="u-container-layout u-container-layout-1">
+                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
+                    <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts['thank_you']; ?></p>
+                    <img src="images/drap.png" alt="" style="margin: auto;">
+                </div>
+            </div>
+        </div>
+    </section>
+    <script>localStorage.clear();</script>
+
+    <?php // Иначе, продолжаем анкету
+    } else {
+        // Инициализация анкеты, если она еще не начата
+        if (!isset($_SESSION["start"])) {
+            try {
+                $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                $stmt = $conn->prepare("SELECT * FROM GSDatabase WHERE level = :level ORDER BY `id` ASC");
+                $stmt->bindParam(':level', $level, PDO::PARAM_INT);
+                $stmt->execute();
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if ($results) {
+                    $_SESSION["QuestionToUse"] = "Questions"; $_SESSION["Rep1"] = "Reponses1"; $_SESSION["Rep2"] = "Reponses2";
+                    $_SESSION["Rep3"] = "Reponses3"; $_SESSION["Rep4"] = "Reponses4"; $_SESSION["Rep5"] = "Reponses5";
+                    $_SESSION["IdInUse"] = "id"; $_SESSION["answer"] = "answer"; $_SESSION["qtype"] = "qtype";
+                    foreach ($results as $row) {
+                        $_SESSION["QuestionToUse"] .= "__" . $row["question"];
+                        $_SESSION["Rep1"] .= "__" . $row["rep1"]; $_SESSION["Rep2"] .= "__" . $row["rep2"];
+                        $_SESSION["Rep3"] .= "__" . $row["rep3"]; $_SESSION["Rep4"] .= "__" . $row["rep4"];
+                        $_SESSION["Rep5"] .= "__" . $row["rep5"]; $_SESSION["IdInUse"] .= "__" . $row["id"];
+                        $_SESSION["answer"] .= "__" . $row["answer"]; $_SESSION["qtype"] .= "__" . $row["qtype"];
+                    }
+                    $_SESSION["TotalQuestions"] = count($results);
+                    $_SESSION["start"] = 1;
+                    $_SESSION["LastQuestion"] = 1;
+                } else {
+                    echo "Нет данных для выбранного уровня. Пожалуйста, свяжитесь с администратором.";
+                    exit();
+                }
+            } catch (PDOException $e) {
+                echo "Ошибка подключения: " . $e->getMessage(); exit();
+            }
+        }
     ?>
     <section style="height:auto;" class="u-align-center u-clearfix u-container-align-center u-palette-2-light-3 u-section-2" id="qcm">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
                 <h5 id="QuestionN" class="u-align-center" style="margin-top:1vh; margin-bottom:0;">
-                    Question <?php echo $_SESSION["LastQuestion"]; ?>
+                    Вопрос <?php echo $_SESSION["LastQuestion"]; ?>
                 </h5>
                 <button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4" style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next" onclick="updateQuestion(-1)">
-                    <?php echo $texts[$lang]['continue']; ?>
+                    <?php echo $texts['continue']; ?>
                 </button>
-                <b>
-                    <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9;">
-                        <?php echo htmlspecialchars($currentQuestion); ?>
-                    </p>
-                </b>
+                <b><p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9;"></p></b>
                 <div style="flex-direction: row; display: flex; justify-content: space-between; margin-top:1em; gap: 10px; width: 80%; margin: auto;" id="quest_list"></div>
             </div>
         </div>
@@ -434,102 +528,12 @@ $texts = [
         </div>
     </section>
     <?php
+        
         if (!isset($_SESSION["finish"])) {
             echo '<script type="text/javascript">startQuestion();</script>';
         }
-
-    // Final questions form
-    } else if (isset($_SESSION["start"]) && $_SESSION["LastQuestion"] > $_SESSION["TotalQuestions"] && !isset($_SESSION["acc"])) { ?>
-    <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
-        <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
-            <div class="u-container-layout u-container-layout-1">
-                <div class="u-clearfix u-sheet u-sheet-1">
-                    <p style="margin:0;" class="u-text u-text-default u-text-1">
-                        <i><b><?php echo $texts[$lang]['final_warning']; ?></b><br>
-                        <?php echo $texts[$lang]['final_warning_desc']; ?></i>
-                    </p><br><br>
-                    <form method="POST" class="u-clearfix u-form-spacing-32 u-inner-form" style="padding: 10px;">
-                        <div class="u-form-group u-form-name u-form-partition-factor-2">
-                            <h3 style="margin:0;"><?php echo $texts[$lang]['gender_question']; ?></h3><br>
-                            <div style="display: flex; align-items: center; gap:10px;">
-                                <p style="margin:0;"><?php echo $texts[$lang]['gender_prompt']; ?></p>
-                                <select style="margin:0; padding-left:0;" name="genre" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                    <option value="1"><?php echo $lang === 'de' ? 'Cisgender' : 'Cisgenre'; ?></option>
-                                    <option value="2"><?php echo $lang === 'de' ? 'Transgender' : 'Transgenre'; ?></option>
-                                    <option value="3"><?php echo $lang === 'de' ? 'Nicht-binär' : 'Non-binaire'; ?></option>
-                                    <option value="4"><?php echo $lang === 'de' ? 'Genderfluid' : 'Genre fluide'; ?></option>
-                                    <option value="5"><?php echo $lang === 'de' ? 'Intersex' : 'Intersexe'; ?></option>
-                                    <option value="6"><?php echo $lang === 'de' ? 'Keines' : 'Aucun'; ?></option>
-                                    <option value="7"><?php echo $lang === 'de' ? 'Andere' : 'Autre'; ?></option>
-                                    <option value="8" selected><?php echo $lang === 'de' ? 'Ich möchte nicht antworten.' : 'Je ne souhaite pas répondre.'; ?></option>
-                                </select>
-                            </div>
-                        </div><br><br>
-                        <div class="u-form-email u-form-group u-form-partition-factor-2">
-                             <h3 style="margin:0;"><?php echo $texts[$lang]['sexuality_question']; ?></h3><br>
-                             <div style="display: flex; align-items: center; gap:10px;">
-                                 <p style="margin:0;"><?php echo $texts[$lang]['sexuality_prompt']; ?></p>
-                                 <select style="margin:0; padding-left:0;" name="orient" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                     <option value="1"><?php echo $lang === 'de' ? 'Heterosexualität' : 'Hétérosexualité'; ?></option>
-                                     <option value="2"><?php echo $lang === 'de' ? 'Homosexualität' : 'Homosexualité'; ?></option>
-                                     <option value="3"><?php echo $lang === 'de' ? 'Bisexualität' : 'Bisexualité'; ?></option>
-                                     <option value="4"><?php echo $lang === 'de' ? 'Pansexualität' : 'Pansexualité'; ?></option>
-                                     <option value="5"><?php echo $lang === 'de' ? 'Asexualität' : 'Asexualité'; ?></option>
-                                     <option value="6"><?php echo $lang === 'de' ? 'Keines' : 'Aucun'; ?></option>
-                                     <option value="7"><?php echo $lang === 'de' ? 'Andere' : 'Autre'; ?></option>
-                                     <option value="8" selected><?php echo $lang === 'de' ? 'Ich möchte nicht antworten.' : 'Je ne souhaite pas répondre.'; ?></option>
-                                 </select>
-                             </div>
-                        </div><br><br>
-                        <div class="u-form-email u-form-group u-form-partition-factor-2">
-                            <label><?php echo $texts[$lang]['email_prompt']; ?></label>
-                            <input name="e_mm" class="u-radius-50 u-text-hover-white">
-                        </div>
-                        <div class="u-align-right u-form-group u-form-submit">
-                             <button type="submit" name="acc" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
-                                 <?php echo $texts[$lang]['submit']; ?>
-                             </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <?php // Thank you page and data submission
-    } else if (isset($_SESSION["start"]) && (isset($_POST["acc"]) || isset($_SESSION["acc"]))) {
-        if (!isset($_SESSION['acc'])) {
-            $_SESSION["acc"] = "1";
-            $_SESSION["genre"] = isset($_POST['genre']) ? htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8') : '';
-            $_SESSION["orient"] = isset($_POST['orient']) ? htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8') : '';
-            $_SESSION["emailr"] = isset($_POST['e_mm']) ? htmlspecialchars($_POST['e_mm'], ENT_QUOTES, 'UTF-8') : '';
-
-            if (isset($_SESSION["id_user"])) {
-                try {
-                    $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-                    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                    $query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail, lang = :lang WHERE id = :id";
-                    $stmt = $conn->prepare($query);
-                    $stmt->execute([
-                        'genre' => $_SESSION["genre"], 'orientation' => $_SESSION["orient"],
-                        'repmail' => $_SESSION["emailr"], 'lang' => $_SESSION["language"],
-                        'id' => $_SESSION["id_user"]
-                    ]);
-                    unset($_SESSION["id_user"]);
-                } catch (PDOException $e) { /* Handle error silently or log it */ }
-            }
-        }
+    }
     ?>
-    <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-final">
-        <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
-            <div class="u-container-layout u-container-layout-1">
-                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                    <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
-                    <img src="images/drap.png" alt="" style="margin: auto;">
-                </div>
-            </div>
-        </div>
-    </section>
     <script>localStorage.clear();</script>
     <?php } else {
         // Fallback if no level is selected or session is invalid, redirect to start
@@ -634,4 +638,5 @@ $texts = [
     </script>
 </body>
 </html>
+
 
