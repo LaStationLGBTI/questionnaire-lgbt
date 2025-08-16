@@ -83,8 +83,7 @@ if(!isset($_SESSION["emailr"]))
 {
 	$_SESSION["emailr"] = "null";
 }
-$conn->prepare("INSERT INTO stationr2 (ip, genre, orientation, reponse, repmail, lang) VALUES (?,?,?,?,?,?)")->execute([$_SERVER['REMOTE_ADDR'], $_SESSION["genre"], $_SESSION["orient"], $_SESSION['reponses'], $_SESSION["emailr"], $_SESSION["language"]]);
-	$_SESSION["LastQuestion"] += 1;
+$conn->prepare("INSERT INTO GSDatabaseR (ip, genre, orientation, reponse, repmail, lang) VALUES (?,?,?,?,?,?)")->execute([$_SERVER['REMOTE_ADDR'], $_SESSION["genre"], $_SESSION["orient"], $_SESSION['reponses'], $_SESSION["emailr"], $_SESSION["language"]]);	$_SESSION["LastQuestion"] += 1;
 	$_SESSION["id_user"] = $conn->lastInsertId();
 	$_SESSION["finish"] = 1;
 	}
