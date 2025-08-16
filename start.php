@@ -15,7 +15,7 @@ try {
 
     // Получаем все уникальные уровни из таблицы вопросов (stationq1 для французской версии)
     // Уровни будут отсортированы по возрастанию
-    $stmt = $pdo->query("SELECT DISTINCT level FROM stationq1 ORDER BY level ASC");
+    $stmt = $pdo->query("SELECT DISTINCT level FROM GSDatabase ORDER BY level ASC");
     $levels = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 } catch (PDOException $e) {
