@@ -16,11 +16,14 @@ if (isset($_GET['level'])) {
         unset($_SESSION['acc']);
         unset($_SESSION['id_user']); // Также сбрасываем id пользователя
     }
-
+    // Перенаправляем на ту же страницу без параметра 'level' в URL,
+    // чтобы избежать сброса при обновлении страницы.
     header('Location: index.php');
     exit();
 }
 
+// Если уровень в сессии не установлен (например, прямой заход на index.php),
+// отправляем на страницу выбора анкеты.
 if (!isset($_SESSION['level'])) {
     header('Location: start.php');
     exit();
@@ -40,7 +43,13 @@ $texts = [
     'email_prompt' => 'Введите ваш e-mail, если хотите получить результаты.',
     'submit' => 'Отправить и завершить',
     'thank_you' => 'Спасибо!',
-    'question' => 'Вопрос'
+    'question' => 'Вопрос',
+    'corrections' => 'Соответствия:',
+    'none' => 'Нет',
+    'popup_title' => 'Определение',
+    'popup_prompt' => 'Выберите вариант из списка:',
+    'popup_close' => 'Закрыть',
+    'question_choise' => 'ВЫБРАТЬ'
 ];
 ?>
 <?php require_once 'conf.php'; ?>
@@ -622,6 +631,7 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
 
