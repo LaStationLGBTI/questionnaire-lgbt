@@ -374,12 +374,13 @@ $texts = [
     </script>
 </head>
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="ru" style="height:100%">
+
     <?php
     $totalQuestions = isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1;
     $lastQuestion = isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0;
 
-    // Если анкета завершена, показываем финальную форму
-    if ($lastQuestion > $totalQuestions && !isset($_POST["acc"]) && !isset($_SESSION["acc"])) { ?>
+    // --- БЛОК 1: ПОКАЗ ФИНАЛЬНОЙ ФОРМЫ ---
+    if ($lastQuestion > $totalQuestions && !isset($_SESSION["acc"])) { ?>
     <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-final">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
@@ -389,44 +390,34 @@ $texts = [
                         <?php echo $texts['final_warning_desc']; ?></i>
                     </p><br><br>
                     <form method="POST" action="index.php" class="u-clearfix u-form-spacing-32 u-inner-form" style="padding: 10px;">
-                        <div class="u-form-group u-form-name u-form-partition-factor-2">
+                        <div class="u-form-group">
                             <h3 style="margin:0;"><?php echo $texts['gender_question']; ?></h3><br>
                             <div style="display: flex; align-items: center; gap:10px;">
                                 <p style="margin:0;"><?php echo $texts['gender_prompt']; ?></p>
                                 <select style="margin:0; padding-left:0;" name="genre" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                    <option value="1">Цисгендер</option>
-                                    <option value="2">Трансгендер</option>
-                                    <option value="3">Небинарный</option>
-                                    <option value="4">Гендерфлюид</option>
-                                    <option value="5">Интерсекс</option>
-                                    <option value="6">Ни один из вариантов</option>
-                                    <option value="7">Другое</option>
-                                    <option value="8">Предпочитаю не отвечать</option>
+                                    <option value="1">Цисгендер</option> <option value="2">Трансгендер</option> <option value="3">Небинарный</option>
+                                    <option value="4">Гендерфлюид</option> <option value="5">Интерсекс</option> <option value="6">Ни один из вариантов</option>
+                                    <option value="7">Другое</option> <option value="8">Предпочитаю не отвечать</option>
                                 </select>
                             </div>
                         </div><br><br>
-                        <div class="u-form-email u-form-group u-form-partition-factor-2">
+                        <div class="u-form-group">
                             <h3 style="margin:0;"><?php echo $texts['sexuality_question']; ?></h3><br>
                             <div style="display: flex; align-items: center; gap:10px;">
                                 <p style="margin:0;"><?php echo $texts['sexuality_prompt']; ?></p>
                                 <select style="margin:0; padding-left:0;" name="orient" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                    <option value="1">Гетеросексуальность</option>
-                                    <option value="2">Гомосексуальность</option>
-                                    <option value="3">Бисексуальность</option>
-                                    <option value="4">Пансексуальность</option>
-                                    <option value="5">Асексуальность</option>
-                                    <option value="6">Ни один из вариантов</option>
-                                    <option value="7">Другое</option>
-                                    <option value="8">Предпочитаю не отвечать</option>
+                                    <option value="1">Гетеросексуальность</option> <option value="2">Гомосексуальность</option> <option value="3">Бисексуальность</option>
+                                    <option value="4">Пансексуальность</option> <option value="5">Асексуальность</option> <option value="6">Ни один из вариантов</option>
+                                    <option value="7">Другое</option> <option value="8">Предпочитаю не отвечать</option>
                                 </select>
                             </div>
                         </div><br><br>
-                        <div class="u-form-email u-form-group u-form-partition-factor-2">
+                        <div class="u-form-group">
                             <label><?php echo $texts['email_prompt']; ?></label>
                             <input name="e_mm" class="u-radius-50 u-text-hover-white">
                         </div>
                         <div class="u-align-right u-form-group u-form-submit">
-                            <button type="submit" name="acc" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
+                            <button type="submit" name="acc" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50">
                                 <?php echo $texts['submit']; ?>
                             </button>
                         </div>
@@ -436,30 +427,24 @@ $texts = [
         </div>
     </section>
 
-    <?php // Если финальная форма отправлена, показываем экран благодарности
-    } else if (isset($_POST["acc"]) || isset($_SESSION["acc"])) {
-        $_SESSION["acc"] = "1";
-        // Записываем данные из POST только один раз
-        if(isset($_POST['genre'])) {
-            $_SESSION["genre"] = htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8');
-            $_SESSION["orient"] = htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8');
-            $_SESSION["emailr"] = htmlspecialchars($_POST['e_mm'], ENT_QUOTES, 'UTF-8');
-        }
+    <?php // --- БЛОК 2: ПОКАЗ СТРАНИЦЫ "СПАСИБО" ---
+   } else if (isset($_POST["acc"]) || isset($_SESSION["acc"])) {
+        if (!isset($_SESSION["acc"])) { // Обрабатываем данные формы только один раз
+            $_SESSION["acc"] = "1";
+            $_SESSION["genre"] = htmlspecialchars($_POST['genre'] ?? '', ENT_QUOTES, 'UTF-8');
+            $_SESSION["orient"] = htmlspecialchars($_POST['orient'] ?? '', ENT_QUOTES, 'UTF-8');
+            $_SESSION["emailr"] = htmlspecialchars($_POST['e_mm'] ?? '', ENT_QUOTES, 'UTF-8');
 
-        if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
-            try {
-                $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                $query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail, lang = 'ru' WHERE id = :id";
-                $stmt = $conn->prepare($query);
-                $stmt->execute([
-                    'genre' => $_SESSION["genre"],
-                    'orientation' => $_SESSION["orient"],
-                    'repmail' => $_SESSION["emailr"],
-                    'id' => $_SESSION["id_user"]
-                ]);
-                unset($_SESSION["id_user"]); // Сбрасываем ID после использования
-            } catch (PDOException $e) { /* echo "Erreur connection: " . $e->getMessage(); */ }
+            if (isset($_SESSION["id_user"])) {
+                try {
+                    $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+                    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    $query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail, lang = 'ru' WHERE id = :id";
+                    $stmt = $conn->prepare($query);
+                    $stmt->execute(['genre' => $_SESSION["genre"], 'orientation' => $_SESSION["orient"], 'repmail' => $_SESSION["emailr"], 'id' => $_SESSION["id_user"]]);
+                    unset($_SESSION["id_user"]);
+                } catch (PDOException $e) { /* Игнорируем ошибку */ }
+            }
         }
     ?>
     <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-thankyou">
@@ -467,16 +452,15 @@ $texts = [
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
                     <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts['thank_you']; ?></p>
-                    <img src="images/drap.png" alt="" style="margin: auto;">
+                    <img src="images/drap.png" alt="Флаг" style="margin: auto;">
                 </div>
             </div>
         </div>
     </section>
     <script>localStorage.clear();</script>
 
-    <?php // Иначе, продолжаем анкету
+    <?php // --- БЛОК 3: ПОКАЗ АНКЕТЫ ---
     } else {
-        // Инициализация анкеты, если она еще не начата
         if (!isset($_SESSION["start"])) {
             try {
                 $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
@@ -638,5 +622,6 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
