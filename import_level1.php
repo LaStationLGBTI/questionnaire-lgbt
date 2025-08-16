@@ -3,7 +3,7 @@
 require_once 'conf.php';
 
 // --- НАСТРОЙКИ ---
-$csvFilePath = 'MODULE 01 v02.xlsx - Tableau EXCEL QCM v01.csv';
+$csvFilePath = 'MODULE 01 v02.csv';
 $targetTable = 'GSDatabase';
 
 // --- ПАРАМЕТРЫ ДЛЯ ЗАПИСИ В БД ---
