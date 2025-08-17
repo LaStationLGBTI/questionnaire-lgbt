@@ -1,25 +1,25 @@
 <?php
-// Всегда начинаем новую сессию и очищаем старую при выборе анкеты
+// Always start a new session and clear the old one when choosing a questionnaire
 session_start();
 session_unset();
 
-require_once 'conf.php'; // Подключаем конфигурацию БД
+require_once 'conf.php'; // Include DB configuration
 
 $levels = [];
 $error_message = '';
 
 try {
-    // Подключаемся к базе данных
+    // Connect to the database
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Получаем все уникальные уровни из таблицы вопросов (stationq1 для французской версии)
-    // Уровни будут отсортированы по возрастанию
+    // Get all unique levels from the question table
+    // The levels will be sorted in ascending order
     $stmt = $pdo->query("SELECT DISTINCT level FROM GSDatabase ORDER BY level ASC");
     $levels = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 } catch (PDOException $e) {
-    $error_message = "Ошибка подключения к базе данных: " . $e->getMessage();
+    $error_message = "Database connection error: " . $e->getMessage();
 }
 ?>
 <!DOCTYPE html>
@@ -27,7 +27,7 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Выбор анкеты</title>
+    <title>Выберите анкету</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
