@@ -2,6 +2,13 @@
 <?php 
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
+if (isset($_GET['level'])) {
+    $new_level = $_GET['level'];
+    $lang_to_preserve = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
+    session_unset();
+    $_SESSION['level'] = $new_level;
+    $_SESSION['language'] = $lang_to_preserve; 
+}
 if (!isset($_SESSION['language'])) {
     $_SESSION['language'] = isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr']) ? $_POST['language'] : 'fr';
 }
@@ -105,44 +112,6 @@ $lang = $_SESSION['language'];
     <link rel="stylesheet" href="nicepage.css" media="screen">
     <link rel="stylesheet" href="Question.css" media="screen">
     <style>
-		.level-selection-container {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-        }
-        .level-selection-box {
-            background-color: #ffffff;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            width: 90%;
-        }
-        .level-selection-box h1 {
-            color: #333;
-            margin-bottom: 30px;
-        }
-        .level-list a {
-            display: block;
-            background-color: #007bff;
-            color: white;
-            padding: 15px 20px;
-            margin: 10px 0;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 1.1em;
-            font-weight: bold;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-        .level-list a:hover {
-            background-color: #0056b3;
-            transform: translateY(-2px);
-        }
         .error { color: #dc3545; }
         .u-align-center {
             transition: background-color 3s ease;
@@ -725,9 +694,8 @@ for (let i = 0; i < data1.length; i++) {
     <?php
 if (!isset($_SESSION['level'])) {
     
-    // Сбрасываем сессию для чистого старта
+    
     session_unset();
-
     $levels = [];
     $error_message = '';
 
@@ -740,24 +708,35 @@ if (!isset($_SESSION['level'])) {
         $error_message = "Ошибка подключения к БД: " . $e->getMessage();
     }
 ?>
-    <div class="level-selection-container">
-        <div class="level-selection-box">
-            <h1><?php echo $texts[$lang]['choose_questionnaire']; ?></h1>
-            <?php if ($error_message): ?>
-                <p class="error"><?= htmlspecialchars($error_message) ?></p>
-            <?php elseif (empty($levels)): ?>
-                <p><?= $texts[$lang]['no_questionnaires_available'] ?></p>
-            <?php else: ?>
-                <div class="level-list">
-                    <?php foreach ($levels as $level): ?>
-                        <a href="index.php?level=<?= htmlspecialchars($level) ?>">
-                           <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']) ?>
-                        </a>
-                    <?php endforeach; ?>
+    <section class="u-clearfix u-valign-middle u-section-1" id="sec-level-selection">
+        <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
+            <div class="u-container-layout u-container-layout-1">
+                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
+                    
+                    <h2 class="u-align-center u-text u-text-default u-text-1">
+                        <b><?php echo $texts[$lang]['choose_questionnaire']; ?></b>
+                    </h2>
+                    
+                    <?php if ($error_message): ?>
+                        <p class="error u-text"><?= htmlspecialchars($error_message) ?></p>
+                    <?php elseif (empty($levels)): ?>
+                        <p class="u-text"><?= $texts[$lang]['no_questionnaires_available'] ?></p>
+                    <?php else: ?>
+                        <div style="margin-top: 2em; padding-bottom: 2em;">
+                            <?php foreach ($levels as $level): ?>
+                                <a href="index.php?level=<?= htmlspecialchars($level) ?>" 
+                                   class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1"
+                                   style="display: block; width: 80%; max-width: 400px; margin: 15px auto;">
+                                   <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
                 </div>
-            <?php endif; ?>
+            </div>
         </div>
-    </div>
+    </section>
 <?php
     } else if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
 <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
@@ -793,7 +772,7 @@ if (!isset($_SESSION['level'])) {
                 </p>
 
 <div class="language-selector">
-    <span style="align-self: center;">Collège Vauban</span>
+    <span style="align-self: center;">Français</span>
     <form method="POST" style="display: inline;">
         <input type="hidden" name="language" value="fr">
         <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
@@ -802,7 +781,7 @@ if (!isset($_SESSION['level'])) {
         <input type="hidden" name="language" value="de">
         <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
     </form>
-    <span style="align-self: center;">Schule Potsdam</span>
+    <span style="align-self: center;">Deutsch</span>
 </div>
 
                 <form method="POST" action="">
@@ -986,20 +965,21 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
     ]);
     unset($_SESSION["id_user"]);
 }
-        ?>
-        <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
-            <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
-                <div class="u-container-layout u-container-layout-1">
-                    <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                        <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
-                        <img src="images/drap.png" alt="" style="margin: auto;">
-						                    <a href="start.php" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
+?>
+    <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
+        <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
+            <div class="u-container-layout u-container-layout-1">
+                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
+                    <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
+                    <img src="images/drap.png" alt="" style="margin: 1em auto;">
+                    
+                    <a href="index.php" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
                         <?php echo $texts[$lang]['return_to_start']; ?>
                     </a>
-                    </div>
                 </div>
             </div>
-        </section>
+        </div>
+    </section>
         <script>
             localStorage.clear();
         </script>
@@ -1498,6 +1478,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
