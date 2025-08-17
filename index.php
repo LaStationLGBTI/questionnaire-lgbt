@@ -1185,8 +1185,8 @@ if(isset($_SESSION['reponses'])){
 						
 						else {
 							timeout = true;
-							if (response[9] === "qcm" || response[9] === "echelle") {
-								cd = 3000; // Устанавливаем задержку в 3 секунды
+							if (response[9] === "qcm") {
+								cd = 3000; 
 							}
 							answersarray.forEach(function (item, index) {
 								const innerAnswers = item.querySelector('div#question_container');
@@ -1618,6 +1618,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
