@@ -213,7 +213,7 @@
             numberLabel.textContent = chartNumber; // Номер графика
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
-            questionLabel.innerHTML = `<b>Вопрос: ${question}</b>`;
+            questionLabel.innerHTML = `<b>Question: ${question}</b>`;
             questionLabel.style.textAlign = "center";
             questionLabel.style.marginBottom = "10px";
             div.appendChild(questionLabel);
@@ -338,3 +338,4 @@
     </script>
 </body>
 </html>
+
