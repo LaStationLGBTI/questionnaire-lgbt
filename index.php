@@ -813,7 +813,7 @@ if (!isset($_SESSION["start"])) {
         echo "Erreur connection: " . $e->getMessage();
     }
     $table = $lang === 'de' ? 'GSDatabase' : 'GSDatabase';
-    $stmt = $conn->prepare("SELECT * FROM $table WHERE level = ? ORDER BY `id` ASC");
+    $stmt = $conn->prepare("SELECT * FROM $table WHERE level = ? ORDER BY `id` ASC LIMIT 3");
     $stmt->execute([$_SESSION['level']]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if ($_SESSION['level'] != 1 && count($results) > 20) {
@@ -1601,6 +1601,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
