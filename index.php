@@ -969,6 +969,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
         'id' => $_SESSION["id_user"]
     ]);
     unset($_SESSION["id_user"]);
+}
 $questions = explode('__', $_SESSION["QuestionToUse"]);
 $ids_in_use = explode('__', $_SESSION["IdInUse"]);
 $rep1s = explode('__', $_SESSION["Rep1"]);
@@ -1600,6 +1601,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
