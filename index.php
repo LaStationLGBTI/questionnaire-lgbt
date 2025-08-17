@@ -384,8 +384,8 @@ $texts = [
     $totalQuestions = $_SESSION["TotalQuestions"] ?? 1;
     $lastQuestion = $_SESSION["LastQuestion"] ?? 0;
 
-    if ($lastQuestion > $totalQuestions && !isset($_SESSION["acc"])) { ?>
-   <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-final">
+if ($lastQuestion > $totalQuestions && !isset($_SESSION["acc"]) && !isset($_POST["acc"])) { ?>
+     <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-final">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1">
@@ -626,6 +626,7 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
 
