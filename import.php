@@ -54,13 +54,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+$delimiter = ';'; // По умолчанию
+                    if (($handle = fopen($file_tmp_path, 'r')) !== FALSE) {
+                        $first_line = fgets($handle); // Читаем первую строку (заголовок)
+                        fclose($handle);
+                        if (substr_count($first_line, ',') > substr_count($first_line, ';')) {
+                            $delimiter = ',';
+                        }
+                    }
+
+                    // 2. Проверка на существующий уровень с правильным разделителем
                     $level_to_check = null;
                     if (($handle = fopen($file_tmp_path, 'r')) !== FALSE) {
-                        fgetcsv($handle, 1000, ";");
-                        if (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
-                           if(isset($data[10])) {
+                        fgetcsv($handle, 1000, $delimiter); // Пропускаем заголовок
+                        
+                        // Ищем первую непустую строку с данными
+                        while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
+                            if (count($data) < 2 && empty($data[0])) continue; // Пропускаем пустые строки
+                            
+                            if(isset($data[10])) {
                                $level_to_check = trim($data[10]);
-                           }
+                            }
+                            break; // Выходим после первой найденной строки
                         }
                         fclose($handle);
                     }
