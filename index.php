@@ -38,7 +38,7 @@ $texts = [
 		'choose_questionnaire' => 'Choisissez un questionnaire',
         'questionnaire_level' => 'Passer l\'enquête (Niveau {level})',
         'no_questionnaires_available' => 'Aucun questionnaire disponible.',
-        'project_title' => 'Sensibilisation aux violences exuelles et sexistes et autres discriminations (Formation en ligne et en auto-évaluation)',
+        'project_title' => 'Sensibilisation aux violences sexuelles et sexistes et autres discriminations (Formation en ligne et en auto-évaluation)',
         'project_desc' => '',
         'objectives' => 'Objectifs du projet :',
         'awareness' => 'Sensibilisation : Encourager les élèves à mieux comprendre les réalités et les défis auxquels font face les personnes LGBTQIA+.',
@@ -997,37 +997,33 @@ if(isset($_SESSION['reponses'])){
 
 <style>
     .results-table {
-        width: 90%;
-        margin: 2em auto;
-        border-collapse: collapse;
-        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-        background-color: white;
+        width: 90%; margin: 1em auto; border-collapse: collapse;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1); background-color: white;
     }
     .results-table th, .results-table td {
-        padding: 12px 15px;
-        border: 1px solid #ddd;
-        text-align: left;
+        padding: 12px 15px; border: 1px solid #ddd; text-align: left;
     }
     .results-table th {
-        background-color: #4f6d7a;
-        color: white;
-        font-weight: bold;
+        background-color: #4f6d7a; color: white; font-weight: bold;
     }
-    .results-table tr:nth-of-type(even) {
-        background-color: #f8f8f8;
+    .results-table tr:nth-of-type(even) { background-color: #f8f8f8; }
+    .results-table .question-column { width: 35%; font-weight: bold; }
+    
+    .legend { text-align: left; width: 90%; margin: 1em auto; padding: 10px; background-color: #f0f0f0; border-radius: 8px; font-size: 0.9em; }
+    .legend-item { display: inline-flex; align-items: center; margin-right: 20px; }
+    .legend-color-box { width: 20px; height: 20px; border: 1px solid #ccc; margin-right: 8px; }
+
+    .user-answer-color { background-color: #a0c4ff; }
+    .correct-answer-color { background-color: #90ee90; }
+    .user-correct-answer-color { background: linear-gradient(135deg, #90ee90 50%, #a0c4ff 50%); }
+
+    .user-answer { background-color: #a0c4ff; /* Синий */}
+    .correct-answer { background-color: #90ee90; /* Зеленый */}
+    /* Смешанный цвет, если у ячейки ОБА класса */
+    .user-answer.correct-answer {
+        background: linear-gradient(135deg, #90ee90 50%, #a0c4ff 50%);
     }
-    .results-table .question-column {
-        width: 35%;
-        font-weight: bold;
-    }
-    .user-answer {
-        background-color: #a0c4ff; /* Голубой для ответа пользователя */
-        border: 2px solid #4169e1;
-    }
-    .correct-answer {
-        background-color: #90ee90; /* Зеленый для правильного ответа */
-        border: 2px solid #2e8b57;
-    }
+    .score-display { font-size: 1.2em; font-weight: bold; margin-top: 2em; }
 </style>
 
 <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
@@ -1036,6 +1032,21 @@ if(isset($_SESSION['reponses'])){
             <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
                 <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
                 
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color-box user-answer-color"></div>
+                        <span><?php echo $lang === 'de' ? 'Ihre Antwort' : 'Ваш ответ'; ?></span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color-box correct-answer-color"></div>
+                        <span><?php echo $lang === 'de' ? 'Richtige Antwort' : 'Правильный ответ'; ?></span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color-box user-correct-answer-color"></div>
+                        <span><?php echo $lang === 'de' ? 'Ihre richtige Antwort' : 'Ваш правильный ответ'; ?></span>
+                    </div>
+                </div>
+
                 <table class="results-table">
                     <thead>
                         <tr>
@@ -1045,52 +1056,58 @@ if(isset($_SESSION['reponses'])){
                     </thead>
                     <tbody>
                         <?php
+                        $total_questions_in_summary = 0;
+                        $correct_answers_count = 0;
+
                         for ($i = 1; $i <= $_SESSION["TotalQuestions"]; $i++) {
                             $q_type = $qtypes[$i] ?? 'qcm';
-                            // Показываем только вопросы типа QCM и Echelle в таблице
                             if ($q_type != 'qcm' && $q_type != 'echelle') {
                                 continue;
                             }
+                            $total_questions_in_summary++;
 
                             $current_id = $ids_in_use[$i];
                             $user_choice = $user_answers[$current_id] ?? null;
                             $correct_answer = $correct_answers[$i];
                             
+                            if ($user_choice !== null && $user_choice == $correct_answer) {
+                                $correct_answers_count++;
+                            }
+                            
                             echo '<tr>';
                             echo '<td class="question-column">' . htmlspecialchars($questions[$i]) . '</td>';
 
-                            $possible_answers = [
-                                $rep1s[$i], $rep2s[$i], $rep3s[$i], $rep4s[$i], $rep5s[$i]
-                            ];
+                            $possible_answers = [$rep1s[$i], $rep2s[$i], $rep3s[$i], $rep4s[$i], $rep5s[$i]];
                             
                             $answers_count = 0;
                             foreach ($possible_answers as $j => $answer_text) {
                                 if ($answer_text !== 'null') {
                                     $answers_count++;
                                     $answer_num = $j + 1;
-                                    $class = '';
-
-                                    // Если это ответ пользователя, помечаем синим
-                                    if ($answer_num == $user_choice) {
-                                        $class = 'user-answer';
-                                    }
-                                    // Если это правильный ответ, помечаем зеленым (этот стиль имеет приоритет)
-                                    if ($answer_num == $correct_answer) {
-                                        $class = 'correct-answer';
-                                    }
+                                    $classes = [];
                                     
-                                    echo '<td class="' . $class . '">' . htmlspecialchars($answer_text) . '</td>';
+                                    if ($answer_num == $user_choice) { $classes[] = 'user-answer'; }
+                                    if ($answer_num == $correct_answer) { $classes[] = 'correct-answer'; }
+                                    
+                                    echo '<td class="' . implode(' ', $classes) . '">' . htmlspecialchars($answer_text) . '</td>';
                                 }
                             }
-                            // Если у вопроса меньше 5 ответов, добавляем пустые ячейки
-                            for ($k = $answers_count; $k < 5; $k++) {
-                                echo '<td></td>';
-                            }
+                            for ($k = $answers_count; $k < 5; $k++) { echo '<td></td>'; }
                             echo '</tr>';
                         }
                         ?>
                     </tbody>
                 </table>
+
+                <p class="score-display">
+                    <?php 
+                    if ($lang === 'de') {
+                        echo "Sie haben {$correct_answers_count} von {$total_questions_in_summary} Fragen richtig beantwortet.";
+                    } else {
+                        echo "Вы правильно ответили на {$correct_answers_count} из {$total_questions_in_summary} вопросов.";
+                    }
+                    ?>
+                </p>
 
                 <form method="POST" action="index.php" style="margin-top: 1em;">
                     <button type="submit" name="reset_session" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
@@ -1601,6 +1618,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
