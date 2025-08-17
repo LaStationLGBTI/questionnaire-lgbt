@@ -44,14 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Résultats du Questionnaire</title>
+    <title>Visualiseur de la Base de Données</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 20px; }
-        .container { background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
+        .container { background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 95%; margin: auto; }
         .login-container { max-width: 500px; margin-top: 10vh; }
-        h1, h2 { color: #5a5a5a; text-align: center; }
-        table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; word-break: break-word; }
+        h1 { color: #5a5a5a; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; table-layout: fixed; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; word-break: break-word; }
         th { background-color: #f8f9fa; font-weight: bold; }
         tr:nth-child(even) { background-color: #f2f2f2; }
         .form-group { margin-bottom: 1.5rem; text-align: left; }
@@ -63,6 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         .logout-form { position: absolute; top: 20px; right: 20px; }
         .logout-form button { background-color: #6c757d; width: auto; }
         .logout-form button:hover { background-color: #5a6268; }
+        .tabs { margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .tabs a { padding: 10px 15px; text-decoration: none; color: #007bff; border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0; }
+        .tabs a.active { font-weight: bold; border-color: #ddd; border-bottom: 2px solid #fff; background-color: #fff; position: relative; top: 2px;}
     </style>
 </head>
 <body>
@@ -74,42 +77,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 <button type="submit" name="logout">Déconnexion</button>
             </form>
             
-            <h1>Résultats des Questionnaires</h1>
+            <h1>Visualiseur de la Base de Données</h1>
 
             <?php
+            // ================== ВАШ ОРИГИНАЛЬНЫЙ КОД НАЧИНАЕТСЯ ЗДЕСЬ ==================
             try {
                 $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // ================== ИСПРАВЛЕНИЕ ЗДЕСЬ ==================
-                // 1. Убрали `timestamp` из SQL-запроса
-                $stmt = $pdo->query("SELECT id, ip, genre, orientation, reponse, repmail, lang FROM GSDatabaseR ORDER BY id DESC");
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Определяем, какую таблицу просматривать
+                $view = isset($_GET['view']) && $_GET['view'] === 'questions' ? 'GSDatabase' : 'GSDatabaseR';
+                
+                // Вкладки для переключения
+                echo '<div class="tabs">';
+                echo '<a href="?view=results" class="' . ($view === 'GSDatabaseR' ? 'active' : '') . '">Voir les Résultats (GSDatabaseR)</a>';
+                echo '<a href="?view=questions" class="' . ($view === 'GSDatabase' ? 'active' : '') . '">Voir les Questions (GSDatabase)</a>';
+                echo '</div>';
+
+                echo "<h2>Affichage de la table : `$view`</h2>";
+
+                // Получаем названия колонок
+                $stmt_cols = $pdo->query("DESCRIBE `$view`");
+                $columns = $stmt_cols->fetchAll(PDO::FETCH_COLUMN);
+
+                // Получаем все данные из таблицы
+                $stmt_data = $pdo->query("SELECT * FROM `$view` ORDER BY id DESC");
+                $results = $stmt_data->fetchAll(PDO::FETCH_ASSOC);
 
                 if (count($results) > 0) {
                     echo "<table>";
-                    // 2. Убрали `Date` из заголовка таблицы
-                    echo "<thead><tr><th>ID</th><th>IP</th><th>Genre</th><th>Orientation</th><th>Réponses</th><th>Email</th><th>Langue</th></tr></thead>";
+                    // Динамически создаем заголовок таблицы
+                    echo "<thead><tr>";
+                    foreach ($columns as $col) {
+                        echo "<th>" . htmlspecialchars($col) . "</th>";
+                    }
+                    echo "</tr></thead>";
+                    
+                    // Динамически выводим строки
                     echo "<tbody>";
                     foreach ($results as $row) {
                         echo "<tr>";
-                        echo "<td>" . htmlspecialchars($row['id']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['ip']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['genre']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['orientation']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['reponse']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['repmail']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['lang']) . "</td>";
-                        // 3. Убрали вывод ячейки с датой
+                        foreach ($columns as $col) {
+                            echo "<td>" . htmlspecialchars($row[$col]) . "</td>";
+                        }
                         echo "</tr>";
                     }
                     echo "</tbody></table>";
                 } else {
-                    echo "<p>Aucun résultat trouvé dans la base de données.</p>";
+                    echo "<p>Aucun résultat trouvé dans la table `$view`.</p>";
                 }
+
             } catch (PDOException $e) {
                 echo "<p class='error'>Erreur de connexion à la base de données : " . $e->getMessage() . "</p>";
             }
+            // =================== ВАШ ОРИГИНАЛЬНЫЙ КОД ЗАКАНЧИВАЕТСЯ ЗДЕСЬ ===================
             ?>
         </div>
 
