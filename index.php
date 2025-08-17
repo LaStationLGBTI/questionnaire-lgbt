@@ -1024,28 +1024,26 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 						var answersarray = findAllBlocks();
 						if (response[0] == "fin") {
 							timeout = true;
+							// Сначала убираем все предыдущие классы для чистоты
 							answersarray.forEach(function (item, index) {
-								if (item.element != null) {
-									const innerAnswers = item.querySelector('div#question_container');
-									if (innerAnswers != null) {
-										innerAnswers.classList.remove('fade-to-green');
-										innerAnswers.classList.remove('fade-to-red');
-										innerAnswers.classList.remove('fade-to-white');
-									}
+								const innerAnswers = item.querySelector('div#question_container');
+								if (innerAnswers != null) {
+									innerAnswers.classList.remove('fade-to-green');
+									innerAnswers.classList.remove('fade-to-red');
+									innerAnswers.classList.remove('fade-to-white');
 								}
 							});
+							// Затем показываем правильный/неправильный ответ
 							answersarray.forEach(function (item, index) {
-								if (item.element != null) {
-									const innerAnswers = item.element.querySelectorAll('div#question_container');
-									if (innerAnswers != null) {
-										innerAnswers.forEach(function (innerAnswer) {
-											if (index === parseInt(response[1], 10) - 1) {
-												innerAnswer.classList.add("fade-to-green");
-											} else {
-												innerAnswer.classList.add("fade-to-red");
-											}
-										})
-									}
+								const innerAnswers = item.querySelectorAll('div#question_container');
+								if (innerAnswers.length > 0) {
+									innerAnswers.forEach(function (innerAnswer) {
+										if (index === parseInt(response[1], 10) - 1) {
+											innerAnswer.classList.add("fade-to-green");
+										} else {
+											innerAnswer.classList.add("fade-to-red");
+										}
+									});
 								}
 							});
 							setTimeout(function () {
@@ -1053,8 +1051,12 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 								window.location.href = window.location.href;
 							}, 3000);
 						}
+						
 						else {
 							timeout = true;
+							if (response[9] === "qcm" || response[9] === "echelle") {
+								cd = 3000; // Устанавливаем задержку в 3 секунды
+							}
 							answersarray.forEach(function (item, index) {
 								const innerAnswers = item.querySelector('div#question_container');
 								if (innerAnswers != null) {
@@ -1485,6 +1487,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
