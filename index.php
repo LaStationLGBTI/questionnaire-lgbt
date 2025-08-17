@@ -3,12 +3,7 @@
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 ini_set('display_errors', 1); ini_set('display_startup_errors', 1); error_reporting(E_ALL);
-if (isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] >= 3) {
-	echo "
-            <h1>Accès Bloqué</h1>
-            <p class="error" name="session_bloquee">Votre accès est bloqué. Veuillez contacter l'administrateur.</p>";
-	exit();
-}
+
 if (isset($_POST['reset_session'])) {
     session_unset();
     session_destroy();
@@ -1496,6 +1491,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
