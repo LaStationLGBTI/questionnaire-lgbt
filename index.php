@@ -946,6 +946,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 		function updateQuestion(buttonIndex) {
 			changeRandomImage();
 			if (timeout == false) {
+				timeout = true;
 				xhr.open("POST", "updateQuestion2.php", true);
 				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
 				xhr.onreadystatechange = function () {
@@ -1396,7 +1397,11 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 
 						}
 					}
-
+					else if (xhr.readyState == 4) {
+						// Если запрос завершился с ошибкой, снова разрешаем нажатия
+						timeout = false;
+						alert('Произошла ошибка. Пожалуйста, попробуйте еще раз.');
+					}
 				};
 				if (ismultiple == true) {
 					let temptext = String(localStorage.getItem('lastationlienvar'));
@@ -1412,6 +1417,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
