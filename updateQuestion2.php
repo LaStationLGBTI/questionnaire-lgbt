@@ -6,8 +6,12 @@ require_once 'conf.php';
 if(isset($_SESSION["finish"]))
 if($_SESSION["finish"] == 1)
 {
-	echo "fin";
-	exit();
+if ($_SESSION['LastQuestion'] > $_SESSION['TotalQuestions']) {
+    $answers = explode("__", $_SESSION["answer"]);
+    $lastCorrectAnswer = $answers[$_SESSION['LastQuestion'] - 1];
+    echo "fin__" . $lastCorrectAnswer; // <-- НОВАЯ ЛОГИКА
+    exit();
+}
 }
 if (isset($_SESSION['QuestionToUse'])) {
 if (isset($_SESSION['start'])) {
