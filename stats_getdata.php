@@ -6,110 +6,107 @@ try {
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Запрос к GSDatabase с фильтром level = 2
+    // ШАГ 1: Получаем ID всех вопросов, которые относятся к уровню 2
+    $level2_stmt = $pdo->query("SELECT id FROM GSDatabase WHERE level = 2");
+    // PDO::FETCH_COLUMN создает простой массив из ID, например: [23, 24, 25, ...]
+    $level2_question_ids = $level2_stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+
+    // Если вопросов уровня 2 нет, возвращаем пустой результат
+    if (empty($level2_question_ids)) {
+        echo json_encode(["formattedData" => [], "answers" => [], "totalResponses" => 0]);
+        exit;
+    }
+
+    // Получаем полную информацию по вопросам уровня 2 для построения графиков
     $stmt = $pdo->query("SELECT * FROM GSDatabase WHERE level = 2");
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Подсчет общего количества ответов из GSDatabaseR с фильтром level = 2
-    $stmt = $pdo->query("SELECT COUNT(*) as total FROM GSDatabaseR WHERE level = 2");
-    $totalResponses = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
-    // Запрос всех ответов из GSDatabaseR с фильтром level = 2
-    $stmt = $pdo->query("SELECT * FROM GSDatabaseR WHERE level = 2");
-    $reponsesdb = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // ШАГ 2: Получаем ВСЕ ответы из таблицы GSDatabaseR без фильтра по уровню
+    $stmt = $pdo->query("SELECT * FROM GSDatabaseR");
+    $all_reponses_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $QuestionsR = [];
-    $formattedData = [];
-    foreach ($reponsesdb as $row) {
+    $submissions_with_level2_answers = []; // Сюда будем записывать ID уникальных сессий
+
+    // ШАГ 3: Фильтруем ответы в PHP
+    foreach ($all_reponses_db as $row) {
         $responseString = $row['reponse'];
-        // Пропускаем строку, если ответы отсутствуют или равны null
         if (empty($responseString) || $responseString === 'null') {
             continue;
         }
 
+        $submission_id = $row['id']; // ID уникальной сессии ответа
+        $contains_level2_answer = false;
+        
         $responseString = str_replace('&amp;', '&', $responseString);
         $parts = explode('__', $responseString);
         
         foreach ($parts as $part) {
-            // Пропускаем пустые части, которые могут возникнуть из-за explode
-            if (empty($part)) {
-                continue;
+            if (empty($part)) continue;
+            
+            $current_question_id = null;
+
+            // Определяем ID вопроса в текущем фрагменте ответа
+            if (strpos($part, '||') !== false) { // Формат QCM: Q@23||R@1
+                $q_part = explode('||', $part)[0];
+                $current_question_id = (int) substr($q_part, strpos($q_part, '@') + 1);
+            } elseif (strpos($part, '&&') !== false) { // Формат MCT/Lien: 23&&Q@1|R@2...
+                 $main_q_part = explode('&&', $part)[0];
+                 $current_question_id = (int) str_replace('Q@', '', $main_q_part);
             }
 
-            if (strpos($part, '&&') !== false) {
-                $subParts = explode('&&', $part);
-                $mainQuestion = '';
-                $subQuestions = [];
-                $subResponses = [];
-                if (empty($mainQuestion) && isset($subParts[0]) && strpos($subParts[0], '@') !== false) {
-                    $mainQuestion = explode('@', $subParts[0])[1];
-                    $mainQuestion = (int) $mainQuestion;
-                }
-                foreach ($subParts as $subPart) {
-                    if (strpos($subPart, '|') !== false) {
-                        $subPartArray = explode('|', $subPart);
-                        if (count($subPartArray) === 2) {
-                            list($question, $response) = $subPartArray;
-                            $questionValue = substr($question, strpos($question, '@') + 1);
-                            $responseValue = substr($response, strpos($response, '@') + 1);
-                            $subQuestions[] = $questionValue;
-                            $subResponses[] = $responseValue;
+            // Если мы нашли ID вопроса и он относится к уровню 2
+            if ($current_question_id && in_array($current_question_id, $level2_question_ids)) {
+                $contains_level2_answer = true;
+                // Добавляем этот фрагмент ответа в массив для обработки
+                // (логика парсинга перенесена сюда)
+                if (strpos($part, '&&') !== false) {
+                    $subParts = explode('&&', $part);
+                    $subQuestions = []; $subResponses = [];
+                    foreach ($subParts as $subPart) {
+                        if (strpos($subPart, '|') !== false) {
+                            list($question, $response) = explode('|', $subPart);
+                            $subQuestions[] = substr($question, strpos($question, '@') + 1);
+                            $subResponses[] = substr($response, strpos($response, '@') + 1);
                         }
                     }
+                    $QuestionsR[] = ['question' => $current_question_id, 'response' => null, 'subquestion' => implode(',', $subQuestions), 'subresponse' => implode(',', $subResponses)];
+                } else {
+                    list($question, $response) = explode('||', $part);
+                    $responseValue = (int) substr($response, strpos($response, '@') + 1);
+                    $QuestionsR[] = ['question' => $current_question_id, 'response' => $responseValue];
                 }
-                if ($mainQuestion) { // Добавляем, только если есть основной вопрос
-                    $QuestionsR[] = [
-                        'question' => $mainQuestion,
-                        'response' => null,
-                        'subquestion' => implode(',', $subQuestions),
-                        'subresponse' => implode(',', $subResponses)
-                    ];
-                }
-            } else if (strpos($part, '||') !== false) { // Явная проверка для QCM
-                list($question, $response) = explode('||', $part);
-                $questionValue = (int) substr($question, strpos($question, '@') + 1);
-                $responseValue = (int) substr($response, strpos($response, '@') + 1);
-                $QuestionsR[] = [
-                    'question' => $questionValue,
-                    'response' => $responseValue
-                ];
             }
         }
-    }
 
+        // Если в этой сессии был хотя бы один ответ на вопрос 2-го уровня, считаем ее
+        if ($contains_level2_answer) {
+            $submissions_with_level2_answers[$submission_id] = true;
+        }
+    }
+    
+    $totalResponses = count($submissions_with_level2_answers);
+
+    // --- Дальнейший код для форматирования данных остается без изменений ---
+
+    $formattedData = [];
     foreach ($questions as $row) {
         $qtype = $row['qtype'];
         $qid = $row['id'];
         $questionText = $row['question'];
         if ($qtype === "qcm" || $qtype === "echelle") {
             $responses = [];
-            for ($i = 1; $i <= 5; $i++) {
-                if (!empty($row["rep$i"])) {
-                    $responses[] = $row["rep$i"];
-                }
-            }
-            $formattedData[] = [
-                'id' => $qid, 'type' => 'qcm', 'question' => $questionText, 'responses' => $responses,
-            ];
+            for ($i = 1; $i <= 5; $i++) { if (!empty($row["rep$i"])) { $responses[] = $row["rep$i"]; } }
+            $formattedData[] = [ 'id' => $qid, 'type' => 'qcm', 'question' => $questionText, 'responses' => $responses ];
         } elseif ($qtype === "mct") {
             $subQuestions = explode("--", $row['rep1']);
             $responses = [];
-            for ($i = 2; $i <= 5; $i++) {
-                if (!empty($row["rep$i"])) {
-                    $responses[] = $row["rep$i"];
-                }
-            }
-            $formattedData[] = [
-                'id' => $qid, 'type' => 'mct', 'question' => $questionText,
-                'sub_questions' => $subQuestions, 'responses' => $responses,
-            ];
+            for ($i = 2; $i <= 5; $i++) { if (!empty($row["rep$i"])) { $responses[] = $row["rep$i"]; } }
+            $formattedData[] = [ 'id' => $qid, 'type' => 'mct', 'question' => $questionText, 'sub_questions' => $subQuestions, 'responses' => $responses ];
         } elseif ($qtype === "lien") {
             $subQuestions = explode("--", $row['rep1']);
             $subResponses = explode("--", $row['rep2']);
-            $formattedData[] = [
-                'id' => $qid, 'type' => 'lien', 'question' => $questionText,
-                'sub_questions' => $subQuestions, 'sub_responses' => $subResponses,
-            ];
+            $formattedData[] = [ 'id' => $qid, 'type' => 'lien', 'question' => $questionText, 'sub_questions' => $subQuestions, 'sub_responses' => $subResponses ];
         }
     }
 
@@ -121,7 +118,6 @@ try {
     echo json_encode($response);
 
 } catch (PDOException $e) {
-    // В случае ошибки базы данных, отправляем JSON с ошибкой
     echo json_encode(['error' => $e->getMessage(), 'formattedData' => [], 'answers' => [], 'totalResponses' => 0]);
 }
 ?>
