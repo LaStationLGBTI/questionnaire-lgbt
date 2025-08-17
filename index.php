@@ -3,6 +3,7 @@ $lang = "fr";
 ini_set('session.gc_maxlifetime', 31536000);
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+var_dump($_POST); die();
 session_start();
 require_once 'conf.php';
 
@@ -626,6 +627,7 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
 
