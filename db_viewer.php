@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         .login-container { max-width: 500px; margin-top: 10vh; }
         h1, h2 { color: #5a5a5a; text-align: center; }
         table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; word-break: break-word; }
         th { background-color: #f8f9fa; font-weight: bold; }
         tr:nth-child(even) { background-color: #f2f2f2; }
         .form-group { margin-bottom: 1.5rem; text-align: left; }
@@ -81,12 +81,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                $stmt = $pdo->query("SELECT id, ip, genre, orientation, reponse, repmail, lang, timestamp FROM GSDatabaseR ORDER BY id DESC");
+                // ================== ИСПРАВЛЕНИЕ ЗДЕСЬ ==================
+                // 1. Убрали `timestamp` из SQL-запроса
+                $stmt = $pdo->query("SELECT id, ip, genre, orientation, reponse, repmail, lang FROM GSDatabaseR ORDER BY id DESC");
                 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 if (count($results) > 0) {
                     echo "<table>";
-                    echo "<thead><tr><th>ID</th><th>IP</th><th>Genre</th><th>Orientation</th><th>Réponses</th><th>Email</th><th>Langue</th><th>Date</th></tr></thead>";
+                    // 2. Убрали `Date` из заголовка таблицы
+                    echo "<thead><tr><th>ID</th><th>IP</th><th>Genre</th><th>Orientation</th><th>Réponses</th><th>Email</th><th>Langue</th></tr></thead>";
                     echo "<tbody>";
                     foreach ($results as $row) {
                         echo "<tr>";
@@ -97,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                         echo "<td>" . htmlspecialchars($row['reponse']) . "</td>";
                         echo "<td>" . htmlspecialchars($row['repmail']) . "</td>";
                         echo "<td>" . htmlspecialchars($row['lang']) . "</td>";
-                        echo "<td>" . htmlspecialchars($row['timestamp']) . "</td>";
+                        // 3. Убрали вывод ячейки с датой
                         echo "</tr>";
                     }
                     echo "</tbody></table>";
