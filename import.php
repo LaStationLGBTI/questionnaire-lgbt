@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                     
                     // Все проверки пройдены, импортируем
                     $pdo->beginTransaction();
-                    $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, image, sound) 
+                    $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype) 
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
                     
@@ -103,9 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                             trim($row[5]) ?? 'null',    // rep4, используем 'null' если пусто
                             trim($row[6]) ?? 'null',    // rep5, используем 'null' если пусто
                             trim($row[7]) ?? null,      // answer
-                            trim($row[8]) ?? null,      // qtype
-                            null,                       // image (нет в CSV)
-                            null                        // sound (нет в CSV)
+                            trim($row[8]) ?? null      // qtype
                         ]);
                     }
                     
