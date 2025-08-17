@@ -890,7 +890,7 @@ if (!isset($_SESSION["start"])) {
         if (!isset($_SESSION["finish"])) {
             echo '<script type="text/javascript">startQuestion();</script>';
         }
-    } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) > (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && !(isset($_POST["acc"]) || isset($_SESSION["acc"]))) { ?>
+    } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && !(isset($_POST["acc"]) || isset($_SESSION["acc"]))) { ?>
         <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
             <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
                 <div class="u-container-layout u-container-layout-1">
@@ -947,7 +947,7 @@ if (!isset($_SESSION["start"])) {
             </div>
         </section>
 
-    <?php } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) > (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && (isset($_POST["acc"]) || isset($_SESSION["acc"]))) {
+    <?php } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && (isset($_POST["acc"]) || isset($_SESSION["acc"]))) {
         $_SESSION["acc"] = "1";
         $_SESSION["genre"] = isset($_POST['genre']) ? htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8') : '';
         $_SESSION["orient"] = isset($_POST['orient']) ? htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8') : '';
@@ -1487,8 +1487,6 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
-
-
 
 
 
