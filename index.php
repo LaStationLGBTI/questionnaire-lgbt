@@ -723,7 +723,6 @@ for (let i = 0; i < data1.length; i++) {
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
 
     <?php
-
 if (!isset($_SESSION['level'])) {
     
     // Сбрасываем сессию для чистого старта
@@ -760,7 +759,7 @@ if (!isset($_SESSION['level'])) {
         </div>
     </div>
 <?php
-    if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
+    } else if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
 <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
     <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
         <div class="u-container-layout u-container-layout-1">
@@ -1499,6 +1498,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
