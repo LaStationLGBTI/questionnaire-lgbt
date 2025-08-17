@@ -49,29 +49,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                    // ================== НОВАЯ ЛОГИКА ИМПОРТА ==================
-
                     ini_set('auto_detect_line_endings', TRUE);
                     $handle = fopen($file_tmp_path, 'r');
 
-                    // Пропускаем BOM
                     if (fgets($handle, 4) !== "\xef\xbb\xbf") {
                         rewind($handle);
                     }
 
-                    // Пропускаем заголовок
-                    fgetcsv($handle, 2000, ";");
+                    fgetcsv($handle, 2000, ";"); // Пропускаем заголовок
 
                     $all_rows = [];
                     $level_to_check = null;
                     while (($data = fgetcsv($handle, 2000, ";")) !== FALSE) {
-                        // Пропускаем пустые строки или строки с недостаточным количеством колонок
                         if (count($data) < 2 || empty($data[1])) {
                             continue;
                         }
                         $all_rows[] = $data;
                         if ($level_to_check === null) {
-                            $level_to_check = trim($data[0]); // Уровень теперь в ПЕРВОЙ колонке (индекс 0)
+                            $level_to_check = trim($data[0]); // Уровень в ПЕРВОЙ колонке (индекс 0)
                         }
                     }
                     fclose($handle);
@@ -80,32 +75,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                          throw new Exception("Impossible de déterminer le niveau ou aucune donnée trouvée.");
                     }
 
-                    // Проверяем уровень на дубликат в БД
                     $stmt = $pdo->prepare("SELECT COUNT(*) FROM GSDatabase WHERE level = ?");
                     $stmt->execute([$level_to_check]);
                     if ($stmt->fetchColumn() > 0) {
                         throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà.");
                     }
                     
-                    // Все проверки пройдены, импортируем
+                    // ================== ИСПРАВЛЕНИЕ ЗДЕСЬ ==================
+
                     $pdo->beginTransaction();
+                    // 1. Убрали image и sound из запроса
                     $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
                     
                     foreach ($all_rows as $row) {
+                        // 2. Убедились, что количество передаваемых значений (9) соответствует запросу
                         $stmt->execute([
                             trim($row[0]) ?? null,      // level
                             trim($row[1]) ?? null,      // question
                             trim($row[2]) ?? null,      // rep1
                             trim($row[3]) ?? null,      // rep2
                             trim($row[4]) ?? null,      // rep3
-                            trim($row[5]) ?? 'null',    // rep4, используем 'null' если пусто
-                            trim($row[6]) ?? 'null',    // rep5, используем 'null' если пусто
+                            trim($row[5]) ?? 'null',    // rep4
+                            trim($row[6]) ?? 'null',    // rep5
                             trim($row[7]) ?? null,      // answer
-                            trim($row[8]) ?? null      // qtype
+                            trim($row[8]) ?? null       // qtype
                         ]);
                     }
+                    
+                    // =======================================================
                     
                     $pdo->commit();
                     $import_message = "<p class='success'>Importation réussie. <strong>" . count($all_rows) . "</strong> questions ajoutées pour le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>.</p>";
@@ -150,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
             </form>
             <h1>Importer un Questionnaire</h1>
             <?php if ($import_message) echo $import_message; ?>
-            <form action="import.php" method="post" enctype="multipart/form-data" style="margin-top: 2rem;">
+            <form action="import.php" method="post" enctype="multipart-form-data" style="margin-top: 2rem;">
                 <div class="form-group">
                     <label for="questionnaire_file">Sélectionnez un fichier de questionnaire (.csv) :</label>
                     <input type="file" id="questionnaire_file" name="questionnaire_file" accept=".csv" required>
