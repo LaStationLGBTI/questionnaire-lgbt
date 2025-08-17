@@ -40,83 +40,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 }
 
+// --- ЛОГИКА ИМПОРТА ФАЙЛА (УЛЬТРА-НАДЁЖНАЯ ВЕРСИЯ) ---
 $import_message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
     if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in']) {
         if (isset($_FILES['questionnaire_file']) && $_FILES['questionnaire_file']['error'] === UPLOAD_ERR_OK) {
             
             $file_tmp_path = $_FILES['questionnaire_file']['tmp_name'];
-            $file_name = $_FILES['questionnaire_file']['name'];
-            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+            $file_ext = strtolower(pathinfo($_FILES['questionnaire_file']['name'], PATHINFO_EXTENSION));
 
             if ($file_ext === 'csv') {
                 try {
                     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-$delimiter = ';'; // По умолчанию
-                    if (($handle = fopen($file_tmp_path, 'r')) !== FALSE) {
-                        $first_line = fgets($handle); // Читаем первую строку (заголовок)
-                        fclose($handle);
-                        if (substr_count($first_line, ',') > substr_count($first_line, ';')) {
-                            $delimiter = ',';
-                        }
+                    // ================== НАЧАЛО ОБНОВЛЕНИЙ ==================
+
+                    // Шаг 1: Открываем файл и исправляем проблемы с кодировкой/окончаниями строк
+                    ini_set('auto_detect_line_endings', TRUE);
+                    $handle = fopen($file_tmp_path, 'r');
+                    
+                    // Проверяем и пропускаем невидимый маркер BOM
+                    if (fgets($handle, 4) !== "\xef\xbb\xbf") {
+                        rewind($handle); // Если BOM нет, возвращаемся в начало
                     }
 
-                    // 2. Проверка на существующий уровень с правильным разделителем
-                    $level_to_check = null;
-                    if (($handle = fopen($file_tmp_path, 'r')) !== FALSE) {
-                        fgetcsv($handle, 1000, $delimiter); // Пропускаем заголовок
-                        
-                        // Ищем первую непустую строку с данными
-                        while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
-                            if (count($data) < 2 && empty($data[0])) continue; // Пропускаем пустые строки
-                            
-                            if(isset($data[10])) {
-                               $level_to_check = trim($data[10]);
-                            }
-                            break; // Выходим после первой найденной строки
-                        }
-                        fclose($handle);
+                    // Шаг 2: Автоматически определяем разделитель (запятая или точка с запятой)
+                    $delimiter = ';';
+                    $first_line_for_delimiter = fgets($handle);
+                    if (substr_count($first_line_for_delimiter, ',') > substr_count($first_line_for_delimiter, ';')) {
+                        $delimiter = ',';
                     }
                     
-                    if ($level_to_check) {
+                    // Шаг 3: Читаем данные и проверяем уровень
+                    $all_rows = [];
+                    $level_to_check = null;
+                    
+                    // Перемещаем указатель обратно в начало, чтобы прочитать файл полностью
+                    rewind($handle);
+                    if (fgets($handle, 4) !== "\xef\xbb\xbf") { // Снова пропускаем BOM, если он есть
+                        rewind($handle);
+                    }
+                    fgetcsv($handle, 2000, $delimiter); // Пропускаем заголовок
+
+                    while (($data = fgetcsv($handle, 2000, $delimiter)) !== FALSE) {
+                        // Пропускаем полностью пустые или некорректные строки
+                        if (count($data) < 11 || empty(implode('', $data))) {
+                            continue;
+                        }
+                        // Находим уровень по первой же строке с данными
+                        if ($level_to_check === null && isset($data[10])) {
+                            $level_to_check = trim($data[10]);
+                        }
+                        $all_rows[] = $data;
+                    }
+                    fclose($handle);
+
+                    // =================== КОНЕЦ ОБНОВЛЕНИЙ ===================
+                    
+                    if ($level_to_check && !empty($all_rows)) {
                         $stmt = $pdo->prepare("SELECT COUNT(*) FROM GSDatabase WHERE level = ?");
                         $stmt->execute([$level_to_check]);
                         if ($stmt->fetchColumn() > 0) {
                             $import_message = "<p class='error'>Erreur : Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà dans la base de données. L'importation est annulée.</p>";
                         } else {
+                            // Шаг 4: Уровень уникален, импортируем все собранные строки
                             $pdo->beginTransaction();
                             $stmt = $pdo->prepare(
                                 "INSERT INTO GSDatabase (question, rep1, rep2, rep3, rep4, rep5, answer, qtype, image, sound, level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                             );
-
-                            $row_count = 0;
-                            if (($handle = fopen($file_tmp_path, 'r')) !== FALSE) {
-                                fgetcsv($handle, 1000, ";"); 
-                                while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
-                                    if(count($data) >= 11){ 
-                                        $stmt->execute([
-                                            $data[0], $data[1], $data[2], $data[3], $data[4], $data[5], $data[6],
-                                            $data[7], $data[8], $data[9], trim($data[10])
-                                        ]);
-                                        $row_count++;
-                                    }
-                                }
-                                fclose($handle);
+                            
+                            foreach($all_rows as $row) {
+                                $stmt->execute([
+                                    $row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6],
+                                    $row[7], $row[8], $row[9], trim($row[10])
+                                ]);
                             }
+                            
                             $pdo->commit();
-                            $import_message = "<p class='success'>Le questionnaire (Niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>) a été importé avec succès. <strong>$row_count</strong> questions ajoutées.</p>";
+                            $import_message = "<p class='success'>Le questionnaire (Niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>) a été importé avec succès. <strong>" . count($all_rows) . "</strong> questions ajoutées.</p>";
                         }
                     } else {
-                        $import_message = "<p class='error'>Erreur : Impossible de déterminer le niveau du questionnaire depuis le fichier CSV.</p>";
+                        $import_message = "<p class='error'>Erreur : Impossible de lire les données ou de déterminer le niveau du questionnaire. Vérifiez que le fichier CSV n'est pas vide, содержит 11 колонок и имеет правильный формат.</p>";
                     }
 
                 } catch (Exception $e) {
                     if(isset($pdo) && $pdo->inTransaction()){
                        $pdo->rollBack();
                     }
-                    $import_message = "<p class='error'>Une erreur est survenue lors de l'importation : " . $e->getMessage() . "</p>";
+                    $import_message = "<p class='error'>Une erreur critique est survenue : " . $e->getMessage() . "</p>";
                 }
             } else {
                 $import_message = "<p class='error'>Erreur : Veuillez sélectionner un fichier au format CSV.</p>";
