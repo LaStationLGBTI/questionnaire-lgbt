@@ -509,7 +509,7 @@ $texts = [
     // The long script for updateQuestion is preserved here
     let timeout = false;
     let xhr = new XMLHttpRequest();
-    let cd = 3000;
+    let cd = 0;
     function updateQuestion(buttonIndex) {
         changeRandomImage();
         if (timeout == false) {
@@ -602,6 +602,7 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
 
