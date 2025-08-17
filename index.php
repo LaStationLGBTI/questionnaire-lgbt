@@ -5,7 +5,9 @@ session_start();
 if (!isset($_SESSION['language'])) {
     $_SESSION['language'] = isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr']) ? $_POST['language'] : 'fr';
 }
-
+if (isset($_GET['level'])) {
+    $_SESSION['level'] = $_GET['level'];
+}
 if (isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr'])) {
     $_SESSION['language'] = $_POST['language'];
 }
@@ -736,6 +738,10 @@ for (let i = 0; i < data1.length; i++) {
 
     <?php } else if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) {
 if (!isset($_SESSION["start"])) {
+	    if (!isset($_SESSION['level'])) {
+        echo "Error: Questionnaire level not selected. Please go back and choose a questionnaire.";
+        exit();
+    }
     try {
         $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -743,8 +749,8 @@ if (!isset($_SESSION["start"])) {
         echo "Erreur connection: " . $e->getMessage();
     }
     $table = $lang === 'de' ? 'GSDatabase' : 'GSDatabase';
-    $stmt = $conn->prepare("SELECT * FROM $table WHERE level = 101 ORDER BY `id` ASC");
-    $stmt->execute();
+    $stmt = $conn->prepare("SELECT * FROM $table WHERE level = ? ORDER BY `id` ASC");
+    $stmt->execute([$_SESSION['level']]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $_SESSION["QuestionToUse"] = "Questions";
@@ -1401,5 +1407,6 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
