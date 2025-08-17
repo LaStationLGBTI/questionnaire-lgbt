@@ -821,7 +821,7 @@ if (!isset($_SESSION["start"])) {
     if ($_SESSION['level'] != 1 && count($results) > 20) {
     shuffle($results);    
     $results = array_slice($results, 0, 20);
-}
+	}
     $_SESSION["QuestionToUse"] = "Questions";
     $_SESSION["Rep1"] = "Reponses1";
     $_SESSION["Rep2"] = "Reponses2";
@@ -1487,6 +1487,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
