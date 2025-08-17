@@ -969,24 +969,137 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
         'id' => $_SESSION["id_user"]
     ]);
     unset($_SESSION["id_user"]);
+$questions = explode('__', $_SESSION["QuestionToUse"]);
+$ids_in_use = explode('__', $_SESSION["IdInUse"]);
+$rep1s = explode('__', $_SESSION["Rep1"]);
+$rep2s = explode('__', $_SESSION["Rep2"]);
+$rep3s = explode('__', $_SESSION["Rep3"]);
+$rep4s = explode('__', $_SESSION["Rep4"]);
+$rep5s = explode('__', $_SESSION["Rep5"]);
+$correct_answers = explode('__', $_SESSION["answer"]);
+$qtypes = explode('__', $_SESSION["qtype"]);
+
+// Парсим ответы пользователя в удобный массив [id_вопроса => ответ]
+$user_answers = [];
+if(isset($_SESSION['reponses'])){
+    $user_reponses_raw = explode('__Q@', $_SESSION['reponses']);
+    foreach ($user_reponses_raw as $rep) {
+        if (strpos($rep, '||R@') !== false) {
+            list($qid_part, $rans_part) = explode('||R@', $rep);
+            $qid = str_replace('Q@', '', $qid_part);
+            $user_answers[$qid] = $rans_part;
+        }
+    }
 }
+// -- КОНЕЦ БЛОКА ПОДГОТОВКИ ДАННЫХ --
 ?>
-    <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
-        <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
-            <div class="u-container-layout u-container-layout-1">
-                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                    <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
-                    <img src="images/drap.png" alt="" style="margin: 1em auto;">
-                    
-<form method="POST" action="index.php" style="margin-top: 1em;">
-    <button type="submit" name="reset_session" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
-        <?php echo $texts[$lang]['return_to_start']; ?>
-    </button>
-</form>
-                </div>
+
+<style>
+    .results-table {
+        width: 90%;
+        margin: 2em auto;
+        border-collapse: collapse;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        background-color: white;
+    }
+    .results-table th, .results-table td {
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        text-align: left;
+    }
+    .results-table th {
+        background-color: #4f6d7a;
+        color: white;
+        font-weight: bold;
+    }
+    .results-table tr:nth-of-type(even) {
+        background-color: #f8f8f8;
+    }
+    .results-table .question-column {
+        width: 35%;
+        font-weight: bold;
+    }
+    .user-answer {
+        background-color: #a0c4ff; /* Голубой для ответа пользователя */
+        border: 2px solid #4169e1;
+    }
+    .correct-answer {
+        background-color: #90ee90; /* Зеленый для правильного ответа */
+        border: 2px solid #2e8b57;
+    }
+</style>
+
+<section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
+    <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
+        <div class="u-container-layout u-container-layout-1">
+            <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
+                <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
+                
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th class="question-column">Question</th>
+                            <th colspan="5">Réponses</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        for ($i = 1; $i <= $_SESSION["TotalQuestions"]; $i++) {
+                            $q_type = $qtypes[$i] ?? 'qcm';
+                            // Показываем только вопросы типа QCM и Echelle в таблице
+                            if ($q_type != 'qcm' && $q_type != 'echelle') {
+                                continue;
+                            }
+
+                            $current_id = $ids_in_use[$i];
+                            $user_choice = $user_answers[$current_id] ?? null;
+                            $correct_answer = $correct_answers[$i];
+                            
+                            echo '<tr>';
+                            echo '<td class="question-column">' . htmlspecialchars($questions[$i]) . '</td>';
+
+                            $possible_answers = [
+                                $rep1s[$i], $rep2s[$i], $rep3s[$i], $rep4s[$i], $rep5s[$i]
+                            ];
+                            
+                            $answers_count = 0;
+                            foreach ($possible_answers as $j => $answer_text) {
+                                if ($answer_text !== 'null') {
+                                    $answers_count++;
+                                    $answer_num = $j + 1;
+                                    $class = '';
+
+                                    // Если это ответ пользователя, помечаем синим
+                                    if ($answer_num == $user_choice) {
+                                        $class = 'user-answer';
+                                    }
+                                    // Если это правильный ответ, помечаем зеленым (этот стиль имеет приоритет)
+                                    if ($answer_num == $correct_answer) {
+                                        $class = 'correct-answer';
+                                    }
+                                    
+                                    echo '<td class="' . $class . '">' . htmlspecialchars($answer_text) . '</td>';
+                                }
+                            }
+                            // Если у вопроса меньше 5 ответов, добавляем пустые ячейки
+                            for ($k = $answers_count; $k < 5; $k++) {
+                                echo '<td></td>';
+                            }
+                            echo '</tr>';
+                        }
+                        ?>
+                    </tbody>
+                </table>
+
+                <form method="POST" action="index.php" style="margin-top: 1em;">
+                    <button type="submit" name="reset_session" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
+                        <?php echo $texts[$lang]['return_to_start']; ?>
+                    </button>
+                </form>
             </div>
         </div>
-    </section>
+    </div>
+</section>
         <script>
             localStorage.clear();
         </script>
@@ -1487,6 +1600,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
