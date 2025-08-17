@@ -6,15 +6,15 @@ try {
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // ИЗМЕНЕНО: Запрос к GSDatabase с фильтром level = 2
+    // Запрос к GSDatabase с фильтром level = 2
     $stmt = $pdo->query("SELECT * FROM GSDatabase WHERE level = 2");
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // ИЗМЕНЕНО: Подсчет общего количества ответов из GSDatabaseR с фильтром level = 2
+    // Подсчет общего количества ответов из GSDatabaseR с фильтром level = 2
     $stmt = $pdo->query("SELECT COUNT(*) as total FROM GSDatabaseR WHERE level = 2");
     $totalResponses = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-    // ИЗМЕНЕНО: Запрос всех ответов из GSDatabaseR с фильтром level = 2
+    // Запрос всех ответов из GSDatabaseR с фильтром level = 2
     $stmt = $pdo->query("SELECT * FROM GSDatabaseR WHERE level = 2");
     $reponsesdb = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -22,12 +22,19 @@ try {
     $formattedData = [];
     foreach ($reponsesdb as $row) {
         $responseString = $row['reponse'];
-        if ($responseString === null || $responseString === 'null') continue;
+        // Пропускаем строку, если ответы отсутствуют или равны null
+        if (empty($responseString) || $responseString === 'null') {
+            continue;
+        }
 
         $responseString = str_replace('&amp;', '&', $responseString);
         $parts = explode('__', $responseString);
+        
         foreach ($parts as $part) {
-            if (empty($part)) continue;
+            // Пропускаем пустые части, которые могут возникнуть из-за explode
+            if (empty($part)) {
+                continue;
+            }
 
             if (strpos($part, '&&') !== false) {
                 $subParts = explode('&&', $part);
@@ -39,22 +46,26 @@ try {
                     $mainQuestion = (int) $mainQuestion;
                 }
                 foreach ($subParts as $subPart) {
-                    $subPartArray = explode('|', $subPart);
-                    if (count($subPartArray) === 2) {
-                        list($question, $response) = $subPartArray;
-                        $questionValue = substr($question, strpos($question, '@') + 1);
-                        $responseValue = substr($response, strpos($response, '@') + 1);
-                        $subQuestions[] = $questionValue;
-                        $subResponses[] = $responseValue;
+                    if (strpos($subPart, '|') !== false) {
+                        $subPartArray = explode('|', $subPart);
+                        if (count($subPartArray) === 2) {
+                            list($question, $response) = $subPartArray;
+                            $questionValue = substr($question, strpos($question, '@') + 1);
+                            $responseValue = substr($response, strpos($response, '@') + 1);
+                            $subQuestions[] = $questionValue;
+                            $subResponses[] = $responseValue;
+                        }
                     }
                 }
-                $QuestionsR[] = [
-                    'question' => $mainQuestion,
-                    'response' => null,
-                    'subquestion' => implode(',', $subQuestions),
-                    'subresponse' => implode(',', $subResponses)
-                ];
-            } else if (strpos($part, '||') !== false) {
+                if ($mainQuestion) { // Добавляем, только если есть основной вопрос
+                    $QuestionsR[] = [
+                        'question' => $mainQuestion,
+                        'response' => null,
+                        'subquestion' => implode(',', $subQuestions),
+                        'subresponse' => implode(',', $subResponses)
+                    ];
+                }
+            } else if (strpos($part, '||') !== false) { // Явная проверка для QCM
                 list($question, $response) = explode('||', $part);
                 $questionValue = (int) substr($question, strpos($question, '@') + 1);
                 $responseValue = (int) substr($response, strpos($response, '@') + 1);
@@ -78,10 +89,7 @@ try {
                 }
             }
             $formattedData[] = [
-                'id' => $qid,
-                'type' => 'qcm',
-                'question' => $questionText,
-                'responses' => $responses,
+                'id' => $qid, 'type' => 'qcm', 'question' => $questionText, 'responses' => $responses,
             ];
         } elseif ($qtype === "mct") {
             $subQuestions = explode("--", $row['rep1']);
@@ -92,33 +100,28 @@ try {
                 }
             }
             $formattedData[] = [
-                'id' => $qid,
-                'type' => 'mct',
-                'question' => $questionText,
-                'sub_questions' => $subQuestions,
-                'responses' => $responses,
+                'id' => $qid, 'type' => 'mct', 'question' => $questionText,
+                'sub_questions' => $subQuestions, 'responses' => $responses,
             ];
         } elseif ($qtype === "lien") {
             $subQuestions = explode("--", $row['rep1']);
             $subResponses = explode("--", $row['rep2']);
             $formattedData[] = [
-                'id' => $qid,
-                'type' => 'lien',
-                'question' => $questionText,
-                'sub_questions' => $subQuestions,
-                'sub_responses' => $subResponses,
+                'id' => $qid, 'type' => 'lien', 'question' => $questionText,
+                'sub_questions' => $subQuestions, 'sub_responses' => $subResponses,
             ];
         }
     }
 
     $response = [
         "formattedData" => $formattedData,
-        "answers" => isset($QuestionsR) ? $QuestionsR : [],
+        "answers" => $QuestionsR,
         "totalResponses" => $totalResponses
     ];
     echo json_encode($response);
 
 } catch (PDOException $e) {
-    echo json_encode(['error' => $e->getMessage()]);
+    // В случае ошибки базы данных, отправляем JSON с ошибкой
+    echo json_encode(['error' => $e->getMessage(), 'formattedData' => [], 'answers' => [], 'totalResponses' => 0]);
 }
 ?>
