@@ -1035,15 +1035,15 @@ if(isset($_SESSION['reponses'])){
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color-box user-answer-color"></div>
-                        <span><?php echo $lang === 'de' ? 'Ihre Antwort' : 'Ваш ответ'; ?></span>
+                        <span><?php echo $lang === 'de' ? 'Ihre Antwort' : 'Votre Réponse'; ?></span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color-box correct-answer-color"></div>
-                        <span><?php echo $lang === 'de' ? 'Richtige Antwort' : 'Правильный ответ'; ?></span>
+                        <span><?php echo $lang === 'de' ? 'Richtige Antwort' : 'Réponse correcte'; ?></span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color-box user-correct-answer-color"></div>
-                        <span><?php echo $lang === 'de' ? 'Ihre richtige Antwort' : 'Ваш правильный ответ'; ?></span>
+                        <span><?php echo $lang === 'de' ? 'Ihre richtige Antwort' : 'Votre réponse est correcte'; ?></span>
                     </div>
                 </div>
 
@@ -1104,7 +1104,7 @@ if(isset($_SESSION['reponses'])){
                     if ($lang === 'de') {
                         echo "Sie haben {$correct_answers_count} von {$total_questions_in_summary} Fragen richtig beantwortet.";
                     } else {
-                        echo "Вы правильно ответили на {$correct_answers_count} из {$total_questions_in_summary} вопросов.";
+                        echo "Vous avez répondu correctement à {$correct_answers_count} questions sur  {$total_questions_in_summary}";
                     }
                     ?>
                 </p>
@@ -1618,6 +1618,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
