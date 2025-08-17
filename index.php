@@ -931,7 +931,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 
 		let timeout = false;
 		let xhr = new XMLHttpRequest();
-		let cd = 3000;
+		let cd = 0;
 		function updateQuestion(buttonIndex) {
 			changeRandomImage();
 			if (timeout == false) {
@@ -1401,4 +1401,5 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
