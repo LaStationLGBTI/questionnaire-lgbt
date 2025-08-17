@@ -6,12 +6,14 @@ if (isset($_POST['reset_session'])) {
     session_unset();
     session_destroy();
 }
-if (isset($_GET['level'])) {
+if (isset($_GET['level']) && !isset($_SESSION['level'])) {
     $new_level = $_GET['level'];
     $lang_to_preserve = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
     session_unset();
     $_SESSION['level'] = $new_level;
-    $_SESSION['language'] = $lang_to_preserve; 
+    $_SESSION['language'] = $lang_to_preserve;
+    header('Location: index.php');
+    exit();
 }
 if (!isset($_SESSION['language'])) {
     $_SESSION['language'] = isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr']) ? $_POST['language'] : 'fr';
@@ -1487,6 +1489,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
