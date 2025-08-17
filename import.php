@@ -1,14 +1,11 @@
 <?php
-// Включаем конфигурацию БД и запускаем сессию
 require_once 'conf.php';
 session_start();
 
-// Инициализируем счетчик попыток входа, если он не существует
 if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['login_attempts'] = 0;
 }
 
-// Обработка выхода из системы
 if (isset($_POST['logout'])) {
     session_unset();
     session_destroy();
@@ -16,7 +13,6 @@ if (isset($_POST['logout'])) {
     exit();
 }
 
-// --- ЛОГИКА АУТЕНТИФИКАЦИИ ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     if ($_SESSION['login_attempts'] < 3) {
         $login = $_POST['identifiant'];
@@ -27,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             $stmt = $pdo->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
             $stmt->execute([$login]);
             $user = $stmt->fetch();
-
             if ($user && $pass === $user['passconn']) {
                 $_SESSION['is_logged_in'] = true;
                 $_SESSION['login_attempts'] = 0;
@@ -36,12 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 $login_error = "Identifiant ou mot de passe incorrect.";
             }
         } catch (PDOException $e) {
-            $login_error = "Erreur de connexion à la base de données : " . $e->getMessage();
+            $login_error = "Erreur de connexion : " . $e->getMessage();
         }
     }
 }
 
-// --- ЛОГИКА ИМПОРТА ФАЙЛА (ВЕРСИЯ С ДИНАМИЧЕСКИМИ КОЛОНКАМИ) ---
 $import_message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
     if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in']) {
@@ -55,78 +49,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                    // Шаг 1: Подготовка к чтению файла
+                    // ================== НОВАЯ ЛОГИКА ИМПОРТА ==================
+
                     ini_set('auto_detect_line_endings', TRUE);
                     $handle = fopen($file_tmp_path, 'r');
-                    
-                    // Пропускаем невидимый маркер BOM
-                    if (fgets($handle, 4) !== "\xef\xbb\bf") {
+
+                    // Пропускаем BOM
+                    if (fgets($handle, 4) !== "\xef\xbb\xbf") {
                         rewind($handle);
                     }
 
-                    // Шаг 2: Читаем заголовок и создаем карту колонок
-                    $header = fgetcsv($handle, 2000, ";"); // Предполагаем точку с запятой
-                    if(count($header) < 2) { // Если колонок мало, пробуем запятую
-                        rewind($handle);
-                        if (fgets($handle, 4) !== "\xef\xbb\bf") { rewind($handle); }
-                        $header = fgetcsv($handle, 2000, ",");
-                    }
-                    $column_map = array_flip($header); // Создаем карту 'имя_колонки' => номер_колонки
+                    // Пропускаем заголовок
+                    fgetcsv($handle, 2000, ";");
 
-                    // Проверяем наличие обязательных колонок
-                    $required_columns = ['level', 'question', 'answer', 'qtype'];
-                    foreach($required_columns as $col) {
-                        if (!isset($column_map[$col])) {
-                            throw new Exception("Colonne requise manquante dans le fichier CSV : '$col'");
-                        }
-                    }
-
-                    // Шаг 3: Читаем все данные и определяем уровень
                     $all_rows = [];
                     $level_to_check = null;
-                    while (($data = fgetcsv($handle, 2000, count($header) > 1 ? ($delimiter ?? ';') : ',')) !== FALSE) {
-                        if (empty(implode('', $data))) continue; // Пропускаем пустые строки
+                    while (($data = fgetcsv($handle, 2000, ";")) !== FALSE) {
+                        // Пропускаем пустые строки или строки с недостаточным количеством колонок
+                        if (count($data) < 2 || empty($data[1])) {
+                            continue;
+                        }
                         $all_rows[] = $data;
                         if ($level_to_check === null) {
-                            $level_to_check = trim($data[$column_map['level']]);
+                            $level_to_check = trim($data[0]); // Уровень теперь в ПЕРВОЙ колонке (индекс 0)
                         }
                     }
                     fclose($handle);
 
                     if (!$level_to_check || empty($all_rows)) {
-                         throw new Exception("Impossible de déterminer le niveau ou aucune donnée trouvée dans le fichier.");
+                         throw new Exception("Impossible de déterminer le niveau ou aucune donnée trouvée.");
                     }
 
-                    // Шаг 4: Проверяем уровень на дубликат в БД
+                    // Проверяем уровень на дубликат в БД
                     $stmt = $pdo->prepare("SELECT COUNT(*) FROM GSDatabase WHERE level = ?");
                     $stmt->execute([$level_to_check]);
                     if ($stmt->fetchColumn() > 0) {
-                        throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà dans la base de données.");
+                        throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà.");
                     }
                     
-                    // Шаг 5: Все проверки пройдены, импортируем
+                    // Все проверки пройдены, импортируем
                     $pdo->beginTransaction();
-                    $sql = "INSERT INTO GSDatabase (question, rep1, rep2, rep3, rep4, rep5, answer, qtype, image, sound, level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, image, sound) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
                     
                     foreach ($all_rows as $row) {
                         $stmt->execute([
-                            $row[$column_map['question']] ?? null,
-                            $row[$column_map['rep1']] ?? null,
-                            $row[$column_map['rep2']] ?? null,
-                            $row[$column_map['rep3']] ?? null,
-                            $row[$column_map['rep4']] ?? null,
-                            $row[$column_map['rep5']] ?? null,
-                            $row[$column_map['answer']] ?? null,
-                            $row[$column_map['qtype']] ?? null,
-                            $row[$column_map['image']] ?? null,
-                            $row[$column_map['sound']] ?? null,
-                            $row[$column_map['level']] ?? null
+                            trim($row[0]) ?? null,      // level
+                            trim($row[1]) ?? null,      // question
+                            trim($row[2]) ?? null,      // rep1
+                            trim($row[3]) ?? null,      // rep2
+                            trim($row[4]) ?? null,      // rep3
+                            trim($row[5]) ?? 'null',    // rep4, используем 'null' если пусто
+                            trim($row[6]) ?? 'null',    // rep5, используем 'null' если пусто
+                            trim($row[7]) ?? null,      // answer
+                            trim($row[8]) ?? null,      // qtype
+                            null,                       // image (нет в CSV)
+                            null                        // sound (нет в CSV)
                         ]);
                     }
                     
                     $pdo->commit();
-                    $import_message = "<p class='success'>Le questionnaire (Niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>) a été importé avec succès. <strong>" . count($all_rows) . "</strong> questions ajoutées.</p>";
+                    $import_message = "<p class='success'>Importation réussie. <strong>" . count($all_rows) . "</strong> questions ajoutées pour le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>.</p>";
 
                 } catch (Exception $e) {
                     if(isset($pdo) && $pdo->inTransaction()){ $pdo->rollBack(); }
@@ -161,33 +145,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
     </style>
 </head>
 <body>
-
     <div class="container">
         <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
-            
             <form action="import.php" method="post" class="logout-form">
                 <button type="submit" name="logout">Déconnexion</button>
             </form>
-            
             <h1>Importer un Questionnaire</h1>
-            
             <?php if ($import_message) echo $import_message; ?>
-
-            <form action="import.php" method="post" enctype="multipart-form-data" style="margin-top: 2rem;">
+            <form action="import.php" method="post" enctype="multipart/form-data" style="margin-top: 2rem;">
                 <div class="form-group">
                     <label for="questionnaire_file">Sélectionnez un fichier de questionnaire (.csv) :</label>
                     <input type="file" id="questionnaire_file" name="questionnaire_file" accept=".csv" required>
                 </div>
                 <button type="submit" name="upload">Importer le fichier</button>
             </form>
-
         <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
-
             <h1>Accès Bloqué</h1>
-            <p class="error" name="session_bloquee">Votre accès est bloqué après 3 tentatives infructueuses. Veuillez contacter l'administrateur.</p>
-
+            <p class="error" name="session_bloquee">Votre accès est bloqué. Veuillez contacter l'administrateur.</p>
         <?php else : ?>
-
             <h1>Accès Administrateur</h1>
             <?php if (isset($login_error)) : ?>
                 <p class="error"><?php echo $login_error; ?></p>
@@ -204,9 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                 </div>
                 <button type="submit" name="login">Connexion</button>
             </form>
-
         <?php endif; ?>
     </div>
-
 </body>
 </html>
