@@ -427,39 +427,71 @@ $texts = [
         </div>
     </section>
 
-    <?php // --- БЛОК 2: ПОКАЗ СТРАНИЦЫ "СПАСИБО" ---
+        <?php 
+    // --- БЛОК 2: ИЗМЕНЕНИЯ ЗДЕСЬ ---
+    // Показ страницы "Спасибо" и сохранение данных
     } else if (isset($_POST["acc"]) || isset($_SESSION["acc"])) {
         if (!isset($_SESSION["acc"])) { // Обрабатываем данные формы только один раз
             $_SESSION["acc"] = "1";
-            $_SESSION["genre"] = htmlspecialchars($_POST['genre'] ?? '', ENT_QUOTES, 'UTF-8');
-            $_SESSION["orient"] = htmlspecialchars($_POST['orient'] ?? '', ENT_QUOTES, 'UTF-8');
+            $_SESSION["genre"] = htmlspecialchars($_POST['genre'] ?? '8', ENT_QUOTES, 'UTF-8');
+            $_SESSION["orient"] = htmlspecialchars($_POST['orient'] ?? '8', ENT_QUOTES, 'UTF-8');
             $_SESSION["emailr"] = htmlspecialchars($_POST['e_mm'] ?? '', ENT_QUOTES, 'UTF-8');
-
-            if (isset($_SESSION["id_user"])) {
-                try {
-                    $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-                    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                    $query = "UPDATE stationr2 SET genre = :genre, orientation = :orientation, repmail = :repmail, lang = 'ru' WHERE id = :id";
-                    $stmt = $conn->prepare($query);
-                    $stmt->execute(['genre' => $_SESSION["genre"], 'orientation' => $_SESSION["orient"], 'repmail' => $_SESSION["emailr"], 'id' => $_SESSION["id_user"]]);
-                    unset($_SESSION["id_user"]);
-                } catch (PDOException $e) { /* Игнорируем ошибку */ }
+            
+            // Убедимся, что переменная с ответами существует
+            if (!isset($_SESSION["reponses"])) {
+                $_SESSION["reponses"] = "null";
             }
+            
+            // Вся логика записи в БД теперь здесь
+            try {
+                $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                // Используем INSERT, как и планировалось изначально в updateQuestion2.php
+                // Убедитесь, что таблица называется GSDatabaseR, а не stationr2.
+                // Если таблица другая, исправьте её имя здесь.
+                $query = "INSERT INTO GSDatabaseR (ip, genre, orientation, reponse, repmail, lang) VALUES (?,?,?,?,?,?)";
+                $stmt = $conn->prepare($query);
+                $stmt->execute([
+                    $_SERVER['REMOTE_ADDR'], 
+                    $_SESSION["genre"], 
+                    $_SESSION["orient"], 
+                    $_SESSION['reponses'], 
+                    $_SESSION["emailr"], 
+                    $_SESSION["language"] ?? 'ru' // Используем язык из сессии или 'ru' по умолчанию
+                ]);
+
+            } catch (PDOException $e) { 
+                // В случае ошибки можно записать её в лог, но не ломать страницу
+                // error_log("DB Error: " . $e->getMessage());
+            }
+            
+            // Очищаем сессию от данных завершенной анкеты
+            unset(
+                $_SESSION['QuestionToUse'], $_SESSION['Rep1'], $_SESSION['Rep2'], 
+                $_SESSION['Rep3'], $_SESSION['Rep4'], $_SESSION['Rep5'], 
+                $_SESSION['IdInUse'], $_SESSION['answer'], $_SESSION['qtype'], 
+                $_SESSION['start'], $_SESSION['LastQuestion'], $_SESSION['finish'], 
+                $_SESSION['reponses'], $_SESSION['id_user']
+            );
         }
     ?>
     <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-thankyou">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
-                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                    <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts['thank_you']; ?></p>
-                    <img src="images/drap.png" alt="Флаг" style="margin: auto;">
+                <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center; padding: 2em;">
+                    <h2 class="u-text u-text-default u-text-1" style="margin-bottom: 1em;">Анкета завершена!</h2>
+                    <p style="margin-bottom: 2em;">Спасибо за ваше участие.</p>
+                    <a href="start.php" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50">
+                        Выбрать другую анкету
+                    </a>
                 </div>
             </div>
         </div>
     </section>
     <script>localStorage.clear();</script>
 
-    <?php // --- БЛОК 3: ПОКАЗ АНКЕТЫ ---
+    <?php  // --- БЛОК 3: ПОКАЗ АНКЕТЫ ---
     } else {
         if (!isset($_SESSION["start"])) {
             try {
@@ -602,6 +634,7 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
 
