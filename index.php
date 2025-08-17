@@ -1,4 +1,5 @@
 <?php
+$lang = "fr";
 ini_set('session.gc_maxlifetime', 31536000);
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
