@@ -15,6 +15,9 @@ $lang = $_SESSION['language'];
 
 $texts = [
     'fr' => [
+		'choose_questionnaire' => 'Choisissez un questionnaire',
+        'questionnaire_level' => 'Passer l\'enquête (Niveau {level})',
+        'no_questionnaires_available' => 'Aucun questionnaire disponible.',
         'project_title' => 'Projet solidaire d’un élève du Collège international Vauban de Strasbourg, avec le soutien de la STATION, centre LGBTQIA+ de Strasbourg.',
         'project_desc' => 'Un élève du Collège international Vauban à Strasbourg, a lancé un projet remarquable visant à sensibiliser ses camarades de classe aux questions LGBTQIA+. À travers une enquête en ligne qu’il a soigneusement conçue, il invite ses pairs à réfléchir sur des thématiques essentielles telles que l’identité de genre, l’orientation sexuelle et le respect de la diversité.',
         'objectives' => 'Objectifs du projet :',
@@ -51,6 +54,9 @@ $texts = [
         'return_to_start' => 'Retour à l\'accueil'
     ],
     'de' => [
+	    'choose_questionnaire' => 'Wählen Sie einen Fragebogen',
+        'questionnaire_level' => 'Umfrage starten (Stufe {level})',
+        'no_questionnaires_available' => 'Keine Fragebögen verfügbar.',
         'project_title' => 'Solidarisches Projekt eines Schülers des Collège international Vauban in Straßburg, unterstützt von der STATION, dem LGBTQIA+-Zentrum in Straßburg.',
         'project_desc' => 'Vorstellung des solidarischen Projekts: Ein Schüler des Collège international Vauban in Straßburg hat ein Projekt ins Leben gerufen, um seine Mitschüler/innen für LGBTQIA+-Themen zu sensibilisieren. Mit einer Online-Umfrage Online-Umfrage lädt Luc seine Altersgenossen ein, über wesentliche Themen wie Geschlechtsidentität, sexuelle Orientierung und Respekt vor Vielfalt nachzudenken.',
         'objectives' => 'Ziele des Projekts:',
@@ -99,6 +105,45 @@ $lang = $_SESSION['language'];
     <link rel="stylesheet" href="nicepage.css" media="screen">
     <link rel="stylesheet" href="Question.css" media="screen">
     <style>
+		.level-selection-container {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .level-selection-box {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        .level-selection-box h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .level-list a {
+            display: block;
+            background-color: #007bff;
+            color: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .level-list a:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        .error { color: #dc3545; }
         .u-align-center {
             transition: background-color 3s ease;
         }
@@ -678,6 +723,43 @@ for (let i = 0; i < data1.length; i++) {
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
 
     <?php
+
+if (!isset($_SESSION['level'])) {
+    
+    // Сбрасываем сессию для чистого старта
+    session_unset();
+
+    $levels = [];
+    $error_message = '';
+
+    try {
+        $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $stmt = $pdo->query("SELECT DISTINCT level FROM GSDatabase ORDER BY level ASC");
+        $levels = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+        $error_message = "Ошибка подключения к БД: " . $e->getMessage();
+    }
+?>
+    <div class="level-selection-container">
+        <div class="level-selection-box">
+            <h1><?php echo $texts[$lang]['choose_questionnaire']; ?></h1>
+            <?php if ($error_message): ?>
+                <p class="error"><?= htmlspecialchars($error_message) ?></p>
+            <?php elseif (empty($levels)): ?>
+                <p><?= $texts[$lang]['no_questionnaires_available'] ?></p>
+            <?php else: ?>
+                <div class="level-list">
+                    <?php foreach ($levels as $level): ?>
+                        <a href="index.php?level=<?= htmlspecialchars($level) ?>">
+                           <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']) ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php
     if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
 <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
     <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
@@ -1417,6 +1499,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
