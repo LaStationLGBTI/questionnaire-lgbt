@@ -382,7 +382,7 @@ $texts = [
     $lastQuestion = $_SESSION["LastQuestion"] ?? 0;
 
     if ($lastQuestion > $totalQuestions && !isset($_SESSION["acc"])) { ?>
-    <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-final">
+   <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-final">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1">
@@ -393,7 +393,7 @@ $texts = [
                             <div style="display: flex; align-items: center; gap:10px;">
                                 <p style="margin:0;"><?php echo $texts['gender_prompt']; ?></p>
                                 <select style="margin:0; padding-left:0;" name="genre" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                    <option value="1">Цисгендер</option><option value="2">Трансгендер</option><option value="3">Небинарный</option><option value="4">Гендерфлюид</option><option value="5">Интерсекс</option><option value="6">Ни один из вариантов</option><option value="7">Другое</option><option value="8">Предпочитаю не отвечать</option>
+                                    <option value="1">Cisgenre</option><option value="2">Transgenre</option><option value="3">Non-binaire</option><option value="4">Genderfluid</option><option value="5">Intersexe</option><option value="6">Aucune de ces options</option><option value="7">Autre</option><option value="8">Préfère ne pas répondre</option>
                                 </select>
                             </div>
                         </div><br><br>
@@ -402,7 +402,7 @@ $texts = [
                             <div style="display: flex; align-items: center; gap:10px;">
                                 <p style="margin:0;"><?php echo $texts['sexuality_prompt']; ?></p>
                                 <select style="margin:0; padding-left:0;" name="orient" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                    <option value="1">Гетеросексуальность</option><option value="2">Гомосексуальность</option><option value="3">Бисексуальность</option><option value="4">Пансексуальность</option><option value="5">Асексуальность</option><option value="6">Ни один из вариантов</option><option value="7">Другое</option><option value="8">Предпочитаю не отвечать</option>
+                                    <option value="1">Hétérosexuel(le)</option><option value="2">Homosexuel(le)</option><option value="3">Bisexuel(le)</option><option value="4">Pansexuel(le)</option><option value="5">Asexuel(le)</option><option value="6">Aucune de ces options</option><option value="7">Autre</option><option value="8">Préfère ne pas répondre</option>
                                 </select>
                             </div>
                         </div><br><br>
@@ -465,10 +465,10 @@ $texts = [
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center; padding: 2em;">
-                    <h2 class="u-text u-text-default u-text-1" style="margin-bottom: 1em;">Анкета завершена!</h2>
-                    <p style="margin-bottom: 2em;">Спасибо за ваше участие.</p>
+                    <h2 class="u-text u-text-default u-text-1" style="margin-bottom: 1em;">Questionnaire terminé !</h2>
+                    <p style="margin-bottom: 2em;">Merci pour votre participation.</p>
                     <a href="start.php" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50">
-                        Выбрать другую анкету
+                        Choisir un autre questionnaire
                     </a>
                 </div>
             </div>
@@ -619,6 +619,7 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
 
