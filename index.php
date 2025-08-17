@@ -3,53 +3,46 @@ ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 require_once 'conf.php';
 
-// Логика для старта и перезапуска анкеты
 if (isset($_GET['level'])) {
-    // Начинаем новую анкету, только если уровень в URL отличается от сохраненного в сессии
-    // или если сессия для анкеты еще не была начата.
+
     if (!isset($_SESSION['level']) || $_SESSION['level'] != $_GET['level']) {
         $_SESSION['level'] = $_GET['level'];
-        // Сбрасываем все переменные предыдущей анкеты
         unset($_SESSION['start']);
         unset($_SESSION['LastQuestion']);
         unset($_SESSION['finish']);
         unset($_SESSION['acc']);
-        unset($_SESSION['id_user']); // Также сбрасываем id пользователя
+        unset($_SESSION['id_user']); 
     }
-    // Перенаправляем на ту же страницу без параметра 'level' в URL,
-    // чтобы избежать сброса при обновлении страницы.
+
     header('Location: index.php');
     exit();
 }
 
-// Если уровень в сессии не установлен (например, прямой заход на index.php),
-// отправляем на страницу выбора анкеты.
+
 if (!isset($_SESSION['level'])) {
     header('Location: start.php');
     exit();
 }
 
 $level = $_SESSION['level'];
-
-// Тексты для интерфейса на русском языке
 $texts = [
-    'continue' => 'Продолжить',
-    'final_warning' => 'Заключительные вопросы',
-    'final_warning_desc' => 'Последние вопросы анкеты носят более личный характер и касаются вашей гендерной идентичности и сексуальной ориентации. Мы понимаем, что эти темы могут восприниматься как деликатные. Отвечать на них не обязательно: вы можете не отвечать на эти вопросы, если чувствуете себя некомфортно. Это никак не повлияет на ваше участие в опросе.',
-    'gender_question' => 'К какому гендеру вы себя относите?',
-    'gender_prompt' => 'Выберите подходящее описание',
-    'sexuality_question' => 'К какой сексуальной ориентации вы себя относите?',
-    'sexuality_prompt' => 'Выберите подходящее описание',
-    'email_prompt' => 'Введите ваш e-mail, если хотите получить результаты.',
-    'submit' => 'Отправить и завершить',
-    'thank_you' => 'Спасибо!',
-    'question' => 'Вопрос',
-    'corrections' => 'Соответствия:',
-    'none' => 'Нет',
-    'popup_title' => 'Определение',
-    'popup_prompt' => 'Выберите вариант из списка:',
-    'popup_close' => 'Закрыть',
-    'question_choise' => 'ВЫБРАТЬ'
+    'continue' => 'Continuer',
+    'final_warning' => 'Questions finales',
+    'final_warning_desc' => 'Les dernières questions de ce questionnaire sont plus personnelles et concernent votre identité de genre et votre orientation sexuelle. Nous comprenons que ces sujets puissent être perçus comme sensibles. Il n\'est pas obligatoire d\'y répondre : vous pouvez ignorer ces questions si vous ne vous sentez pas à l\'aise. Cela n\'affectera en rien votre participation.',
+    'gender_question' => 'À quel genre vous identifiez-vous ?',
+    'gender_prompt' => 'Choisissez une description appropriée',
+    'sexuality_question' => 'Quelle est votre orientation sexuelle ?',
+    'sexuality_prompt' => 'Choisissez une description appropriée',
+    'email_prompt' => 'Entrez votre e-mail si vous souhaitez recevoir les résultats.',
+    'submit' => 'Envoyer et terminer',
+    'thank_you' => 'Merci !',
+    'question' => 'Question',
+    'corrections' => 'Correspondances :',
+    'none' => 'Aucune',
+    'popup_title' => 'Définition',
+    'popup_prompt' => 'Choisissez une option dans la liste :',
+    'popup_close' => 'Fermer',
+    'question_choise' => 'CHOISIR'
 ];
 ?>
 <?php require_once 'conf.php'; ?>
@@ -388,7 +381,6 @@ $texts = [
     $totalQuestions = $_SESSION["TotalQuestions"] ?? 1;
     $lastQuestion = $_SESSION["LastQuestion"] ?? 0;
 
-    // --- БЛОК 1: ПОКАЗ ФИНАЛЬНОЙ ФОРМЫ ---
     if ($lastQuestion > $totalQuestions && !isset($_SESSION["acc"])) { ?>
     <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e-final">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
@@ -428,28 +420,23 @@ $texts = [
     </section>
 
         <?php 
-    // --- БЛОК 2: ИЗМЕНЕНИЯ ЗДЕСЬ ---
-    // Показ страницы "Спасибо" и сохранение данных
+
     } else if (isset($_POST["acc"]) || isset($_SESSION["acc"])) {
-        if (!isset($_SESSION["acc"])) { // Обрабатываем данные формы только один раз
+        if (!isset($_SESSION["acc"])) { 
             $_SESSION["acc"] = "1";
             $_SESSION["genre"] = htmlspecialchars($_POST['genre'] ?? '8', ENT_QUOTES, 'UTF-8');
             $_SESSION["orient"] = htmlspecialchars($_POST['orient'] ?? '8', ENT_QUOTES, 'UTF-8');
             $_SESSION["emailr"] = htmlspecialchars($_POST['e_mm'] ?? '', ENT_QUOTES, 'UTF-8');
             
-            // Убедимся, что переменная с ответами существует
             if (!isset($_SESSION["reponses"])) {
                 $_SESSION["reponses"] = "null";
             }
             
-            // Вся логика записи в БД теперь здесь
             try {
                 $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // Используем INSERT, как и планировалось изначально в updateQuestion2.php
-                // Убедитесь, что таблица называется GSDatabaseR, а не stationr2.
-                // Если таблица другая, исправьте её имя здесь.
+
                 $query = "INSERT INTO GSDatabaseR (ip, genre, orientation, reponse, repmail, lang) VALUES (?,?,?,?,?,?)";
                 $stmt = $conn->prepare($query);
                 $stmt->execute([
@@ -458,15 +445,13 @@ $texts = [
                     $_SESSION["orient"], 
                     $_SESSION['reponses'], 
                     $_SESSION["emailr"], 
-                    $_SESSION["language"] ?? 'ru' // Используем язык из сессии или 'ru' по умолчанию
+                    $_SESSION["language"] ?? 'ru' 
                 ]);
 
             } catch (PDOException $e) { 
-                // В случае ошибки можно записать её в лог, но не ломать страницу
-                // error_log("DB Error: " . $e->getMessage());
+
             }
             
-            // Очищаем сессию от данных завершенной анкеты
             unset(
                 $_SESSION['QuestionToUse'], $_SESSION['Rep1'], $_SESSION['Rep2'], 
                 $_SESSION['Rep3'], $_SESSION['Rep4'], $_SESSION['Rep5'], 
@@ -491,7 +476,7 @@ $texts = [
     </section>
     <script>localStorage.clear();</script>
 
-    <?php  // --- БЛОК 3: ПОКАЗ АНКЕТЫ ---
+    <?php  
     } else {
         if (!isset($_SESSION["start"])) {
             try {
@@ -634,6 +619,7 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
 
