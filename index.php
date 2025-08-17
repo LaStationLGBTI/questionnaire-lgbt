@@ -2,6 +2,10 @@
 <?php 
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
+if (isset($_POST['reset_session'])) {
+    session_unset();
+    session_destroy();
+}
 if (isset($_GET['level'])) {
     $new_level = $_GET['level'];
     $lang_to_preserve = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
@@ -973,9 +977,11 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
                     <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
                     <img src="images/drap.png" alt="" style="margin: 1em auto;">
                     
-                    <a href="index.php" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
-                        <?php echo $texts[$lang]['return_to_start']; ?>
-                    </a>
+<form method="POST" action="index.php" style="margin-top: 1em;">
+    <button type="submit" name="reset_session" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
+        <?php echo $texts[$lang]['return_to_start']; ?>
+    </button>
+</form>
                 </div>
             </div>
         </div>
@@ -1478,6 +1484,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
