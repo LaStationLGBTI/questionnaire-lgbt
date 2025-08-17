@@ -4,7 +4,7 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
-    <title>Question</title>
+    <title>Statistiques</title>
     <link rel="stylesheet" href="nicepage.css" media="screen">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="Question.css" media="screen">
@@ -41,10 +41,6 @@
             padding: 5px 10px;
             border-radius: 4px;
             z-index: 10;
-        }
-        .chart-number {
-                color: #000 !important;
-                background-color: #fff !important;
         }
         .chart-box canvas {
             max-height: 20em !important;
@@ -85,25 +81,6 @@
             flex-shrink: 0;
             font-weight: bold;
         }
-        .language-buttons {
-            text-align: center;
-            margin: 10px 0;
-        }
-        .language-buttons button {
-            margin: 0 5px;
-            padding: 8px 16px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-        }
-        .language-buttons button:hover {
-            background-color: #0056b3;
-        }
-        .language-buttons button.active {
-            background-color: #28a745;
-        }
         .count-box {
             background-color: #f8f9fa;
             border: 2px solid #007bff;
@@ -112,58 +89,20 @@
             margin: 10px auto;
             width: fit-content;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s ease;
         }
-
-        .count-box:hover {
-            background-color: #e9ecef;
-        }
-
         #totalCountText {
             font-size: 18px;
             font-weight: bold;
             color: #333;
         }
-
-        /* --- НОВЫЙ БЛОК: СТИЛИ ДЛЯ ПЕЧАТИ --- */
         @media print {
-            /* Скрыть ненужные для печати элементы */
-            .language-buttons,
-            #footer-placeholder,
-            .count-box {
-                display: none !important;
-            }
-
-            /* Предотвратить разрыв блока с графиком между страницами */
-            .chart-box {
-                page-break-inside: avoid;
-                box-shadow: none !important; /* Убрать тени для печати */
-                border: 1px solid #ccc !important; /* Сделать рамку тоньше для печати */
-                width: 100% !important; /* Растянуть на всю ширину страницы */
-            }
-
-            /* Убедиться, что цвета графиков и легенды печатаются */
-            body, .chart-box, .legend-color {
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact; /* Для совместимости с Chrome/Safari */
-            }
-
-            /* Установить белый фон для печати */
-            body, .u-group-1 .u-container-layout-1 {
-                background-color: #fff !important;
-            }
-            
-            section, .u-container-layout {
-                min-height: auto !important;
-            }
-            
-            .chart-number {
-                color: #000 !important;
-                background-color: #fff !important;
-            }
+            #footer-placeholder, .count-box { display: none !important; }
+            .chart-box { page-break-inside: avoid; box-shadow: none !important; border: 1px solid #ccc !important; width: 100% !important; }
+            body, .chart-box, .legend-color { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            body, .u-group-1 .u-container-layout-1 { background-color: #fff !important; }
+            section, .u-container-layout { min-height: auto !important; }
+            .chart-number { color: #000 !important; background-color: #fff !important; }
         }
-        /* --- КОНЕЦ БЛОКА СТИЛЕЙ ДЛЯ ПЕЧАТИ --- */
-
     </style>
 </head>
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="fr" style="height:100%">
@@ -171,13 +110,9 @@
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                    <div class="language-buttons">
-                        <button onclick="loadStats('fr')" class="lang-btn" data-lang="fr">Français</button>
-                        <button onclick="loadStats('de')" class="lang-btn" data-lang="de">Deutsch</button>
-                        <button onclick="loadStats('all')" class="lang-btn active" data-lang="all">All</button>
-                    </div>
+                    
                     <div id="totalCount" class="count-box">
-                        <span id="totalCountText">Total responses: 0 (All)</span>
+                        <span id="totalCountText">Всего ответов (Уровень 2): 0</span>
                     </div>
                     <div id="chartsContainer" class="chart-container"></div>
                 </div>
@@ -187,40 +122,30 @@
 
     <script>
         const chartInstances = {};
-        let chartCounter = 0;
-        function loadStats(lang) {
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.lang === lang) {
-                    btn.classList.add('active');
-                }
-            });
-
+        
+        function loadStats() {
             const container = document.getElementById('chartsContainer');
             container.innerHTML = '';
-            chartCounter = 0;
+            let chartCounter = 0; // Счетчик для нумерации
             Object.keys(chartInstances).forEach(key => {
                 chartInstances[key].destroy();
                 delete chartInstances[key];
             });
 
-            fetch(`stats_getdata.php?lang=${lang}`)
+            fetch(`stats_getdata.php`) // Убран параметр lang
                 .then(response => response.json())
                 .then(data => {
-                    const totalText = { 'fr': 'Réponses totales', 'de': 'Gesamtanzahl der Antworten', 'all': 'Total responses' };
-                    const languageLabel = { 'fr': 'Français', 'de': 'Deutsch', 'all': 'All' };
                     const totalResponses = data.totalResponses || 0;
-                    document.getElementById('totalCountText').textContent = `${totalText[lang]}: ${totalResponses} (${languageLabel[lang]})`;
+                    document.getElementById('totalCountText').textContent = `Всего ответов (Уровень 2): ${totalResponses}`;
 
                     data.formattedData.forEach(item => {
-                        chartCounter++;
-                        console.log(`Creating chart ${chartCounter} for question ID ${item.id}`);
+                        chartCounter++; // Увеличиваем счетчик для каждого нового графика
                         if (item.type === 'qcm' || item.type === 'echelle') {
-                            createPieChart(item.question, item.responses, item.id,chartCounter);
+                            createPieChart(item.question, item.responses, item.id, chartCounter);
                         } else if (item.type === 'mct') {
-                            createStackedBarChart(item.sub_questions, item.responses, item.id, item.question,chartCounter);
+                            createStackedBarChart(item.sub_questions, item.responses, item.id, item.question, chartCounter);
                         } else if (item.type === 'lien') {
-                            createStackedBarChart(item.sub_questions, item.sub_responses, item.id, item.question,chartCounter);
+                            createStackedBarChart(item.sub_questions, item.sub_responses, item.id, item.question, chartCounter);
                         }
                     });
 
@@ -253,7 +178,7 @@
                         const chart = chartInstances[chartId];
                         chart.update();
 
-                        const legendContainer = document.querySelector(`#chart_${chartId} + .legend-container`);
+                        const legendContainer = document.querySelector(`#chart_${chartId}`).parentElement.querySelector('.legend-container');
                         if (!legendContainer) return;
                         const legendItems = legendContainer.querySelectorAll('.legend-item');
 
@@ -285,11 +210,10 @@
             div.className = "chart-box";
             let numberLabel = document.createElement("div");
             numberLabel.className = "chart-number";
-            numberLabel.textContent = chartNumber || "N/A"; // Убедимся, что chartNumber отображается
-            console.log(`Adding chart number: ${chartNumber} for chart_${chartIndex}`); // НОВОЕ: Отладочный вывод
+            numberLabel.textContent = chartNumber; // Номер графика
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
-            questionLabel.innerHTML = `<b>Question: ${question}</b>`;
+            questionLabel.innerHTML = `<b>Вопрос: ${question}</b>`;
             questionLabel.style.textAlign = "center";
             questionLabel.style.marginBottom = "10px";
             div.appendChild(questionLabel);
@@ -339,17 +263,16 @@
             container.appendChild(div);
         }
 
-        function createStackedBarChart(subQuestions, responses, chartIndex, question,chartNumber) {
+        function createStackedBarChart(subQuestions, responses, chartIndex, question, chartNumber) {
             let container = document.getElementById("chartsContainer");
             let div = document.createElement("div");
             div.className = "chart-box";
             let numberLabel = document.createElement("div");
             numberLabel.className = "chart-number";
-            numberLabel.textContent = chartNumber || "N/A"; // Убедимся, что chartNumber отображается
-            console.log(`Adding chart number: ${chartNumber} for chart_${chartIndex}`); // НОВОЕ: Отладочный вывод
+            numberLabel.textContent = chartNumber; // Номер графика
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
-            questionLabel.innerHTML = `<b>Question: ${question}</b>`;
+            questionLabel.innerHTML = `<b>Вопрос: ${question}</b>`;
             questionLabel.style.textAlign = "center";
             questionLabel.style.marginBottom = "10px";
             div.appendChild(questionLabel);
@@ -398,7 +321,7 @@
             div.appendChild(legendContainer);
         }
 
-        loadStats('all');
+        loadStats(); // Загружаем статистику при открытии страницы
     </script>
     <script>
         setTimeout(() => {
@@ -415,7 +338,3 @@
     </script>
 </body>
 </html>
-
-
-
-
