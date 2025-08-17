@@ -39,7 +39,7 @@ $texts = [
         'questionnaire_level' => 'Passer l\'enquête (Niveau {level})',
         'no_questionnaires_available' => 'Aucun questionnaire disponible.',
         'project_title' => 'Sensibilisation aux violences exuelles et sexistes et autres discriminations (Formation en ligne et en auto-évaluation)',
-        'project_desc' => 'Un élève du Collège international Vauban à Strasbourg, a lancé un projet remarquable visant à sensibiliser ses camarades de classe aux questions LGBTQIA+. À travers une enquête en ligne qu’il a soigneusement conçue, il invite ses pairs à réfléchir sur des thématiques essentielles telles que l’identité de genre, l’orientation sexuelle et le respect de la diversité.',
+        'project_desc' => '',
         'objectives' => 'Objectifs du projet :',
         'awareness' => 'Sensibilisation : Encourager les élèves à mieux comprendre les réalités et les défis auxquels font face les personnes LGBTQIA+.',
         'inclusion' => 'Inclusion : Promouvoir un climat scolaire respectueux, où chacun se sent accepté, peu importe son identité ou son orientation.',
@@ -78,7 +78,7 @@ $texts = [
         'questionnaire_level' => 'Umfrage starten (Stufe {level})',
         'no_questionnaires_available' => 'Keine Fragebögen verfügbar.',
         'project_title' => '',
-        'project_desc' => 'Vorstellung des solidarischen Projekts: Ein Schüler des Collège international Vauban in Straßburg hat ein Projekt ins Leben gerufen, um seine Mitschüler/innen für LGBTQIA+-Themen zu sensibilisieren. Mit einer Online-Umfrage Online-Umfrage lädt Luc seine Altersgenossen ein, über wesentliche Themen wie Geschlechtsidentität, sexuelle Orientierung und Respekt vor Vielfalt nachzudenken.',
+        'project_desc' => '',
         'objectives' => 'Ziele des Projekts:',
         'awareness' => 'Sensibilisierung: Die Schüler/innen dazu ermutigen, die Realitäten und Herausforderungen von LGBTQIA+-Personen besser zu verstehen.',
         'inclusion' => 'Inklusion: Förderung eines respektvollen Schulklima, in dem sich jede Person unabhängig von ihrer Identität oder Orientierung akzeptiert fühlt.',
@@ -1485,6 +1485,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
