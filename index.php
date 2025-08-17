@@ -421,12 +421,14 @@ $texts = [
             </div>
         </div>
     </section>
-
-        <?php 
-
+<?php
+    // --- BLOC 2 : AFFICHAGE DE LA PAGE DE REMERCIEMENT CORRIGÉE ---
     } else if (isset($_POST["acc"]) || isset($_SESSION["acc"])) {
-        if (!isset($_SESSION["acc"])) { 
-            $_SESSION["acc"] = "1";
+        
+        if (!isset($_SESSION["acc"])) {
+            
+            $_SESSION["acc"] = "1"; 
+
             $_SESSION["genre"] = htmlspecialchars($_POST['genre'] ?? '8', ENT_QUOTES, 'UTF-8');
             $_SESSION["orient"] = htmlspecialchars($_POST['orient'] ?? '8', ENT_QUOTES, 'UTF-8');
             $_SESSION["emailr"] = htmlspecialchars($_POST['e_mm'] ?? '', ENT_QUOTES, 'UTF-8');
@@ -438,8 +440,7 @@ $texts = [
             try {
                 $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-
+                
                 $query = "INSERT INTO GSDatabaseR (ip, genre, orientation, reponse, repmail, lang) VALUES (?,?,?,?,?,?)";
                 $stmt = $conn->prepare($query);
                 $stmt->execute([
@@ -448,11 +449,15 @@ $texts = [
                     $_SESSION["orient"], 
                     $_SESSION['reponses'], 
                     $_SESSION["emailr"], 
-                    $_SESSION["language"] ?? 'ru' 
+                    $_SESSION["language"] ?? 'fr'
                 ]);
 
             } catch (PDOException $e) { 
-
+                // Этот блок остановит выполнение и покажет ошибку, если она есть
+                echo "<h1>Erreur de base de données !</h1>";
+                echo "<p>Le questionnaire est terminé, mais les données n'ont pas pu être sauvegardées.</p>";
+                echo "<p><strong>Message d'erreur :</strong> " . $e->getMessage() . "</p>";
+                exit(); // Останавливаем скрипт, чтобы не было цикла
             }
             
             unset(
@@ -479,7 +484,7 @@ $texts = [
     </section>
     <script>localStorage.clear();</script>
 
-    <?php  
+<?php
     } else {
         if (!isset($_SESSION["start"])) {
             try {
@@ -621,6 +626,7 @@ $texts = [
     </script>
 </body>
 </html>
+
 
 
 
