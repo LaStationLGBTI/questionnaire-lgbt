@@ -38,7 +38,7 @@ $texts = [
 		'choose_questionnaire' => 'Choisissez un questionnaire',
         'questionnaire_level' => 'Passer l\'enquête (Niveau {level})',
         'no_questionnaires_available' => 'Aucun questionnaire disponible.',
-        'project_title' => 'Projet solidaire d’un élève du Collège international Vauban de Strasbourg, avec le soutien de la STATION, centre LGBTQIA+ de Strasbourg.',
+        'project_title' => 'Sensibilisation aux violences exuelles et sexistes et autres discriminations (Formation en ligne et en auto-évaluation)',
         'project_desc' => 'Un élève du Collège international Vauban à Strasbourg, a lancé un projet remarquable visant à sensibiliser ses camarades de classe aux questions LGBTQIA+. À travers une enquête en ligne qu’il a soigneusement conçue, il invite ses pairs à réfléchir sur des thématiques essentielles telles que l’identité de genre, l’orientation sexuelle et le respect de la diversité.',
         'objectives' => 'Objectifs du projet :',
         'awareness' => 'Sensibilisation : Encourager les élèves à mieux comprendre les réalités et les défis auxquels font face les personnes LGBTQIA+.',
@@ -77,7 +77,7 @@ $texts = [
 	    'choose_questionnaire' => 'Wählen Sie einen Fragebogen',
         'questionnaire_level' => 'Umfrage starten (Stufe {level})',
         'no_questionnaires_available' => 'Keine Fragebögen verfügbar.',
-        'project_title' => 'Solidarisches Projekt eines Schülers des Collège international Vauban in Straßburg, unterstützt von der STATION, dem LGBTQIA+-Zentrum in Straßburg.',
+        'project_title' => '',
         'project_desc' => 'Vorstellung des solidarischen Projekts: Ein Schüler des Collège international Vauban in Straßburg hat ein Projekt ins Leben gerufen, um seine Mitschüler/innen für LGBTQIA+-Themen zu sensibilisieren. Mit einer Online-Umfrage Online-Umfrage lädt Luc seine Altersgenossen ein, über wesentliche Themen wie Geschlechtsidentität, sexuelle Orientierung und Respekt vor Vielfalt nachzudenken.',
         'objectives' => 'Ziele des Projekts:',
         'awareness' => 'Sensibilisierung: Die Schüler/innen dazu ermutigen, die Realitäten und Herausforderungen von LGBTQIA+-Personen besser zu verstehen.',
@@ -762,17 +762,6 @@ if (!isset($_SESSION['level'])) {
                 <p style="margin:0; font-size:16px;">
                     <?php echo $texts[$lang]['project_desc']; ?><br><br>
 
-                    <b><?php echo $texts[$lang]['objectives']; ?></b><br>
-                    <b><?php echo $texts[$lang]['awareness']; ?></b><br>
-                    <b><?php echo $texts[$lang]['inclusion']; ?></b><br>
-                    <b><?php echo $texts[$lang]['engagement']; ?></b><br>
-
-                    <br><b><?php echo $texts[$lang]['why_survey']; ?></b><br>
-                    <?php echo $texts[$lang]['survey_reason']; ?><br>
-
-                    <br><b><?php echo $texts[$lang]['impact']; ?></b><br>
-                    <?php echo $texts[$lang]['impact_desc']; ?><br>
-                    <br><?php echo $texts[$lang]['project_note']; ?>
                 </p>
                 <p style="margin:1em; padding:1em;border:solid; font-size:14px; border-color:#1400ff;">
                     <b><?php echo $texts[$lang]['warning_title']; ?></b> <br><br>
@@ -1496,6 +1485,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
