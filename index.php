@@ -818,7 +818,10 @@ if (!isset($_SESSION["start"])) {
     $stmt = $conn->prepare("SELECT * FROM $table WHERE level = ? ORDER BY `id` ASC");
     $stmt->execute([$_SESSION['level']]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+    if ($_SESSION['level'] != 1 && count($results) > 20) {
+    shuffle($results);    
+    $results = array_slice($results, 0, 20);
+}
     $_SESSION["QuestionToUse"] = "Questions";
     $_SESSION["Rep1"] = "Reponses1";
     $_SESSION["Rep2"] = "Reponses2";
@@ -1484,6 +1487,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
