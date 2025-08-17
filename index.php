@@ -47,7 +47,8 @@ $texts = [
         'popup_close' => 'Close',
         'corrections' => 'Corrections :',
         'none' => 'Aucun',
-	'question_choise' => "CHOISIR"
+		'question_choise' => "CHOISIR",
+        'return_to_start' => 'Retour à l\'accueil'
     ],
     'de' => [
         'project_title' => 'Solidarisches Projekt eines Schülers des Collège international Vauban in Straßburg, unterstützt von der STATION, dem LGBTQIA+-Zentrum in Straßburg.',
@@ -82,7 +83,8 @@ $texts = [
         'popup_close' => 'Schließen',
         'corrections' => 'Korrekturen:',
         'none' => 'Keine',
-	'question_choise' => "AUSWÄHLEN"
+		'question_choise' => "AUSWÄHLEN",
+        'return_to_start' => 'Zurück zum Start'
     ]
 ];
 $lang = $_SESSION['language'];
@@ -910,6 +912,9 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
                     <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
                         <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
                         <img src="images/drap.png" alt="" style="margin: auto;">
+						                    <a href="start.php" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
+                        <?php echo $texts[$lang]['return_to_start']; ?>
+                    </a>
                     </div>
                 </div>
             </div>
@@ -1407,6 +1412,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
 	</script>
 </body>
 </html>
+
 
 
 
