@@ -1,14 +1,11 @@
 <?php
-// Включаем конфигурацию БД и запускаем сессию
 require_once 'conf.php';
 session_start();
 
-// Инициализируем счетчик попыток входа, если он не существует
 if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['login_attempts'] = 0;
 }
 
-// Обработка выхода из системы
 if (isset($_POST['logout'])) {
     session_unset();
     session_destroy();
@@ -16,7 +13,6 @@ if (isset($_POST['logout'])) {
     exit();
 }
 
-// --- ЛОГИКА АУТЕНТИФИКАЦИИ ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     if ($_SESSION['login_attempts'] < 3) {
         $login = $_POST['identifiant'];
@@ -30,10 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             $stmt->execute([$login]);
             $user = $stmt->fetch();
 
-            // Проверяем пароль с помощью password_verify
-            if ($user && password_verify($pass, $user['passconn'])) {
+
+            if ($user && $pass === $user['passconn']) {
                 $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0; // Сбрасываем счетчик при успехе
+                $_SESSION['login_attempts'] = 0;
             } else {
                 $_SESSION['login_attempts']++;
                 $login_error = "Identifiant ou mot de passe incorrect.";
@@ -44,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 }
 
-// --- ЛОГИКА ИМПОРТА ФАЙЛА ---
 $import_message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
     if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in']) {
@@ -59,10 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                    // 1. Проверка на существующий уровень
                     $level_to_check = null;
                     if (($handle = fopen($file_tmp_path, 'r')) !== FALSE) {
-                        fgetcsv($handle, 1000, ";"); // Пропускаем заголовок
+                        fgetcsv($handle, 1000, ";");
                         if (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
                            if(isset($data[10])) {
                                $level_to_check = trim($data[10]);
@@ -77,7 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                         if ($stmt->fetchColumn() > 0) {
                             $import_message = "<p class='error'>Erreur : Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà dans la base de données. L'importation est annulée.</p>";
                         } else {
-                            // 2. Уровень уникален, приступаем к импорту
                             $pdo->beginTransaction();
                             $stmt = $pdo->prepare(
                                 "INSERT INTO GSDatabase (question, rep1, rep2, rep3, rep4, rep5, answer, qtype, image, sound, level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -85,9 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
 
                             $row_count = 0;
                             if (($handle = fopen($file_tmp_path, 'r')) !== FALSE) {
-                                fgetcsv($handle, 1000, ";"); // Снова пропускаем заголовок
+                                fgetcsv($handle, 1000, ";"); 
                                 while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
-                                    if(count($data) >= 11){ // Убедимся, что в строке достаточно данных
+                                    if(count($data) >= 11){ 
                                         $stmt->execute([
                                             $data[0], $data[1], $data[2], $data[3], $data[4], $data[5], $data[6],
                                             $data[7], $data[8], $data[9], trim($data[10])
