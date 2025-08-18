@@ -123,15 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                     echo "</tr></thead>";
                     
                     // Динамически выводим строки
-                    echo "<tbody>";
-                    foreach ($results as $row) {
-                        echo "<tr>";
-                        foreach ($columns as $col) {
-                            echo "<td>" . htmlspecialchars($row[$col]) . "</td>";
-                        }
-                        echo "</tr>";
-                    }
-                    echo "</tbody></table>";
+// NOUVEAU CODE CORRIGÉ
+echo "<tbody>";
+foreach ($results as $row) {
+    echo "<tr>";
+    foreach ($columns as $col) {
+        // On a simplement enlevé htmlspecialchars()
+        echo "<td>" . $row[$col] . "</td>"; 
+    }
+    echo "</tr>";
+}
+echo "</tbody></table>";
                 } else {
                     echo "<p>Aucun résultat trouvé dans la table `$view`.</p>";
                 }
