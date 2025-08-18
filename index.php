@@ -711,12 +711,14 @@ if (!isset($_SESSION['level'])) {
     session_unset();
     $levels = [];
     $error_message = '';
-
+	$level_titles = [];
     try {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $stmt = $pdo->query("SELECT DISTINCT level FROM GSDatabase ORDER BY level ASC");
         $levels = $stmt->fetchAll(PDO::FETCH_COLUMN);
+		$stmt_titles = $pdo->query("SELECT level, titre FROM GSDatabaseT");
+        $all_titles = $stmt_titles->fetchAll(PDO::FETCH_KEY_PAIR); 
     } catch (PDOException $e) {
         $error_message = "Ошибка подключения к БД: " . $e->getMessage();
     }
@@ -740,12 +742,17 @@ if (!isset($_SESSION['level'])) {
                                 <b><a href="index.php?level=<?= htmlspecialchars($level) ?>" 
                                    
                                    style="color:black; display: block; width: 100%; max-width: 400px; margin: 15px auto;">
+                                   
+                                   <?php  ?>
                                    <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']); 
-		
-		if($level == 1) echo ": Êtes-vous sexiste ?"; 
-		else if($level == 2) echo ": Violences sexuelles, sexistes, consentement et emprise"; 
-		
-		?>
+                                   
+                                   if (isset($all_titles[$level])) {
+                                       
+                                       echo ': ' . htmlspecialchars($all_titles[$level]);
+                                   }
+                                   ?>
+                                   <?php ?>
+
                                 </a></b>
                             <?php endforeach; ?>
                         </div>
@@ -1661,6 +1668,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
