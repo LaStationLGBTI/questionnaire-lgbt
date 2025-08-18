@@ -756,7 +756,35 @@ if (!isset($_SESSION['level'])) {
         </div>
     </section>
 <?php
-    } else if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { ?>
+    } else if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { 
+
+	    $level_titre = '';
+    $level_text = ''; // Переменная по умолчанию
+    
+    try {
+        // Подключаемся к БД
+        $pdo_desc = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+        $pdo_desc->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // Готовим запрос для получения текста по текущему $_SESSION['level']
+        $stmt_desc = $pdo_desc->prepare("SELECT titre, text FROM GSDatabaseT WHERE level = ?");
+        $stmt_desc->execute([$_SESSION['level']]);
+        $level_data = $stmt_desc->fetch(PDO::FETCH_ASSOC);
+
+        // Если данные для этого уровня найдены, используем их
+        if ($level_data) {
+            $level_titre = $level_data['titre'];
+            $level_text = $level_data['text'];
+        } else {
+            // Если в таблице нет описания для этого уровня, используем текст по умолчанию
+            $level_text = $texts[$lang]['project_desc'];
+        }
+    } catch (PDOException $e) {
+        // В случае ошибки подключения к БД, выводим сообщение
+        $level_text = "Erreur de chargement de la description.";
+    }
+	
+	?>
 <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
     <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
         <div class="u-container-layout u-container-layout-1">
@@ -764,10 +792,20 @@ if (!isset($_SESSION['level'])) {
                 <p class="u-text u-text-default u-text-1" style="text-align:center;margin:auto; font-size:24px;">
                     <b><?php echo $texts[$lang]['project_title']; ?></b>
                 </p>
-                <p style="margin:0; font-size:16px;">
-                    <?php echo $texts[$lang]['project_desc']; ?><br><br>
 
-                </p>
+                <?php // --- ИЗМЕНЕННАЯ СТРОКА ВЫВОДА --- ?>
+                <div style="margin:1em 0; font-size:16px; text-align: justify; padding: 0 1em;">
+                    <?php
+                        // Выводим заголовок из базы данных, если он есть
+                        if (!empty($level_titre)) {
+                            echo '<h3 style="text-align: center;">' . htmlspecialchars($level_titre) . '</h3>';
+                        }
+                        // Выводим основной текст (он уже содержит HTML, поэтому без htmlspecialchars)
+                        echo $level_text;
+                    ?>
+                </div>
+                <?php // --- КОНЕЦ ИЗМЕНЕНИЙ --- ?>
+
                 <p style="margin:1em; padding:1em;border:solid; font-size:14px; border-color:#1400ff;">
                     <b><?php echo $texts[$lang]['warning_title']; ?></b> <br><br>
 
@@ -778,18 +816,18 @@ if (!isset($_SESSION['level'])) {
                     <i><?php echo $texts[$lang]['thanks']; ?></i>
                 </p>
 
-<div class="language-selector">
-    <span style="align-self: center;">Français</span>
-    <form method="POST" style="display: inline;">
-        <input type="hidden" name="language" value="fr">
-        <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
-    </form>
-    <form method="POST" style="display: inline;">
-        <input type="hidden" name="language" value="de">
-        <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
-    </form>
-    <span style="align-self: center;">Deutsch</span>
-</div>
+                <div class="language-selector">
+                    <span style="align-self: center;">Français</span>
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="language" value="fr">
+                        <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                    </form>
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="language" value="de">
+                        <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                    </form>
+                    <span style="align-self: center;">Deutsch</span>
+                </div>
 
                 <form method="POST" action="">
                     <div class="u-align-right u-form-group u-form-submit">
@@ -1623,6 +1661,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
