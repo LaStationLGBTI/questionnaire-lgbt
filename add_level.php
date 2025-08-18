@@ -11,35 +11,36 @@ $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Получаем данные из формы
     $level = filter_input(INPUT_POST, 'level', FILTER_VALIDATE_INT);
-    $titre = htmlspecialchars($_POST['titre']);
-    $text = htmlspecialchars($_POST['text']);
+$titre = $_POST['titre'];
+$text = $_POST['text'];
 
     // Простая проверка, что все поля заполнены
-    if ($level && !empty($titre) && !empty($text)) {
+if ($level && !empty($titre)) { // Поле text может быть пустым
         try {
             $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            // Подготовленный запрос для безопасной вставки данных
+            // --- ВОТ КЛЮЧЕВАЯ ЧАСТЬ ---
+            // Этот запрос вставляет новую строку, а если level уже существует,
+            // он обновляет поля titre и text для этой строки.
             $sql = "INSERT INTO GSDatabaseT (level, titre, text) VALUES (:level, :titre, :text)
                     ON DUPLICATE KEY UPDATE titre = :titre, text = :text";
             
             $stmt = $pdo->prepare($sql);
 
-            // Выполняем запрос с данными из формы
             $stmt->execute([
                 ':level' => $level,
                 ':titre' => $titre,
                 ':text'  => $text
             ]);
 
-            $message = "<p style='color: green;'><strong>Успех!</strong> Данные для уровня {$level} добавлены/обновлены.</p>";
+            $message = "<p style='color: green;'><strong>Успех!</strong> Данные для уровня {$level} были успешно сохранены (добавлены или обновлены).</p>";
 
         } catch (PDOException $e) {
-            $message = "<p style='color: red;'><strong>Ошибка!</strong> Не удалось добавить данные: " . $e->getMessage() . "</p>";
+            $message = "<p style='color: red;'><strong>Ошибка!</strong> Не удалось сохранить данные: " . $e->getMessage() . "</p>";
         }
     } else {
-        $message = "<p style='color: red;'><strong>Ошибка!</strong> Пожалуйста, заполните все поля корректно.</p>";
+        $message = "<p style='color: red;'><strong>Ошибка!</strong> Пожалуйста, заполните поля 'Уровень' и 'Заголовок'.</p>";
     }
 }
 ?>
