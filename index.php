@@ -798,7 +798,7 @@ if (!isset($_SESSION['level'])) {
                     <?php
                         // Выводим заголовок из базы данных, если он есть
                         if (!empty($level_titre)) {
-                            echo '<h3 style="text-align: center;">' . htmlspecialchars($level_titre) . '</h3>';
+                            echo '<i><b><h3 style="text-align: center;">' . htmlspecialchars($level_titre) . '</h3></i></b>';
                         }
                         // Выводим основной текст (он уже содержит HTML, поэтому без htmlspecialchars)
                         echo $level_text;
@@ -1661,6 +1661,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
