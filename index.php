@@ -739,11 +739,11 @@ if (!isset($_SESSION['level'])) {
                             <?php foreach ($levels as $level): ?>
                                 <a href="index.php?level=<?= htmlspecialchars($level) ?>" 
                                    
-                                   style="display: block; width: 80%; max-width: 400px; margin: 15px auto;">
+                                   style="display: block; width: 100%; max-width: 400px; margin: 15px auto;">
                                    <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']); 
 		
 		if($level == 1) echo ": Êtes-vous sexiste ?"; 
-		else if($level == 2) echo ": Violences sexuelles, sexistes, aux questions de consentement et de l’emprise"; 
+		else if($level == 2) echo ": Violences sexuelles, sexistes, consentement et emprise"; 
 		
 		?>
                                 </a>
@@ -1623,6 +1623,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
