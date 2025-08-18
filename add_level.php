@@ -34,13 +34,13 @@ if ($level && !empty($titre)) { // Поле text может быть пусты�
                 ':text'  => $text
             ]);
 
-            $message = "<p style='color: green;'><strong>Ok!</strong> Information de module {$level} et ajoutée/modifiée.</p>";
+            $message = "<p style='color: green;'><strong>Успех!</strong> Данные для уровня {$level} были успешно сохранены (добавлены или обновлены).</p>";
 
         } catch (PDOException $e) {
-            $message = "<p style='color: red;'><strong>Ошибка!</strong> Erreur de sauvgarde: " . $e->getMessage() . "</p>";
+            $message = "<p style='color: red;'><strong>Ошибка!</strong> Не удалось сохранить данные: " . $e->getMessage() . "</p>";
         }
     } else {
-        $message = "<p style='color: red;'><strong>Ошибка!</strong> Il faut remplir "Titre" et "Text".</p>";
+        $message = "<p style='color: red;'><strong>Ошибка!</strong> Пожалуйста, заполните поля 'Уровень' и 'Заголовок'.</p>";
     }
 }
 ?>
@@ -49,7 +49,7 @@ if ($level && !empty($titre)) { // Поле text может быть пусты�
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ajouter Module</title>
+    <title>Добавить описание уровня</title>
     <style>
         body { font-family: sans-serif; margin: 2em; background-color: #f4f4f4; }
         .container { max-width: 600px; margin: auto; padding: 2em; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -81,24 +81,24 @@ if ($level && !empty($titre)) { // Поле text может быть пусты�
 </head>
 <body>
     <div class="container">
-        <h1>Ajouter module/modifier</h1>
+        <h1>Добавить/Изменить описание уровня</h1>
         
         <?php echo $message; // Отображение сообщения об успехе или ошибке ?>
 
         <form action="add_level.php" method="POST">
             <div>
-                <label for="level">Module (Level):</label>
+                <label for="level">Уровень (Level):</label>
                 <input type="number" id="level" name="level" required>
             </div>
             <div>
-                <label for="titre">Titre (Titre):</label>
+                <label for="titre">Заголовок (Titre):</label>
                 <input type="text" id="titre" name="titre" required>
             </div>
             <div>
-                <label for="text">Text (Text):</label>
+                <label for="text">Текст (Text):</label>
                 <textarea id="text" name="text" required></textarea>
             </div>
-            <button type="submit">Sauvgarder</button>
+            <button type="submit">Сохранить данные</button>
         </form>
     </div>
 </body>
