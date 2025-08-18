@@ -740,7 +740,7 @@ if (!isset($_SESSION['level'])) {
                                 <a href="index.php?level=<?= htmlspecialchars($level) ?>" 
                                    class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1"
                                    style="display: block; width: 80%; max-width: 400px; margin: 15px auto;">
-                                   <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']) echo "Êtes-vous sexiste ?"; ?>
+                                   <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']); echo "Êtes-vous sexiste ?"; ?>
                                 </a>
                             <?php endforeach; ?>
                         </div>
@@ -1618,6 +1618,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
