@@ -80,18 +80,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             <h1>Visualiseur de la Base de Données</h1>
 
             <?php
-            // ================== ВАШ ОРИГИНАЛЬНЫЙ КОД НАЧИНАЕТСЯ ЗДЕСЬ ==================
+            // ================== ИЗМЕНЕНИЯ НАЧИНАЮТСЯ ЗДЕСЬ ==================
             try {
                 $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // Определяем, какую таблицу просматривать
-                $view = isset($_GET['view']) && $_GET['view'] === 'questions' ? 'GSDatabase' : 'GSDatabaseR';
+                // --- ИЗМЕНЕНИЕ 1: Добавлена логика для третьей таблицы ---
+                $current_view_param = $_GET['view'] ?? 'results'; // 'results' будет по умолчанию
+
+                if ($current_view_param === 'questions') {
+                    $view = 'GSDatabase';
+                } elseif ($current_view_param === 'texts') {
+                    $view = 'GSDatabaseT';
+                } else {
+                    $view = 'GSDatabaseR';
+                }
                 
-                // Вкладки для переключения
+                // --- ИЗМЕНЕНИЕ 2: Добавлена кнопка для новой вкладки ---
                 echo '<div class="tabs">';
                 echo '<a href="?view=results" class="' . ($view === 'GSDatabaseR' ? 'active' : '') . '">Voir les Résultats (GSDatabaseR)</a>';
                 echo '<a href="?view=questions" class="' . ($view === 'GSDatabase' ? 'active' : '') . '">Voir les Questions (GSDatabase)</a>';
+                echo '<a href="?view=texts" class="' . ($view === 'GSDatabaseT' ? 'active' : '') . '">Voir les Textes (GSDatabaseT)</a>'; // Новая строка
                 echo '</div>';
 
                 echo "<h2>Affichage de la table : `$view`</h2>";
@@ -130,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             } catch (PDOException $e) {
                 echo "<p class='error'>Erreur de connexion à la base de données : " . $e->getMessage() . "</p>";
             }
-            // =================== ВАШ ОРИГИНАЛЬНЫЙ КОД ЗАКАНЧИВАЕТСЯ ЗДЕСЬ ===================
+            // =================== ИЗМЕНЕНИЯ ЗАКАНЧИВАЮТСЯ ЗДЕСЬ ===================
             ?>
         </div>
 
