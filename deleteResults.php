@@ -47,18 +47,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
             // Выполняем команду TRUNCATE
             $pdo->exec("TRUNCATE TABLE GSDatabaseR");
             
-            $message = "<p class='success'>Успех! Все записи из таблицы <strong>GSDatabaseR</strong> были удалены.</p>";
+            $message = "<p class='success'>Succès ! Tous les enregistrements de la table <strong>GSDatabaseR</strong> ont été supprimés.</p>";
         } catch (PDOException $e) {
-            $message = "<p class='error'>Ошибка при удалении данных: " . $e->getMessage() . "</p>";
+            $message = "<p class='error'>Erreur lors de la suppression des données : " . $e->getMessage() . "</p>";
         }
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Очистка таблицы результатов</title>
+    <title>Nettoyage de la table des résultats</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background: #fff; padding: 2rem 3rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; max-width: 600px; width: 100%; }
@@ -81,34 +81,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
                 <button type="submit" name="logout">Déconnexion</button>
             </form>
 
-            <h1>Очистка таблицы результатов</h1>
+            <h1>Nettoyage de la table des résultats</h1>
             
             <?php if ($message) echo $message; ?>
 
             <div class="warning">
-                <strong>ВНИМАНИЕ!</strong> Это действие безвозвратно удалит <strong>ВСЕ</strong> записи из таблицы <code>GSDatabaseR</code>. ID записей будет сброшен на 1.
+                <strong>ATTENTION !</strong> Cette action supprimera de manière irréversible <strong>TOUS</strong> les enregistrements de la table <code>GSDatabaseR</code>. L'ID des enregistrements sera réinitialisé à 1.
             </div>
             
-            <form action="" method="post" onsubmit="return confirm('Вы абсолютно уверены, что хотите удалить все результаты? Это действие нельзя отменить.');">
-                <button type="submit" name="confirm_delete" class="delete-button">Да, я уверен, удалить все результаты</button>
+            <form action="" method="post" onsubmit="return confirm('Êtes-vous absolument certain de vouloir supprimer tous les résultats ? Cette action est irréversible.');">
+                <button type="submit" name="confirm_delete" class="delete-button">Oui, je suis sûr, supprimer tous les résultats</button>
             </form>
 
         <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
-            <h1>Доступ заблокирован</h1>
-            <p class="error">Ваш доступ заблокирован после 3 неудачных попыток.</p>
+            <h1>Accès bloqué</h1>
+            <p class="error">Votre accès est bloqué après 3 tentatives infructueuses.</p>
         <?php else : ?>
-            <h1>Вход для администратора</h1>
+            <h1>Connexion administrateur</h1>
              <?php if (isset($login_error)) : ?><p class="error"><?php echo $login_error; ?></p><?php endif; ?>
             <form action="" method="post" style="text-align: left;">
                 <div style="margin-bottom: 1rem;">
-                    <label for="identifiant">Логин:</label>
+                    <label for="identifiant">Identifiant :</label>
                     <input type="text" id="identifiant" name="identifiant" required style="width: 100%; padding: 0.5rem; box-sizing: border-box;">
                 </div>
                 <div style="margin-bottom: 1.5rem;">
-                    <label for="mot_de_passe">Пароль:</label>
+                    <label for="mot_de_passe">Mot de passe :</label>
                     <input type="password" id="mot_de_passe" name="mot_de_passe" required style="width: 100%; padding: 0.5rem; box-sizing: border-box;">
                 </div>
-                <button type="submit" name="login">Войти</button>
+                <button type="submit" name="login">Se connecter</button>
             </form>
         <?php endif; ?>
     </div>
