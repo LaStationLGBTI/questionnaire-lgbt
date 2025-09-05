@@ -1,3 +1,17 @@
+Хорошая идея, это сделает работу намного удобнее.
+
+Я обновил скрипт и добавил на первую страницу альтернативный вариант: **"Шаг 1 (Альтернатива): Выбрать существующий уровень"**.
+
+Теперь у вас есть выбор:
+
+1.  Создать совершенно новый уровень, как и раньше.
+2.  Выбрать уровень из выпадающего списка и сразу перейти к добавлению в него вопросов (Шаг 2).
+
+### Обновлённый скрипт
+
+Просто замените код в вашем файле `add_level.php` на этот.
+
+```php
 <?php
 // On inclut la configuration et on démarre la session
 require_once 'conf.php';
@@ -18,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_level'])) {
             $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            // Vérifier si le niveau existe déjà
             $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM GSDatabaseT WHERE level = ?");
             $stmt_check->execute([$level]);
             if ($stmt_check->fetchColumn() > 0) {
@@ -28,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_level'])) {
                 $stmt->execute([$level, $titre, $text]);
                 $_SESSION['level_created'] = $level;
                 $_SESSION['level_titre'] = $titre;
-                $message = "<p class='success'>Le niveau '$titre' (ID: $level) a été créé avec succès. Vous pouvez maintenant ajouter des questions.</p>";
                 header('Location: ' . $_SERVER['PHP_SELF']);
                 exit();
             }
@@ -39,6 +51,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_level'])) {
         $message = "<p class='error'>Veuillez saisir un numéro de niveau et un titre valides.</p>";
     }
 }
+
+// --- NOUVEAU BLOC DE LOGIQUE ---
+// Traitement de la sélection d'un niveau existant
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['select_level'])) {
+    $level_id = filter_input(INPUT_POST, 'existing_level', FILTER_VALIDATE_INT);
+
+    if ($level_id) {
+        try {
+            $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            // Récupérer le titre du niveau sélectionné
+            $stmt = $pdo->prepare("SELECT titre FROM GSDatabaseT WHERE level = ?");
+            $stmt->execute([$level_id]);
+            $level_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($level_data) {
+                $_SESSION['level_created'] = $level_id;
+                $_SESSION['level_titre'] = $level_data['titre'];
+                header('Location: ' . $_SERVER['PHP_SELF']);
+                exit();
+            } else {
+                $message = "<p class='error'>Erreur : Le niveau sélectionné n'a pas été trouvé.</p>";
+            }
+        } catch (PDOException $e) {
+            $message = "<p class='error'>Erreur de base de données : " . $e->getMessage() . "</p>";
+        }
+    } else {
+        $message = "<p class='error'>Veuillez sélectionner un niveau valide.</p>";
+    }
+}
+
 
 // Traitement de l'ajout d'une question
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_question'])) {
@@ -105,6 +149,7 @@ if (isset($_POST['reset_level'])) {
         .success { color: #155724; background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 5px; margin-top: 1rem; }
         .info { color: #0c5460; background: #d1ecf1; border: 1px solid #bee5eb; padding: 1rem; border-radius: 5px; margin-bottom: 1.5rem; }
         .question-form { border-top: 2px solid #eee; margin-top: 2rem; padding-top: 2rem; }
+        .separator { text-align: center; font-size: 1.2rem; font-weight: bold; color: #6c757d; margin: 2rem 0; }
     </style>
 </head>
 <body>
@@ -129,11 +174,40 @@ if (isset($_POST['reset_level'])) {
                 </div>
                 <button type="submit" name="create_level">Créer le niveau</button>
             </form>
-        <?php else: ?>
+
+            <div class="separator">--- OU ---</div>
+            <h2>Étape 1 (Alternative) : Choisir un niveau existant</h2>
+            <?php
+                // Récupérer les niveaux existants pour le menu déroulant
+                $existing_levels = [];
+                try {
+                    $pdo_levels = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+                    $pdo_levels->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    $stmt_levels = $pdo_levels->query("SELECT level, titre FROM GSDatabaseT ORDER BY level ASC");
+                    $existing_levels = $stmt_levels->fetchAll(PDO::FETCH_ASSOC);
+                } catch (PDOException $e) {
+                    echo "<p class='error'>Impossible de charger la liste des niveaux existants.</p>";
+                }
+            ?>
+            <form action="" method="post">
+                <div class="form-group">
+                    <label for="existing_level">Sélectionnez un niveau :</label>
+                    <select id="existing_level" name="existing_level" required>
+                        <option value="">-- Choisissez --</option>
+                        <?php foreach ($existing_levels as $lvl): ?>
+                            <option value="<?= htmlspecialchars($lvl['level']) ?>">
+                                <?= htmlspecialchars($lvl['level']) ?> - <?= htmlspecialchars($lvl['titre']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" name="select_level">Passer à l'étape 2</button>
+            </form>
+            <?php else: ?>
             <div class="info">
                 Vous ajoutez des questions au niveau : <strong><?php echo htmlspecialchars($level_titre) . " (ID: " . htmlspecialchars($level_created) . ")"; ?></strong>
                 <form action="" method="post" style="display:inline; margin-left: 20px;">
-                    <button type="submit" name="reset_level" class="reset-button">Créer un autre niveau</button>
+                    <button type="submit" name="reset_level" class="reset-button">Choisir un autre niveau</button>
                 </form>
             </div>
             
@@ -190,3 +264,4 @@ if (isset($_POST['reset_level'])) {
     </div>
 </body>
 </html>
+```
