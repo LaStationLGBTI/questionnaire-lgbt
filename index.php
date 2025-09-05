@@ -175,7 +175,13 @@ $lang = $_SESSION['language'];
             margin: 0;
             margin-top: 0;
         }
-
+		.results-table .question-column { width: 30%; font-weight: bold; }    
+    	.results-table .expliq-column { 
+        width: 35%; 
+        font-style: italic; 
+        color: #555; 
+        background-color: #fdfdfd;
+    	}
         .u-active-palette-2-light-1.u-align-center.u-border-none.u-btn.u-btn-round {
             padding: 0.2em;
         }
@@ -863,7 +869,7 @@ if (!isset($_SESSION["start"])) {
         echo "Erreur connection: " . $e->getMessage();
     }
     $table = $lang === 'de' ? 'GSDatabase' : 'GSDatabase';
-    $stmt = $conn->prepare("SELECT * FROM $table WHERE level = ? ORDER BY `id` ASC");
+    $stmt = $conn->prepare("SELECT * FROM $table WHERE level = ? ORDER BY `id` ASC LIMIT 3");
     $stmt->execute([$_SESSION['level']]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if ($_SESSION['level'] != 1 && count($results) > 20) {
@@ -879,6 +885,7 @@ if (!isset($_SESSION["start"])) {
     $_SESSION["IdInUse"] = "id";
     $_SESSION["answer"] = "answer";
     $_SESSION["qtype"] = "qtype";
+	$_SESSION["expliqs"] = "expliqs";
     if ($results) {
         foreach ($results as $row) {
             $_SESSION["QuestionToUse"] .= "__" . $row["question"];
@@ -890,6 +897,7 @@ if (!isset($_SESSION["start"])) {
             $_SESSION["IdInUse"] .= "__" . $row["id"];
             $_SESSION["answer"] .= "__" . $row["answer"];
             $_SESSION["qtype"] .= "__" . $row["qtype"];
+			$_SESSION["expliqs"] .= "__" . $row["expliq"];
         }
         $ids = explode("__", $_SESSION["IdInUse"]);
         $_SESSION["TotalQuestions"] = count($ids) - 1;
@@ -1097,57 +1105,69 @@ if(isset($_SESSION['reponses'])){
                     </div>
                 </div>
 
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th class="question-column">Question</th>
-                            <th colspan="5">Réponses</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $total_questions_in_summary = 0;
-                        $correct_answers_count = 0;
+<table class="results-table">
+    <thead>
+        <tr>
+            <th class="question-column">Question</th>
+            <th class="expliq-column">Explication</th>
+            <th colspan="5">Réponses</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php
+        $total_questions_in_summary = 0;
+        $correct_answers_count = 0;
+        
+        // --- NEW: Load expliqs from session ---
+        $expliqs = explode('__', $_SESSION["expliqs"]);
 
-                        for ($i = 1; $i <= $_SESSION["TotalQuestions"]; $i++) {
-                            $q_type = $qtypes[$i] ?? 'qcm';
-                            if ($q_type != 'qcm' && $q_type != 'echelle') {
-                                continue;
-                            }
-                            $total_questions_in_summary++;
+        for ($i = 1; $i <= $_SESSION["TotalQuestions"]; $i++) {
+            $q_type = $qtypes[$i] ?? 'qcm';
+            if ($q_type != 'qcm' && $q_type != 'echelle') {
+                continue;
+            }
+            $total_questions_in_summary++;
 
-                            $current_id = $ids_in_use[$i];
-                            $user_choice = $user_answers[$current_id] ?? null;
-                            $correct_answer = $correct_answers[$i];
-                            
-                            if ($user_choice !== null && $user_choice == $correct_answer) {
-                                $correct_answers_count++;
-                            }
-                            
-                            echo '<tr>';
-                            echo '<td class="question-column">' . htmlspecialchars($questions[$i]) . '</td>';
+            $current_id = $ids_in_use[$i];
+            $user_choice = $user_answers[$current_id] ?? null;
+            $correct_answer = $correct_answers[$i];
+            
+            if ($user_choice !== null && $user_choice == $correct_answer) {
+                $correct_answers_count++;
+            }
+            
+            echo '<tr>';
+            echo '<td class="question-column">' . htmlspecialchars($questions[$i]) . '</td>';
 
-                            $possible_answers = [$rep1s[$i], $rep2s[$i], $rep3s[$i], $rep4s[$i], $rep5s[$i]];
-                            
-                            $answers_count = 0;
-                            foreach ($possible_answers as $j => $answer_text) {
-                                if ($answer_text !== 'null') {
-                                    $answers_count++;
-                                    $answer_num = $j + 1;
-                                    $classes = [];
-                                    
-                                    if ($answer_num == $user_choice) { $classes[] = 'user-answer'; }
-                                    if ($answer_num == $correct_answer) { $classes[] = 'correct-answer'; }
-                                    
-                                    echo '<td class="' . implode(' ', $classes) . '">' . htmlspecialchars($answer_text) . '</td>';
-                                }
-                            }
-                            for ($k = $answers_count; $k < 5; $k++) { echo '<td></td>'; }
-                            echo '</tr>';
-                        }
-                        ?>
-                    </tbody>
-                </table>
+            
+            $explanation = isset($expliqs[$i]) ? htmlspecialchars($expliqs[$i]) : '';
+            echo '<td class="expliq-column">' . $explanation . '</td>';
+
+            $possible_answers = [$rep1s[$i], $rep2s[$i], $rep3s[$i], $rep4s[$i], $rep5s[$i]];
+            
+            $answers_count = 0;
+            foreach ($possible_answers as $j => $answer_text) {
+                if ($answer_text !== 'null' && $answer_text !== '') {
+                    $answers_count++;
+                    $answer_num = $j + 1;
+                    $classes = [];
+                    
+                    if ($answer_num == $user_choice) { $classes[] = 'user-answer'; }
+                    if ($answer_num == $correct_answer) { $classes[] = 'correct-answer'; }
+                    
+                    echo '<td class="' . implode(' ', $classes) . '">' . htmlspecialchars($answer_text) . '</td>';
+                }
+            }
+            
+            
+            for ($k = $answers_count; $k < 5; $k++) {
+                echo '<td></td>';
+            }
+            echo '</tr>';
+        }
+        ?>
+    </tbody>
+</table>
 
                 <p class="score-display">
                     <?php 
@@ -1668,6 +1688,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
