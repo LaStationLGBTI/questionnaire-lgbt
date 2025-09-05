@@ -12,23 +12,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_level'])) {
     $level = filter_input(INPUT_POST, 'level', FILTER_VALIDATE_INT);
     $titre = trim($_POST['titre']);
     $text = trim($_POST['text']);
-    // --- ПОЛУЧАЕМ ДАННЫЕ ИЗ НОВОГО ПОЛЯ ---
-    $expliq = trim($_POST['expliq']);
 
     if ($level && !empty($titre)) {
         try {
             $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+            // Vérifier si le niveau existe déjà
             $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM GSDatabaseT WHERE level = ?");
             $stmt_check->execute([$level]);
             if ($stmt_check->fetchColumn() > 0) {
                 $message = "<p class='error'>Erreur : Le niveau numéro $level existe déjà.</p>";
             } else {
-                // --- ОБНОВЛЕННЫЙ ЗАПРОС INSERT ---
-                $stmt = $pdo->prepare("INSERT INTO GSDatabaseT (level, titre, text, expliq) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$level, $titre, $text, $expliq]);
-                
+                $stmt = $pdo->prepare("INSERT INTO GSDatabaseT (level, titre, text) VALUES (?, ?, ?)");
+                $stmt->execute([$level, $titre, $text]);
                 $_SESSION['level_created'] = $level;
                 $_SESSION['level_titre'] = $titre;
                 $message = "<p class='success'>Le niveau '$titre' (ID: $level) a été créé avec succès. Vous pouvez maintenant ajouter des questions.</p>";
@@ -46,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_level'])) {
 // Traitement de l'ajout d'une question
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_question'])) {
     if ($level_created) {
-        // ... (логика добавления вопроса осталась без изменений, поле expliq здесь больше не обрабатывается)
         $level = $level_created;
         $qtype = $_POST['qtype'];
         $question = trim($_POST['question']);
@@ -56,18 +52,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_question'])) {
         $rep4 = trim($_POST['rep4']);
         $rep5 = trim($_POST['rep5']);
         $answer = filter_input(INPUT_POST, 'answer', FILTER_VALIDATE_INT);
+        $expliq = trim($_POST['expliq']);
 
         if (!empty($question) && !empty($rep1) && !empty($rep2) && $answer !== null) {
              try {
                 $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                // Запрос теперь стандартный, без expliq
                 $stmt_q = $pdo->prepare(
-                    "INSERT INTO GSDatabase (level, qtype, question, rep1, rep2, rep3, rep4, rep5, answer) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO GSDatabase (level, qtype, question, rep1, rep2, rep3, rep4, rep5, answer, expliq) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
-                $stmt_q->execute([$level, $qtype, $question, $rep1, $rep2, $rep3, $rep4, $rep5, $answer]);
+                $stmt_q->execute([$level, $qtype, $question, $rep1, $rep2, $rep3, $rep4, $rep5, $answer, $expliq]);
 
                 $message = "<p class='success'>La question a été ajoutée avec succès au niveau '$level_titre' !</p>";
 
@@ -131,12 +127,6 @@ if (isset($_POST['reset_level'])) {
                     <label for="text">Description/Texte pour le niveau (supporte le HTML) :</label>
                     <textarea id="text" name="text" rows="8"></textarea>
                 </div>
-                
-                <div class="form-group">
-                    <label for="expliq">Explication (pour le niveau) :</label>
-                    <textarea id="expliq" name="expliq" rows="4"></textarea>
-                </div>
-                
                 <button type="submit" name="create_level">Créer le niveau</button>
             </form>
         <?php else: ?>
@@ -162,6 +152,11 @@ if (isset($_POST['reset_level'])) {
                     <div class="form-group">
                         <label for="question">Texte de la question :</label>
                         <textarea id="question" name="question" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="expliq">Explication de la réponse :</label>
+                        <textarea id="expliq" name="expliq" rows="4"></textarea>
                     </div>
                     
                     <div class="form-group">
