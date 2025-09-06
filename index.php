@@ -1108,9 +1108,9 @@ if(isset($_SESSION['reponses'])){
 <table class="results-table">
     <thead>
         <tr>
-            <th class="question-column">Question</th>
-            <th class="expliq-column">Explication</th>
+            <th class="question-column">Question</th>            
             <th colspan="5">Réponses</th>
+			<th class="expliq-column">Explication</th>
         </tr>
     </thead>
     <tbody>
@@ -1140,8 +1140,7 @@ if(isset($_SESSION['reponses'])){
             echo '<td class="question-column">' . htmlspecialchars($questions[$i]) . '</td>';
 
             
-            $explanation = isset($expliqs[$i]) ? htmlspecialchars($expliqs[$i]) : '';
-            echo '<td class="expliq-column">' . $explanation . '</td>';
+
 
             $possible_answers = [$rep1s[$i], $rep2s[$i], $rep3s[$i], $rep4s[$i], $rep5s[$i]];
             
@@ -1158,11 +1157,13 @@ if(isset($_SESSION['reponses'])){
                     echo '<td class="' . implode(' ', $classes) . '">' . htmlspecialchars($answer_text) . '</td>';
                 }
             }
-            
-            
+			
+                        
             for ($k = $answers_count; $k < 5; $k++) {
                 echo '<td></td>';
             }
+			            $explanation = isset($expliqs[$i]) ? htmlspecialchars($expliqs[$i]) : '';
+            echo '<td class="expliq-column">' . $explanation . '</td>';
             echo '</tr>';
         }
         ?>
@@ -1688,6 +1689,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
