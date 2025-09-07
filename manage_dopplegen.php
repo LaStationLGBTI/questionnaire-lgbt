@@ -51,6 +51,10 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         $name = trim($_POST['name']);
         $imageFile = $_FILES['image'];
 
+        // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Сохраняем категорию в сессию ---
+        $_SESSION['last_category'] = $category;
+        // ----------------------------------------------------
+
         if (!empty($category) && !empty($name) && $imageFile['error'] === UPLOAD_ERR_OK) {
             $fileExtension = pathinfo($imageFile['name'], PATHINFO_EXTENSION);
             $safeFilename = uniqid('img_', true) . '.' . strtolower($fileExtension);
@@ -155,15 +159,17 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         </form>
         
         <h1>Panneau de gestion "Dopplegen"</h1>
-        <?php if ($message) echo $message; ?>
+        <?php if ($message) echo $message; // Affiche les messages de succès ou d'erreur ?>
 
         <div class="main-container">
+            
             <div class="panel panel-left">
                 <h2>Ajouter une nouvelle entrée</h2>
                 <form action="manage_dopplegen.php" method="POST" enctype="multipart/form-data">
                     <div class="form-group">
                         <label for="category">Catégorie :</label>
-                        <input type="text" id="category" name="category" required>
+                        <input type="text" id="category" name="category" required 
+                               value="<?= htmlspecialchars(isset($_SESSION['last_category']) ? $_SESSION['last_category'] : '') ?>">
                     </div>
                     <div class="form-group">
                         <label for="name">Nom / Titre :</label>
@@ -176,8 +182,10 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     <button type="submit" name="add_entry">Ajouter</button>
                 </form>
             </div>
+
             <div class="panel panel-right">
                 <h2>Gérer les entrées existantes</h2>
+                
                 <form action="manage_dopplegen.php" method="GET">
                     <div class="form-group">
                         <label for="category_select">Filtrer par catégorie :</label>
