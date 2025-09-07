@@ -386,41 +386,47 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 }
                 ?>
 
-                <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
+<?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
                     
                     <?php
+                    // Перемешиваем порядок символов (индексов от 0 до k-1) для этой карты
                     shuffle($symbol_indices_array); 
-                    $k = count($symbol_indices_array);
-                    // Получаем ограничения для этого 'k'
-                    $constraints = getSymbolConstraints($k);
+                    $k = count($symbol_indices_array); // k = 8, 6, 5, 4, или 3
                     ?>
 
-                    <div class="dobble-card"> <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
+                    <div class="dobble-card layout-k<?= $k ?>"> 
+                        <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
                         
-                        <?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
+                        <?php 
+                        // Мы перебираем массив $symbol_indices_array. 
+                        // $key будет индексом ячейки (0, 1, 2, 3...)
+                        // $symbol_db_index будет индексом символа из БД (например, 42, 15, 3...)
+                        foreach ($symbol_indices_array as $key => $symbol_db_index): 
+                        ?>
                             <?php 
+                            // Получаем данные символа (имя, файл) по его ID из БД
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             
-                            // --- НОВАЯ СЛУЧАЙНАЯ ЛОГИКА (POSITION: ABSOLUTE) ---
-                            $size = rand($constraints['min_w'], $constraints['max_w']); // Случайный размер (из ограничений)
-                            $rotation = rand(-180, 180); // Случайный поворот
+                            // --- ЛОГИКА ДЛЯ CSS GRID ---
+                            // Нам больше не нужны top/left. Нам нужен только случайный поворот
+                            // и, возможно, небольшой случайный размер (в % от ячейки сетки).
+                            $rotation = rand(-90, 90);      // Случайный поворот
+                            $size_percent = rand(80, 95);   // Символ займет 80-95% своей ячейки сетки
                             
-                            // Случайная позиция, ограниченная, чтобы не уходить за край
-                            $max_pos_top = 100 - $size - 5; // (5% - это отступ)
-                            $max_pos_left = 100 - $size - 5;
-                            
-                            $top = rand(5, max(5, $max_pos_top));
-                            $left = rand(5, max(5, $max_pos_left));
-
-                            $style = "position: absolute; width: {$size}%; top: {$top}%; left: {$left}%; transform: rotate({$rotation}deg);";
+                            // Мы применяем только размер и поворот. Позиционированием займется CSS Grid.
+                            $style = "width: {$size_percent}%; max-height: {$size_percent}%; transform: rotate({$rotation}deg);";
                             ?>
                             
-                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
-                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
-                                 title="<?= htmlspecialchars($symbol_data['name']) ?>"
-                                 class="symbol" style="<?= $style ?>"> <?php endforeach; ?>
+                            <div class="symbol-cell symbol-cell-<?= $key ?>">
+                                <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
+                                     alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
+                                     title="<?= htmlspecialchars($symbol_data['name']) ?>"
+                                     class="symbol" 
+                                     style="<?= $style ?>">
+                            </div>
+                        <?php endforeach; // Конец цикла по символам ?>
                     </div>
-                <?php endforeach; ?>
+                <?php endforeach;?>
 
             </div>
 
