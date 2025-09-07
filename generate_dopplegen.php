@@ -309,97 +309,96 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
         <?php if (!empty($all_cards_indices)): ?>
             
-            <?php
+<?php
             /**
-             * Функция-хелпер "Слотов Макет"
-             * Генерирует массив предопределенных, БЕЗОПАСНЫХ координат для каждого символа на карте.
-             * Использует полярные координаты и динамические размеры.
-             * Возвращает: [ ['size' => %, 'top' => %, 'left' => %, 'z_index' => int], ... ]
+             * Функция-хелпер "Слотов Макет" (ПЕРЕРАБОТАННАЯ ВЕРСИЯ)
+             * Генерирует массив безопасных, математически выверенных координат для k символов.
+             * Эта модель гарантирует отсутствие перекрытий и обрезки по краям.
+             * Использует модель: 1 центральный слот + (k-1) слотов на одной орбите.
+             * Размеры (size), радиус орбиты (radius) и отступы (top/left) рассчитаны математически.
              */
             function getSymbolLayoutSlots($k) {
                 $slots = [];
-                $card_radius = 50; // Радиус карты в процентах (50% от родителя)
-                $center_x = 50; // Центр карты X
-                $center_y = 50; // Центр карты Y
+                $center_x = 50; // Центр карты X (в %)
+                $center_y = 50; // Центр карты Y (в %)
 
-                // Сначала определяем количество символов на центральной орбите и внешних орбитах.
-                // Это сильно зависит от 'k'.
-                $num_center_orbit = 0; // Символы на внутренней орбите
-                $num_outer_orbit = 0;  // Символы на внешней орбите
-                $center_symbol_size = 0; // Размер центрального символа
-                $orbit_symbol_size = 0;  // Размер символов на орбите
-                $orbit_radius_percent_inner = 0; // Радиус внутренней орбиты
-                $orbit_radius_percent_outer = 0; // Радиус внешней орбиты
+                // Параметры макета [center_size, orbit_size, orbit_radius]
+                // Рассчитано на основе формул:
+                // 1. (Безопасный радиус карты) = 48% (оставляем 2% зазора)
+                // 2. (Радиус орбиты) + (Размер орбиты / 2) = 48
+                // 3. (Размер орбиты) < 2 * (Радиус орбиты) * sin(PI / (k-1))  (чтобы символы на орбите не пересекались)
+                // 4. (Размер центра) / 2 < (Радиус орбиты) - (Размер орбиты / 2) (чтобы центр не пересекался с орбитой)
+                
+                $layout_params = [];
 
-
-                // Параметры для разных 'k'
                 switch ($k) {
-                    case 8: // 1 большой в центре, 3 средних на внутренней орбите, 4 маленьких на внешней
-                        $slots[] = ['size' => 38, 'top' => 31, 'left' => 31, 'z_index' => 10]; // Центральный, самый большой
-
-                        $num_center_orbit = 3; // Например, 3 средних
-                        $orbit_radius_percent_inner = 20; // Радиус орбиты для средних символов
-                        $orbit_symbol_size = 22; // Размер средних символов
-
-                        $num_outer_orbit = 4; // 4 маленьких
-                        $orbit_radius_percent_outer = 38; // Радиус орбиты для маленьких символов
-                        $outer_symbol_size = 20; // Размер маленьких символов
+                    case 8: // Порядок 7 (1 центр, 7 на орбите)
+                        // Max So < 29.04 -> Используем 28
+                        // Max Sc < 40 -> Используем 38
+                        // Ro = 48 - (28/2) = 34
+                        $layout_params = ['center_size' => 38, 'orbit_size' => 28, 'orbit_radius' => 34];
                         break;
-                    case 6: // 1 большой в центре, 5 средних на одной орбите
-                        $slots[] = ['size' => 45, 'top' => 27.5, 'left' => 27.5, 'z_index' => 10]; // Центральный, большой
-                        $num_outer_orbit = 5;
-                        $orbit_radius_percent_outer = 35;
-                        $outer_symbol_size = 25;
+                    case 6: // Порядок 5 (1 центр, 5 на орбите)
+                        // Max So < 35.53 -> Используем 34
+                        // Max Sc < 28 -> Используем 26 (для зазора)
+                        // Ro = 48 - (34/2) = 31
+                        $layout_params = ['center_size' => 26, 'orbit_size' => 34, 'orbit_radius' => 31];
                         break;
-                    case 5: // 1 большой в центре, 4 средних на одной орбите
-                        $slots[] = ['size' => 48, 'top' => 26, 'left' => 26, 'z_index' => 10]; // Центральный, большой
-                        $num_outer_orbit = 4;
-                        $orbit_radius_percent_outer = 38;
-                        $outer_symbol_size = 28;
+                    case 5: // Порядок 4 (1 центр, 4 на орбите)
+                        // Max So < 39.76 -> Используем 38
+                        // Max Sc < 20 -> Используем 18 (для зазора)
+                        // Ro = 48 - (38/2) = 29
+                        $layout_params = ['center_size' => 18, 'orbit_size' => 38, 'orbit_radius' => 29];
                         break;
-                    case 4: // 1 большой в центре, 3 средних на одной орбите
-                        $slots[] = ['size' => 50, 'top' => 25, 'left' => 25, 'z_index' => 10]; // Центральный, большой
-                        $num_outer_orbit = 3;
-                        $orbit_radius_percent_outer = 35;
-                        $outer_symbol_size = 30;
+                    case 4: // Порядок 3 (1 центр, 3 на орбите)
+                        // Max So < 44.55 -> Используем 42
+                        // Max Sc < 12 -> Используем 10 (для зазора)
+                        // Ro = 48 - (42/2) = 27
+                        $layout_params = ['center_size' => 10, 'orbit_size' => 42, 'orbit_radius' => 27];
                         break;
-                    case 3: // 1 большой в центре, 2 средних на одной орбите
+                    case 3: // Порядок 2 (1 центр, 2 на орбите)
                     default:
-                        $slots[] = ['size' => 55, 'top' => 22.5, 'left' => 22.5, 'z_index' => 10]; // Центральный, большой
-                        $num_outer_orbit = 2;
-                        $orbit_radius_percent_outer = 30;
-                        $outer_symbol_size = 35;
+                        // Сбалансированный макет
+                        // S < 32. Используем 30 для всех.
+                        // Ro должно быть > 30 и < 33. Используем 31.5
+                        $layout_params = ['center_size' => 30, 'orbit_size' => 30, 'orbit_radius' => 31.5];
                         break;
                 }
 
-                // Генерируем слоты для внутренней орбиты (если есть)
-                if ($num_center_orbit > 0) {
-                    for ($i = 0; $i < $num_center_orbit; $i++) {
-                        $angle = (M_PI * 2 / $num_center_orbit) * $i;
-                        $x = $center_x + $orbit_radius_percent_inner * cos($angle);
-                        $y = $center_y + $orbit_radius_percent_inner * sin($angle);
-                        $slots[] = [
-                            'size' => $orbit_symbol_size,
-                            'top' => $y - ($orbit_symbol_size / 2),
-                            'left' => $x - ($orbit_symbol_size / 2),
-                            'z_index' => 5
-                        ];
-                    }
+                // 1. Создать центральный слот
+                $cs = $layout_params['center_size'];
+                $slots[] = [
+                    'size' => $cs,
+                    'top' => $center_y - ($cs / 2),  // 50% - (половина размера) = верхний левый угол
+                    'left' => $center_x - ($cs / 2), // 50% - (половина размера) = верхний левый угол
+                    'z_index' => 10 // Центральный всегда выше
+                ];
+
+                // 2. Создать (k-1) орбитальных слотов
+                $num_orbit = $k - 1;
+                if ($num_orbit <= 0) {
+                    return $slots; // На случай, если k=1 (хотя это невозможно по алгоритму игры)
                 }
 
-                // Генерируем слоты для внешней орбиты (если есть)
-                if ($num_outer_orbit > 0) {
-                    for ($i = 0; $i < $num_outer_orbit; $i++) {
-                        $angle = (M_PI * 2 / $num_outer_orbit) * $i + (M_PI / $num_outer_orbit); // Смещаем, чтобы не пересекались с внутренней
-                        $x = $center_x + $orbit_radius_percent_outer * cos($angle);
-                        $y = $center_y + $orbit_radius_percent_outer * sin($angle);
-                        $slots[] = [
-                            'size' => $outer_symbol_size,
-                            'top' => $y - ($outer_symbol_size / 2),
-                            'left' => $x - ($outer_symbol_size / 2),
-                            'z_index' => 4
-                        ];
-                    }
+                $os = $layout_params['orbit_size'];
+                $or = $layout_params['orbit_radius'];
+                $angle_step = (M_PI * 2) / $num_orbit;
+                $angle_offset = M_PI / $num_orbit; // Смещаем на половину шага, чтобы ни один символ не был ровно "в 3 часа"
+
+                for ($i = 0; $i < $num_orbit; $i++) {
+                    $angle = ($angle_step * $i) + $angle_offset;
+                    
+                    // Рассчитываем ЦЕНТР символа на орбите
+                    $x = $center_x + $or * cos($angle);
+                    $y = $center_y + $or * sin($angle);
+
+                    // Рассчитываем ВЕРХНИЙ ЛЕВЫЙ УГОЛ (top, left) из центра и размера
+                    $slots[] = [
+                        'size' => $os,
+                        'top' => $y - ($os / 2), // Центрируем символ относительно точки (x,y)
+                        'left' => $x - ($os / 2),// Центрируем символ относительно точки (x,y)
+                        'z_index' => 5
+                    ];
                 }
                 
                 return $slots;
