@@ -349,50 +349,64 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
         <?php if (!empty($all_cards_indices)): ?>
             <div class="cards-container">
                 
+                <?php
+                // --- НОВАЯ PHP-ФУНКЦИЯ ДЛЯ ОГРАНИЧЕНИЯ РАЗМЕРОВ ---
+                // Эта функция определяет максимальный размер символа в зависимости от их количества
+                function getSymbolConstraints($k) {
+                    if ($k >= 8) { // n=7 (8 символов)
+                        return ['min_w' => 20, 'max_w' => 30, 'max_pos' => 65]; // Размер 20-30%, макс. позиция 65%
+                    } elseif ($k >= 6) { // n=5 (6 символов)
+                        return ['min_w' => 25, 'max_w' => 38, 'max_pos' => 60];
+                    } elseif ($k >= 5) { // n=4 (5 символов)
+                        return ['min_w' => 30, 'max_w' => 45, 'max_pos' => 55];
+                    } elseif ($k >= 4) { // n=3 (4 символа)
+                        return ['min_w' => 35, 'max_w' => 50, 'max_pos' => 50];
+                    } else { // n=2 (3 символа)
+                        return ['min_w' => 40, 'max_w' => 55, 'max_pos' => 45];
+                    }
+                }
+                ?>
+
                 <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
                     
                     <?php
-                    // PHP-логика здесь не меняется
-                    $k = count($symbol_indices_array);
-                    $layout_class = 'layout-k' . $k;
                     shuffle($symbol_indices_array); 
-                    
-                    $min_size_percent = 70; 
-                    $max_size_percent = 100;
+                    $k = count($symbol_indices_array);
+                    // Получаем ограничения для этого 'k'
+                    $constraints = getSymbolConstraints($k);
                     ?>
 
-                    <div class="dobble-card <?= $layout_class ?>"> 
-                        <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
+                    <div class="dobble-card"> <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
                         
-<?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
+                        <?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
                             <?php 
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             
-$min_size_percent_base = 50; // Базовый минимальный размер
-                            $max_size_percent_base = 85; // Базовый максимальный размер
+                            // --- НОВАЯ СЛУЧАЙНАЯ ЛОГИКА (POSITION: ABSOLUTE) ---
+                            $size = rand($constraints['min_w'], $constraints['max_w']); // Случайный размер (из ограничений)
+                            $rotation = rand(-180, 180); // Случайный поворот
                             
-                            // Вы можете настроить эти значения, чтобы найти идеальный баланс
-                            $size = rand($min_size_percent_base, $max_size_percent_base); 
-                            $rotation = rand(-180, 180);
+                            // Случайная позиция, ограниченная, чтобы не уходить за край
+                            $max_pos_top = 100 - $size - 5; // (5% - это отступ)
+                            $max_pos_left = 100 - $size - 5;
                             
-                            $img_style = "width: {$size}%; max-width: {$size}%; transform: rotate({$rotation}deg);";
-                            
-                            $cell_class = 'symbol-cell-' . $key;
+                            $top = rand(5, max(5, $max_pos_top));
+                            $left = rand(5, max(5, $max_pos_left));
+
+                            $style = "position: absolute; width: {$size}%; top: {$top}%; left: {$left}%; transform: rotate({$rotation}deg);";
                             ?>
                             
-                            <div class="symbol-cell <?= $cell_class ?>">
-                                <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
-                                     alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
-                                     title="<?= htmlspecialchars($symbol_data['name']) ?>"
-                                     class="symbol"
-                                     style="<?= $img_style ?>">
-                            </div>
-                            <?php endforeach; ?>
+                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
+                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
+                                 title="<?= htmlspecialchars($symbol_data['name']) ?>"
+                                 class="symbol" style="<?= $style ?>"> <?php endforeach; ?>
                     </div>
                 <?php endforeach; ?>
 
-</div> <div class="symbol-legend-container">
-                <h2>Symboles (Légende)</h2>
+            </div>
+
+            <div class="symbol-legend-container">
+                <h2>Symboles utilisés (Légende)</h2>
                 <p>Liste de tous les symboles uniques (<?= count($symbols_to_use) ?>) utilisés dans ce jeu.</p>
                 <table class="legend-table">
                     <thead>
@@ -415,7 +429,8 @@ $min_size_percent_base = 50; // Базовый минимальный разме
                     </tbody>
                 </table>
             </div>
-            <?php endif; ?>
+
+        <?php endif; ?>
         
 
     <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
