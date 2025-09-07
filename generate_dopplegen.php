@@ -150,7 +150,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
 
-        /* --- NOUVEAUX STYLES DE CARTE (GRID) --- */
+        /* --- STYLES DE CARTE (GRID) --- */
         .cards-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -164,23 +164,21 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
             position: relative;
-            overflow: hidden; /* Toujours couper ce qui dépasse */
+            overflow: hidden; 
             padding: 15px;
             box-sizing: border-box;
-            
-            /* DÉFINITION DE LA GRILLE PRINCIPALE */
             display: grid; 
         }
         .card-header {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 1;
         }
         .dobble-card .symbol {
-            /* Le symbole est maintenant un enfant de la grille */
-            max-width: 95%; /* Taille max par rapport à sa cellule */
+            max-width: 95%; 
             max-height: 95%;
             object-fit: contain;
-            margin: auto; /* Centrer dans la cellule de la grille */
+            margin: auto; 
             transition: transform 0.3s ease;
+            /* Le style inline PHP ajoutera width:% et transform:rotate() */
         }
         .dobble-card .symbol:hover {
             transform: scale(1.2) !important;
@@ -188,7 +186,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             position: relative;
         }
 
-        /* --- GRILLES DE LAYOUT POUR CHAQUE ORDRE (k = symboles par carte) --- */
+        /* --- GRILLES DE LAYOUT POUR CHAQUE ORDRE --- */
 
         /* Layout pour 8 symboles (k=8, Ordre n=7) */
         .layout-k8 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
@@ -218,13 +216,22 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .layout-k5 .symbol-cell-3 { grid-area: 3 / 1; }
         .layout-k5 .symbol-cell-4 { grid-area: 3 / 3; }
 
-        /* Layout pour 4 symboles (k=4, Ordre n=3) */
-        .layout-k4 { grid-template: 1fr 1fr / 1fr 1fr; place-items: center; gap: 10px; padding: 10%; }
-        /* Les classes (symbol-cell-0 à 3) seront assignées automatiquement */
+        /* --- CSS ИСПРАВЛЕНО ЗДЕСЬ --- */
         
-        /* Layout pour 3 symboles (k=3, Ordre n=2) */
-        .layout-k3 { grid-template: 1fr 1fr 1fr / 1fr; place-items: center; gap: 10px; padding: 15%; }
-        /* Les classes (symbol-cell-0 à 2) seront assignées automatiquement */
+        /* Layout pour 4 symboles (k=4, Ordre n=3) - Раскладка "по углам" */
+        .layout-k4 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; padding: 10%; }
+        .layout-k4 .symbol-cell-0 { grid-area: 1 / 1; }
+        .layout-k4 .symbol-cell-1 { grid-area: 1 / 3; }
+        .layout-k4 .symbol-cell-2 { grid-area: 3 / 1; }
+        .layout-k4 .symbol-cell-3 { grid-area: 3 / 3; }
+        
+        /* Layout pour 3 symboles (k=3, Ordre n=2) - Раскладка "треугольник" */
+        .layout-k3 { grid-template: 1fr 1fr / 1fr 1fr; place-items: center; gap: 5px; padding: 15%; }
+        .layout-k3 .symbol-cell-0 { grid-area: 1 / 1; grid-column-start: 1; grid-column-end: 3; } /* Вверху по центру */
+        .layout-k3 .symbol-cell-1 { grid-area: 2 / 1; } /* Внизу слева */
+        .layout-k3 .symbol-cell-2 { grid-area: 2 / 2; } /* Внизу справа */
+        
+        /* --- КОНЕЦ ИСПРАВЛЕНИЙ --- */
 
 
         /* --- Styles d'impression (6 cartes par page A4) --- */
@@ -248,7 +255,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 page-break-inside: avoid;
                 width: 95mm; /* Taille fixe */
                 height: 95mm; /* Taille fixe */
-                padding: 8px; /* Réduire le padding pour l'impression */
+                padding: 8px; /* Réduire le padding для печати */
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; } 
