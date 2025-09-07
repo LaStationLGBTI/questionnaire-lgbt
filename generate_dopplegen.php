@@ -129,7 +129,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     <title>Générateur de Cartes Dopplegen</title>
     <style>
         /* Styles de base (écran) */
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; box-sizing: border-box; }
         h1, h2 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
         .login-container { max-width: 400px; margin: 50px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 1rem; border-radius: 5px; margin-top: 10px; }
@@ -150,7 +150,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
 
-        /* --- STYLES DE CARTE (GRID) --- */
+        /* --- СТИЛИ КАРТОЧКИ ОБНОВЛЕНЫ (УБРАН GRID) --- */
         .cards-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -163,41 +163,26 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             border-radius: 50%;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
-            position: relative;
-            overflow: hidden; 
-            padding: 15px;
+            position: relative; /* Обязательно для абсолютного позиционирования детей */
+            overflow: hidden; /* Обязательно для обрезки по кругу */
+            padding: 10px;
             box-sizing: border-box;
-            display: grid; 
+            /* display: grid; -- УБРАН */
         }
         .card-header {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 1;
         }
 
-        /* --- БЛОК ИЗМЕНЕН --- */
-        /* 1. ЭТО НОВЫЙ КОНТЕЙНЕР-ОБЕРТКА. Он является ячейкой сетки. */
-        .symbol-cell {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden; /* <-- ЭТО ГЛАВНОЕ ИСПРАВЛЕНИЕ. Обрезает повернутое изображение. */
-            width: 100%;
-            height: 100%;
-        }
-
-        /* 2. Само изображение (символ) теперь просто заполняет свой контейнер */
+        /* --- СТИЛИ СИМВОЛА ОБНОВЛЕНЫ --- */
         .dobble-card .symbol {
-            max-width: 100%; 
-            max-height: 100%;
+            position: absolute; /* 100% случайное позиционирование */
             object-fit: contain;
             transition: transform 0.3s ease;
-            /* margin: auto; - больше не нужен, flex-контейнер делает это */
+            height: auto; /* Высота автоматическая, управляем шириной */
         }
-        /* --- КОНЕЦ ИЗМЕНЕНИЙ --- */
-
         .dobble-card .symbol:hover {
-            transform: scale(1.2) !important;
+            transform: scale(1.2) !important; 
             z-index: 10;
-            position: relative;
         }
 
         /* --- Все раскладки (layout) остаются БЕЗ ИЗМЕНЕНИЙ --- */
@@ -270,7 +255,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 box-sizing: border-box;
             }
             .card-header { display: none; }
-            .dobble-card .symbol { transition: none; } 
+            .dobble-card .symbol { transition: none; }
             /* --- Styles pour l'impression de la Légende --- */
         .symbol-legend-container {
             page-break-before: always; /* ФОРСИРУЕТ ЛЕГЕНДУ НА НОВУЮ (ПОСЛЕДНЮЮ) СТРАНИЦУ */
