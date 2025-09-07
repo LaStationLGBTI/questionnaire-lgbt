@@ -243,7 +243,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             .cards-container {
                 display: grid;
                 grid-template-columns: 1fr 1fr; /* 2 colonnes */
-                grid-auto-rows: 85mm; /* --- ИЗМЕНЕНО: Фиксированная высота ряда --- */
+                grid-auto-rows: 70mm; /* --- ИЗМЕНЕНО: Фиксированная высота ряда --- */
                 gap: 10mm; /* --- ИЗМЕНЕНО: Отступ 10мм --- */
                 padding: 5mm; /* Небольшой отступ от края страницы */
                 margin: 0;
