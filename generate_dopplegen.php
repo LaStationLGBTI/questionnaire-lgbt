@@ -47,9 +47,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     $selected_category_get = '';
     $uploadDir = 'dopplegenImages/';
 
-    // --- НОВОЕ: Получаем значения слайдеров (или значения по умолчанию) ---
+    // --- ПОЛУЧАЕМ ЗНАЧЕНИЯ СЛАЙДЕРОВ (или значения по умолчанию) ---
     $min_variance_mod = isset($_GET['min_var']) ? (int)$_GET['min_var'] : 60;
-    $max_variance_mod = isset($_GET['max_var']) ? (int)$_GET['max_var'] : 130;
+    $max_variance_mod = isset($_GET['max_var']) ? (int)$_GET['max_var'] : 100; // По умолчанию 100 (безопасно)
 
 
     try {
@@ -72,7 +72,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 $sql .= " WHERE category = ?";
                 $params[] = $selected_category_get;
             }
-            $sql .= " ORDER BY RAND()"; // Mélanger les symboles pour un jeu différent à каждый раз
+            $sql .= " ORDER BY RAND()"; // Mélanger les symboles для разной игры
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -144,7 +144,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         input[type="text"], input[type="password"], select {
             width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1rem;
         }
-        /* --- НОВЫЕ СТИЛИ ДЛЯ СЛАЙДЕРОВ --- */
+        /* --- СТИЛИ ДЛЯ СЛАЙДЕРОВ --- */
         input[type="range"] { width: 100%; margin-top: 5px; }
         .slider-label { font-size: 0.9rem; color: #333; }
         .slider-value { font-weight: bold; color: #007bff; background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; display: inline-block; min-width: 25px; text-align: center; }
@@ -180,7 +180,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             box-sizing: border-box;
             display: flex; /* Используем flexbox для центрирования содержимого */
             justify-content: center;
-            align: items-center;
+            align-items: center;
         }
         .card-header {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 10;
@@ -306,7 +306,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     </select>
                 </div>
 
-                <p class="slider-label">Ajuster la plage de taille aléatoire (en % de la taille de sécurité maximale) :</p>
+                <p class="slider-label">Ajuster la plage de taille aléatoire (% de la taille de sécurité maximale) :</p>
                 <div class="slider-container">
                     <div class="form-group">
                         <label for="min_var">Taille Minimale: <span id="minValLabel" class="slider-value"><?= $min_variance_mod ?></span>%</label>
@@ -315,7 +315,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     </div>
                     <div class="form-group">
                         <label for="max_var">Taille Maximale: <span id="maxValLabel" class="slider-value"><?= $max_variance_mod ?></span>%</label>
-                        <input type="range" id="max_var" name="max_var" min="10" max="100" value="<?= $max_variance_mod ?>"
+                        <input type="range" id="max_var" name="max_var" min="10" max="130" value="<?= $max_variance_mod ?>"
                                oninput="document.getElementById('maxValLabel').innerText = this.value">
                     </div>
                 </div>
@@ -336,14 +336,14 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             
             <?php
             /**
-             * ФУНКЦИЯ-ПОМОЩНИК (Обновленная версия 3.0)
-             * Теперь принимает модификаторы min/max от слайдеров.
+             * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.0)
+             * Принимает модификаторы min/max от слайдеров.
              */
             function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center_y = 50) {
                 $slots = [];
                 $layer_index = 0;
 
-                // --- НОВОЕ: Проверка слайдеров ---
+                // --- Проверка слайдеров ---
                 // Убедимся, что мин. модификатор не больше макс. модификатора
                 if ($min_mod > $max_mod) {
                     $min_mod = $max_mod; 
@@ -403,8 +403,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             }
 
             /**
-             * ОСНОВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ МАКЕТА (Обновленная версия 3.0)
-             * Теперь принимает $min_mod и $max_mod и передает их в build_slots.
+             * ОСНОВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ МАКЕТА (Версия 3.0)
+             * Принимает $min_mod и $max_mod и передает их в build_slots.
              * Все рецепты (размеры) основаны на 100% безопасном размере (с учетом вращения).
              */
             function getSymbolLayoutSlots($k, $min_mod, $max_mod) {
