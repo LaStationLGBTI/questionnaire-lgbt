@@ -243,9 +243,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             .cards-container {
                 display: grid;
                 grid-template-columns: 1fr 1fr; /* 2 colonnes */
-                grid-template-rows: auto auto auto; /* 3 rangées */
-                gap: 5mm; 
-                padding: 5mm;
+                grid-auto-rows: 85mm; /* --- ИЗМЕНЕНО: Фиксированная высота ряда --- */
+                gap: 10mm; /* --- ИЗМЕНЕНО: Отступ 10мм --- */
+                padding: 5mm; /* Небольшой отступ от края страницы */
                 margin: 0;
             }
             .dobble-card {
@@ -253,9 +253,10 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 border: 2px solid #000;
                 border-radius: 50%;
                 page-break-inside: avoid;
-                width: 95mm; /* Taille fixe */
-                height: 95mm; /* Taille fixe */
-                padding: 8px; /* Réduire le padding для печати */
+                width: 85mm;  /* --- ИЗМЕНЕНО: Уменьшен размер --- */
+                height: 85mm; /* --- ИЗМЕНЕНО: Уменьшен размер --- */
+                padding: 8px; 
+                margin: 0; /* Сетка управляет отступами */
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; } 
