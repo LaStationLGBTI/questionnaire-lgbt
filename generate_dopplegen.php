@@ -150,7 +150,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
 
-        /* --- STYLES DE CARTE (GRID) --- */
+        /* --- STYLES DE CARTE --- */
         .cards-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -163,37 +163,33 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             border-radius: 50%;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
-            position: relative; /* ОБЯЗАТЕЛЬНО для position: absolute у дочерних символов */
-            overflow: hidden; 
-            padding: 10px; 
+            position: relative; /* Обязательно для позиционирования символов */
+            overflow: hidden; /* Обрезает все, что выходит за круг */
+            padding: 0; /* Небольшой отступ будет внутри символов */
             box-sizing: border-box;
-            /* display: grid; БОЛЬШЕ НЕ НУЖЕН */
+            display: flex; /* Используем flexbox для центрирования содержимого */
+            justify-content: center;
+            align-items: center;
         }
         .card-header {
-            position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 1;
+            position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 10;
         }
 
-
-        /* * CSS ДЛЯ МАКЕТОВ (GRID LAYOUTS .layout-k...) БЫЛИ УДАЛЕНЫ.
-         * Они больше не нужны, так как PHP теперь генерирует 
-         * position: absolute с рассчитанными координатами.
-        */
-
-        /* Стиль для самого символа (теперь с position: absolute) */
+        /* Общие стили для символов */
         .dobble-card .symbol {
-            max-width: 100%; 
-            max-height: 100%;
-            object-fit: contain;
+            position: absolute; /* Позиция управляется PHP */
+            object-fit: contain; /* Сохраняет пропорции, вписывая в рамки */
             transition: transform 0.3s ease;
-            position: absolute; /* PHP УПРАВЛЯЕТ ЭТИМ */
-            /* PHP применяет к нему width, height, top, left, transform */
+            max-width: none; /* Отменяем max-width, чтобы PHP-width работал */
+            max-height: none; /* Отменяем max-height, чтобы PHP-height работал */
+            z-index: 5;
         }
         .dobble-card .symbol:hover {
-            transform: scale(1.2) !important;
+            transform: scale(1.1) !important; /* Уменьшаем scale, чтобы не сильно выходило за круг */
             z-index: 10;
         }
         
-        /* Стили печати остаются БЕЗ ИЗМЕНЕНИЙ */
+        /* Стили печати */
         @media print {
             body { background: #fff; padding: 0; margin: 0; }
             .no-print, .logout-button, .print-button, h1, .info, .error, .generator-form {
@@ -215,27 +211,27 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 page-break-inside: avoid;
                 width: 80mm;  
                 height: 80mm; 
-                padding: 7px; 
+                padding: 7px; /* Слегка увеличим padding, чтобы символы не прилипали к краю */
                 margin: 0;
                 box-sizing: border-box;
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; }
             /* --- Styles pour l'impression de la Légende --- */
-        .symbol-legend-container {
-            page-break-before: always; /* ФОРСИРУЕТ ЛЕГЕНДУ НА НОВУЮ (ПОСЛЕДНЮЮ) СТРАНИЦУ */
-            margin-top: 0;
-            padding: 0;
-            box-shadow: none;
-            border: none;
-        }
-        .legend-table {
-            width: 100%;
-        }
-        .legend-img {
-            width: 40px; /* Чуть меньше для печати */
-            height: 40px;
-        }
+            .symbol-legend-container {
+                page-break-before: always; /* ФОРСИРУЕТ ЛЕГЕНДУ НА НОВУЮ (ПОСЛЕДНЮЮ) СТРАНИЦУ */
+                margin-top: 0;
+                padding: 0;
+                box-shadow: none;
+                border: none;
+            }
+            .legend-table {
+                width: 100%;
+            }
+            .legend-img {
+                width: 40px; /* Чуть меньше для печати */
+                height: 40px;
+            }
         }
         /* --- Styles pour la Légende des Symboles --- */
         .symbol-legend-container {
@@ -316,56 +312,97 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             <?php
             /**
              * Функция-хелпер "Слотов Макет"
-             * Возвращает массив предопределенных, безопасных координат для каждого 'k' (количества символов).
-             * Каждый слот - это [ 'size' => %, 'top' => %, 'left' => % ]
-             * Эти координаты рассчитаны так, чтобы имитировать вид Dobble (1 большой, N маленьких)
-             * и гарантированно не перекрываться и помещаться в круг.
+             * Генерирует массив предопределенных, БЕЗОПАСНЫХ координат для каждого символа на карте.
+             * Использует полярные координаты и динамические размеры.
+             * Возвращает: [ ['size' => %, 'top' => %, 'left' => %, 'z_index' => int], ... ]
              */
             function getSymbolLayoutSlots($k) {
+                $slots = [];
+                $card_radius = 50; // Радиус карты в процентах (50% от родителя)
+                $center_x = 50; // Центр карты X
+                $center_y = 50; // Центр карты Y
+
+                // Сначала определяем количество символов на центральной орбите и внешних орбитах.
+                // Это сильно зависит от 'k'.
+                $num_center_orbit = 0; // Символы на внутренней орбите
+                $num_outer_orbit = 0;  // Символы на внешней орбите
+                $center_symbol_size = 0; // Размер центрального символа
+                $orbit_symbol_size = 0;  // Размер символов на орбите
+                $orbit_radius_percent_inner = 0; // Радиус внутренней орбиты
+                $orbit_radius_percent_outer = 0; // Радиус внешней орбиты
+
+
+                // Параметры для разных 'k'
                 switch ($k) {
-                    case 8: // 1 Большой (Центр) + 7 Маленьких (Орбита)
-                        return [
-                            ['size' => 40, 'top' => 30, 'left' => 30], // Центр
-                            ['size' => 25, 'top' => 5,  'left' => 37], // Верх
-                            ['size' => 25, 'top' => 15, 'left' => 10], // Верх-Лево
-                            ['size' => 25, 'top' => 15, 'left' => 65], // Верх-Право
-                            ['size' => 25, 'top' => 40, 'left' => 5],  // Середина-Лево
-                            ['size' => 25, 'top' => 40, 'left' => 70], // Середина-Право
-                            ['size' => 25, 'top' => 65, 'left' => 20], // Низ-Лево
-                            ['size' => 25, 'top' => 65, 'left' => 55], // Низ-Право
-                        ];
-                    case 6: // 1 Большой (Центр) + 5 Маленьких (Пятиугольник)
-                        return [
-                            ['size' => 45, 'top' => 27.5,'left' => 27.5], // Центр
-                            ['size' => 30, 'top' => 5,  'left' => 20], // Верх-Лево
-                            ['size' => 30, 'top' => 5,  'left' => 50], // Верх-Право
-                            ['size' => 30, 'top' => 35, 'left' => 65], // Середина-Право
-                            ['size' => 30, 'top' => 60, 'left' => 45], // Низ-Право
-                            ['size' => 30, 'top' => 60, 'left' => 15], // Низ-Лево
-                        ];
-                    case 5: // 1 Большой (Центр) + 4 Маленьких (Углы) - "Кости"
-                        return [
-                            ['size' => 45, 'top' => 27.5, 'left' => 27.5], // Центр
-                            ['size' => 30, 'top' => 10, 'left' => 10], // Верх-Лево
-                            ['size' => 30, 'top' => 10, 'left' => 60], // Верх-Право
-                            ['size' => 30, 'top' => 60, 'left' => 10], // Низ-Лево
-                            ['size' => 30, 'top' => 60, 'left' => 60], // Низ-Право
-                        ];
-                    case 4: // 1 Большой (Центр) + 3 Маленьких (Треугольник)
-                        return [
-                            ['size' => 50, 'top' => 25, 'left' => 25], // Центр
-                            ['size' => 35, 'top' => 10, 'left' => 45], // Верх-Право
-                            ['size' => 35, 'top' => 55, 'left' => 10], // Низ-Лево
-                            ['size' => 35, 'top' => 55, 'left' => 55], // Низ-Право
-                        ];
-                    case 3: // 1 Большой + 2 Средних
+                    case 8: // 1 большой в центре, 3 средних на внутренней орбите, 4 маленьких на внешней
+                        $slots[] = ['size' => 38, 'top' => 31, 'left' => 31, 'z_index' => 10]; // Центральный, самый большой
+
+                        $num_center_orbit = 3; // Например, 3 средних
+                        $orbit_radius_percent_inner = 20; // Радиус орбиты для средних символов
+                        $orbit_symbol_size = 22; // Размер средних символов
+
+                        $num_outer_orbit = 4; // 4 маленьких
+                        $orbit_radius_percent_outer = 38; // Радиус орбиты для маленьких символов
+                        $outer_symbol_size = 20; // Размер маленьких символов
+                        break;
+                    case 6: // 1 большой в центре, 5 средних на одной орбите
+                        $slots[] = ['size' => 45, 'top' => 27.5, 'left' => 27.5, 'z_index' => 10]; // Центральный, большой
+                        $num_outer_orbit = 5;
+                        $orbit_radius_percent_outer = 35;
+                        $outer_symbol_size = 25;
+                        break;
+                    case 5: // 1 большой в центре, 4 средних на одной орбите
+                        $slots[] = ['size' => 48, 'top' => 26, 'left' => 26, 'z_index' => 10]; // Центральный, большой
+                        $num_outer_orbit = 4;
+                        $orbit_radius_percent_outer = 38;
+                        $outer_symbol_size = 28;
+                        break;
+                    case 4: // 1 большой в центре, 3 средних на одной орбите
+                        $slots[] = ['size' => 50, 'top' => 25, 'left' => 25, 'z_index' => 10]; // Центральный, большой
+                        $num_outer_orbit = 3;
+                        $orbit_radius_percent_outer = 35;
+                        $outer_symbol_size = 30;
+                        break;
+                    case 3: // 1 большой в центре, 2 средних на одной орбите
                     default:
-                        return [
-                            ['size' => 50, 'top' => 25, 'left' => 25], // Центр
-                            ['size' => 40, 'top' => 10, 'left' => 5],  // Верх-Лево
-                            ['size' => 40, 'top' => 50, 'left' => 55], // Низ-Право
-                        ];
+                        $slots[] = ['size' => 55, 'top' => 22.5, 'left' => 22.5, 'z_index' => 10]; // Центральный, большой
+                        $num_outer_orbit = 2;
+                        $orbit_radius_percent_outer = 30;
+                        $outer_symbol_size = 35;
+                        break;
                 }
+
+                // Генерируем слоты для внутренней орбиты (если есть)
+                if ($num_center_orbit > 0) {
+                    for ($i = 0; $i < $num_center_orbit; $i++) {
+                        $angle = (M_PI * 2 / $num_center_orbit) * $i;
+                        $x = $center_x + $orbit_radius_percent_inner * cos($angle);
+                        $y = $center_y + $orbit_radius_percent_inner * sin($angle);
+                        $slots[] = [
+                            'size' => $orbit_symbol_size,
+                            'top' => $y - ($orbit_symbol_size / 2),
+                            'left' => $x - ($orbit_symbol_size / 2),
+                            'z_index' => 5
+                        ];
+                    }
+                }
+
+                // Генерируем слоты для внешней орбиты (если есть)
+                if ($num_outer_orbit > 0) {
+                    for ($i = 0; $i < $num_outer_orbit; $i++) {
+                        $angle = (M_PI * 2 / $num_outer_orbit) * $i + (M_PI / $num_outer_orbit); // Смещаем, чтобы не пересекались с внутренней
+                        $x = $center_x + $orbit_radius_percent_outer * cos($angle);
+                        $y = $center_y + $orbit_radius_percent_outer * sin($angle);
+                        $slots[] = [
+                            'size' => $outer_symbol_size,
+                            'top' => $y - ($outer_symbol_size / 2),
+                            'left' => $x - ($outer_symbol_size / 2),
+                            'z_index' => 4
+                        ];
+                    }
+                }
+                
+                return $slots;
             }
             ?>
 
@@ -374,12 +411,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     
                     <?php
                     $k = count($symbol_indices_array);
-                    // 1. Получаем массив предопределенных макетов (слотов)
+                    // Получаем массив предопределенных макетов (слотов)
                     $layout_slots = getSymbolLayoutSlots($k);
                     
-                    // 2. КЛЮЧЕВОЙ МОМЕНТ: Мы перемешиваем массив слотов.
-                    // (Первый слот в массиве всегда "Большой", остальные "Маленькие").
-                    // Перемешивая их, мы гарантируем, что "Большой" слот достанется случайному символу.
+                    // Перемешиваем массив слотов. Это гарантирует, что каждый символ 
+                    // получит случайный слот (размер и позицию).
                     shuffle($layout_slots);
                     ?>
 
@@ -387,26 +423,29 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                         <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
                         
                         <?php 
-                        // Мы перебираем символы как $key => $symbol_db_index
-                        // $key будет 0, 1, 2... (до $k-1)
                         foreach ($symbol_indices_array as $key => $symbol_db_index): 
-                        ?>
-                            <?php 
+                            // Проверяем, что слот существует для данного ключа
+                            if (!isset($layout_slots[$key])) {
+                                // Это может случиться, если 'k' не соответствует количеству сгенерированных слотов
+                                // В данном случае, просто пропустим символ или используем дефолтный слот
+                                continue; 
+                            }
                             $symbol_data = $symbols_to_use[$symbol_db_index];
-                            
-                            // 3. Получаем соответствующий (теперь перемешанный) слот для этого ключа
                             $slot = $layout_slots[$key];
                             
-                            // 4. Добавляем случайный поворот
+                            // Добавляем случайный поворот
                             $rotation = rand(-180, 180);      
                             
-                            // 5. Собираем стиль: position: absolute с ДЕТЕРМИНИРОВАННЫМИ координатами из слота.
+                            // Собираем стиль: position: absolute с ДЕТЕРМИНИРОВАННЫМИ координатами из слота.
+                            // Теперь размеры и координаты top/left рассчитываются так, чтобы символ 
+                            // был центрирован относительно своей точки орбиты.
                             $style = "position: absolute; " .
                                      "width: {$slot['size']}%; " .
                                      "height: {$slot['size']}%; " . // Гарантируем квадратность
                                      "top: {$slot['top']}%; " .
                                      "left: {$slot['left']}%; " .
-                                     "transform: rotate({$rotation}deg);";
+                                     "transform: rotate({$rotation}deg); " .
+                                     "z-index: {$slot['z_index']};"; // Управляем z-index для порядка наложения
                             ?>
                             
                             <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
@@ -418,7 +457,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     </div>
                 <?php endforeach; // Конец цикла по картам ?>
 
-            </div> <div class="symbol-legend-container">
+            </div> 
+            <div class="symbol-legend-container">
                 <h2>Symboles utilisés (Légende)</h2>
                 <p>Liste de tous les symboles uniques (<?= count($symbols_to_use) ?>) utilisés dans ce jeu.</p>
                 <table class="legend-table">
@@ -436,7 +476,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                                          alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
                                          class="legend-img">
                                 </td>
-                                <td><?= htmlspecialchars($symbol_data['name']) ?></td>
+                                <td><?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
