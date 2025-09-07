@@ -51,9 +51,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         $name = trim($_POST['name']);
         $imageFile = $_FILES['image'];
 
-        // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Сохраняем категорию в сессию ---
-        $_SESSION['last_category'] = $category;
-        // ----------------------------------------------------
+        $_SESSION['last_category'] = $category; // Запоминаем категорию
 
         if (!empty($category) && !empty($name) && $imageFile['error'] === UPLOAD_ERR_OK) {
             $fileExtension = pathinfo($imageFile['name'], PATHINFO_EXTENSION);
@@ -101,11 +99,41 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
     $selected_category = '';
     $entries = [];
+    $category_count_message = ''; // Новая переменная для сообщения о количестве
+
     if (isset($_GET['category_select']) && !empty($_GET['category_select'])) {
         $selected_category = $_GET['category_select'];
         $stmt_entries = $pdo->prepare("SELECT id, name, image_name FROM dopplegen WHERE category = ? ORDER BY name ASC");
         $stmt_entries->execute([$selected_category]);
         $entries = $stmt_entries->fetchAll(PDO::FETCH_ASSOC);
+
+        // --- НОВЫЙ БЛОК: Логика подсчета для Dopplegen ---
+        $count = count($entries);
+        $tiers = [7, 13, 21, 31, 57]; // Уровни игры
+        $needed = 0;
+        $next_tier = 0;
+
+        foreach ($tiers as $tier) {
+            if ($count < $tier) {
+                $needed = $tier - $count;
+                $next_tier = $tier;
+                break; // Нашли следующую цель
+            }
+        }
+
+        if ($count == 0) {
+            $category_count_message = "<p class='error'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: 0</strong>. <br>Il faut <strong>7</strong> symboles pour le premier niveau de jeu.</p>";
+        } elseif ($needed > 0) {
+            // Не хватает до следующего уровня
+            $category_count_message = "<p class='info'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: $count</strong>. <br>Il manque <strong>$needed</strong> symboles pour atteindre le prochain palier (<strong>$next_tier</strong> symboles).</p>";
+        } elseif ($count >= 57) {
+            // Достигнут максимальный уровень
+            $category_count_message = "<p class='success'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: $count</strong>. <br>Vous avez assez de symboles (57+) pour le jeu maximal !</p>";
+        } else {
+            // Количество точно совпадает с одним из уровней (7, 13, 21 or 31)
+            $category_count_message = "<p class='success'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: $count</strong>. <br>C'est un compte parfait pour un jeu !</p>";
+        }
+        // --- КОНЕЦ НОВОГО БЛОКА ---
     }
 }
 ?>
@@ -117,6 +145,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; box-sizing: border-box; }
         h1, h2 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+        ul { margin-top: 5px; }
+        li { margin-bottom: 2px; }
         .main-container { display: flex; flex-wrap: wrap; gap: 30px; }
         .panel { background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 25px; }
         .panel-left { flex: 1; min-width: 300px; }
@@ -137,6 +167,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .msg { padding: 12px; border-radius: 5px; margin-top: 15px; }
         .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .login-container { max-width: 400px; margin: 50px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         
         .results-table { border-collapse: collapse; width: 100%; margin-top: 20px; }
@@ -161,6 +192,17 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         <h1>Panneau de gestion "Dopplegen"</h1>
         <?php if ($message) echo $message; // Affiche les messages de succès ou d'erreur ?>
 
+        <div class="info" style="font-size: 0.9em; line-height: 1.5; padding: 15px; margin-bottom: 20px;">
+            <strong>Règles du générateur de jeu :</strong> Le générateur (sur la page 'generate_dopplegen.php') crée un jeu "parfait". Pour fonctionner, il a besoin d'un nombre spécifique de symboles uniques dans une catégorie :
+            <ul style="padding-left: 20px;">
+                <li><strong>Jeu Ordre 2 :</strong> 7 symboles requis (Crée 7 cartes de 3 symboles)</li>
+                <li><strong>Jeu Ordre 3 :</strong> 13 symboles requis (Crée 13 cartes de 4 symboles)</li>
+                <li><strong>Jeu Ordre 4 :</strong> 21 symboles requis (Crée 21 cartes de 5 symboles)</li>
+                <li><strong>Jeu Ordre 5 :</strong> 31 symboles requis (Crée 31 cartes de 6 symboles)</li>
+                <li><strong>Jeu Ordre 7 :</strong> 57 symboles requis (Crée 57 cartes de 8 symboles)</li>
+            </ul>
+            Si vous sélectionnez une catégorie avec 40 symboles, le générateur créera le jeu d'ordre 5 (utilisant 31 de vos 40 symboles).
+        </div>
         <div class="main-container">
             
             <div class="panel panel-left">
@@ -201,8 +243,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     <button type="submit">Afficher</button>
                 </form>
 
+                <?php if (!empty($category_count_message)) echo $category_count_message; ?>
                 <?php if (!empty($selected_category) && empty($entries)): ?>
-                    <p style="margin-top: 20px;">Aucune entrée trouvée pour cette catégorie.</p>
+                    <?php if (empty($category_count_message)): // Показать это, только если сообщение о счете еще не отображено (т.е. категория выбрана, но пуста) ?>
+                        <p style="margin-top: 20px;">Aucune entrée trouvée pour cette catégorie.</p>
+                    <?php endif; ?>
                 <?php elseif (!empty($entries)): ?>
                     <table class="results-table">
                         <thead>
