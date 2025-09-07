@@ -334,17 +334,19 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     <div class="dobble-card <?= $layout_class ?>"> 
                         <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
                         
-                        <?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
+<?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
                             <?php 
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             
-                            $size = rand($min_size_percent, $max_size_percent); 
+$min_size_percent_base = 50; // Базовый минимальный размер
+                            $max_size_percent_base = 85; // Базовый максимальный размер
+                            
+                            // Вы можете настроить эти значения, чтобы найти идеальный баланс
+                            $size = rand($min_size_percent_base, $max_size_percent_base); 
                             $rotation = rand(-180, 180);
                             
-                            // Этот стиль теперь применяется к самому <img>
                             $img_style = "width: {$size}%; max-width: {$size}%; transform: rotate({$rotation}deg);";
                             
-                            // Этот класс применяется к DIV-обертке
                             $cell_class = 'symbol-cell-' . $key;
                             ?>
                             
