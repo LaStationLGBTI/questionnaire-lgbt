@@ -49,7 +49,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // 1. Récupérer TOUS les symboles de la BDD
+        // 1. Récupérer TOUS les symboles
         $stmt = $pdo->query("SELECT id, name, image_name FROM dopplegen ORDER BY id ASC");
         $all_symbols_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $total_symbols_available = count($all_symbols_db);
@@ -68,56 +68,39 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             $n = 2;
         }
 
-        // 3. S'il n'y a pas assez de symboles, définir une erreur. Sinon, générer.
+        // 3. Générer ou définir une erreur
         if ($n === 0) {
             $generation_error = "Erreur : Vous avez besoin d'au moins 7 symboles dans la base de données pour générer un jeu. Vous n'en avez que $total_symbols_available.";
         } else {
             // Calculer les propriétés du jeu
             $symbols_needed = $n * $n + $n + 1;
             $symbols_per_card = $n + 1;
-            
-            // Prendre seulement les symboles nécessaires pour cet ordre
             $symbols_to_use = array_slice($all_symbols_db, 0, $symbols_needed);
             
             $generation_message = "Jeu généré (Ordre <strong>$n</strong>). Total cartes : <strong>$symbols_needed</strong>. Symboles par carte : <strong>$symbols_per_card</strong>. (Basé sur vos <strong>$total_symbols_available</strong> symboles disponibles)";
 
             // --- ALGORITHME DU PLAN PROJECTIF (GÉNÉRIQUE) ---
-            
-            // Carte 0 (La ligne à l'infini)
             $card_zero = [];
             for($i = 0; $i < $symbols_per_card; $i++) {
-                $card_zero[] = $i; // Indices 0 à n
+                $card_zero[] = $i; 
             }
             $all_cards_indices[] = $card_zero;
 
-            // Ensemble de cartes 2 : Lignes avec pente (n*n cartes)
-            for ($i = 0; $i < $n; $i++) { // Pente 'i'
-                for ($j = 0; $j < $n; $j++) { // Ordonnée à l'origine 'j'
-                    
+            for ($i = 0; $i < $n; $i++) { 
+                for ($j = 0; $j < $n; $j++) { 
                     $card = [];
-                    // 1. Le point à l'infini pour cette pente (symbole 1 à n)
                     $card[] = $i + 1; 
-
-                    // 2. Les n points affines
                     for ($x = 0; $x < $n; $x++) {
                         $y = ($i * $x + $j) % $n;
-                        // Mapper (x, y) à notre index de symbole (commençant après les points infinis)
-                        // L'index de symbole est (n+1) + (x*n) + y
                         $symbol_index = ($n + 1) + ($x * $n) + $y;
                         $card[] = $symbol_index;
                     }
                     $all_cards_indices[] = $card;
                 }
             }
-
-            // Ensemble de cartes 3 : Lignes verticales (n cartes)
-            for ($j = 0; $j < $n; $j++) { // Ligne x = j
-                
+            for ($j = 0; $j < $n; $j++) { 
                 $card = [];
-                // 1. Le point à l'infini "vertical" (symbole 0)
                 $card[] = 0;
-
-                // 2. Les n points affines
                 for ($y = 0; $y < $n; $y++) {
                     $x = $j;
                     $symbol_index = ($n + 1) + ($x * $n) + $y;
@@ -161,21 +144,22 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
-            padding-bottom: 80px; /* Espace pour le bouton d'impression */
+            padding-bottom: 80px; 
         }
         .dobble-card {
             background: #fff;
             border: 2px dashed #ccc;
-            border-radius: 15px;
+            border-radius: 50%; /* --- СДЕЛАЕМ ИХ КРУГЛЫМИ --- */
             padding: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
             position: relative;
-            /* Nouveau layout flexible pour les symboles */
-            display: flex;
+            /* Используем flex для размещения символов */
+            display: flex; 
             flex-wrap: wrap;
-            justify-content: space-around;
-            align-items: center;
+            justify-content: center; /* Центрируем по горизонтали */
+            align-items: center;    /* Центрируем по вертикали */
+            overflow: hidden; /* Скрываем все, что выходит за круг */
         }
         .card-header {
             position: absolute;
@@ -184,34 +168,42 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             font-size: 0.8rem;
             color: #aaa;
         }
+
+        /* --- CSS ИЗМЕНЕНО ЗДЕСЬ --- */
         .dobble-card .symbol {
-            /* Ajuster la taille des symboles en fonction du nombre */
-            flex-basis: 28%; /* ~3 symboles par ligne */
-            max-width: 28%;
+            /* Убраны flex-basis и max-width, размер задается в PHP */
             height: auto;
-            margin: 2%;
+            margin: 2px;
             object-fit: contain;
+            transition: transform 0.3s ease;
         }
+        .dobble-card .symbol:hover {
+            transform: scale(1.2); /* Эффект при наведении */
+            z-index: 10;
+            position: relative; /* Чтобы :hover был поверх других */
+        }
+        /* --- КОНЕЦ ИЗМЕНЕНИЙ CSS --- */
 
         /* --- Styles pour l'impression PDF --- */
         @media print {
             body { background: #fff; padding: 0; margin: 0; }
             .no-print, .logout-button, .print-button, h1, .info, .error {
-                display: none !important; /* Cacher l'interface non nécessaire */
+                display: none !important; 
             }
             .cards-container {
                 display: grid;
-                grid-template-columns: 1fr 1fr; /* 2 cartes par ligne sur une page A4 */
+                grid-template-columns: 1fr 1fr; 
                 gap: 10mm;
                 page-break-inside: avoid;
             }
             .dobble-card {
                 box-shadow: none;
                 border: 2px solid #000;
-                border-radius: 10px;
-                page-break-inside: avoid; /* Empêcher une carte d'être coupée entre deux pages */
+                border-radius: 50%; /* Печатаем их круглыми */
+                page-break-inside: avoid; 
             }
             .card-header { display: none; }
+            .dobble-card .symbol { margin: 1%; } /* Уменьшаем отступы для печати */
         }
     </style>
 </head>
@@ -241,24 +233,39 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     <div class="dobble-card">
                         <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
                         
-                        <?php 
-                        // Mélanger les symboles sur la carte pour un aspect aléatoire
-                        shuffle($symbol_indices_array); 
-                        ?>
+                        <?php shuffle($symbol_indices_array); ?>
                         
+                        <?php
+                        // Рассчитываем диапазон размеров в зависимости от кол-ва символов
+                        $k = count($symbol_indices_array); // k = символов на карте (напр. 8, 6, 4...)
+                        $min_size_percent = ($k <= 4) ? 35 : (($k <= 6) ? 30 : 25); // Чем меньше символов, тем они крупнее
+                        $max_size_percent = ($k <= 4) ? 50 : (($k <= 6) ? 45 : 40);
+                        ?>
+
                         <?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
-                            <?php $symbol_data = $symbols_to_use[$symbol_db_index]; ?>
+                            <?php 
+                            $symbol_data = $symbols_to_use[$symbol_db_index];
+                            
+                            // Генерируем случайные стили для КАЖДОГО символа
+                            $size = rand($min_size_percent, $max_size_percent); // Случайный % ширины
+                            $rotation = rand(-180, 180); // Случайный угол
+                            
+                            // Собираем CSS в строку
+                            $style = "width: {$size}%; height: auto; max-width: {$size}%; transform: rotate({$rotation}deg);";
+                            ?>
+                            
                             <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
                                  alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
                                  title="<?= htmlspecialchars($symbol_data['name']) ?>"
-                                 class="symbol">
-                        <?php endforeach; ?>
-                    </div>
+                                 class="symbol"
+                                 style="<?= $style ?>"> <?php endforeach; ?>
+                        </div>
                 <?php endforeach; ?>
 
             </div>
         <?php endif; ?>
-        <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+
+    <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
         <div class="login-container">
             <h1>Accès Bloqué</h1>
             <p class="error">Vous avez échoué 3 tentatives de connexion. Accès verrouillé.</p>
@@ -271,7 +278,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 <div class="form-group">
                     <label for="identifiant">Identifiant :</label>
                     <input type="text" id="identifiant" name="identifiant" required>
-                </form-group">
+                </div>
                 <div class="form-group">
                     <label for="mot_de_passe">Mot de passe :</label>
                     <input type="password" id="mot_de_passe" name="mot_de_passe" required>
