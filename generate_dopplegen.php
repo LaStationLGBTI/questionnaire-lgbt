@@ -433,7 +433,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 // 3. Построить и вернуть массив слотов на основе этого рецепта
                 return build_slots($chosen_recipe_layers);
             }
-            ?>
+            
 
                 // 1. Создать центральный слот
                 $cs = $layout_params['center_size'];
