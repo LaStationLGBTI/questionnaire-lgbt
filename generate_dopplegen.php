@@ -365,68 +365,116 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         <?php endif; ?>
 
 
-        <?php if (!empty($all_cards_indices)): ?>
-            <div class="cards-container">
-                
-                <?php
-                // --- НОВАЯ PHP-ФУНКЦИЯ ДЛЯ ОГРАНИЧЕНИЯ РАЗМЕРОВ ---
-                // Эта функция определяет максимальный размер символа в зависимости от их количества
-                function getSymbolConstraints($k) {
-                    if ($k >= 8) { // n=7 (8 символов)
-                        return ['min_w' => 20, 'max_w' => 30, 'max_pos' => 65]; // Размер 20-30%, макс. позиция 65%
-                    } elseif ($k >= 6) { // n=5 (6 символов)
-                        return ['min_w' => 25, 'max_w' => 38, 'max_pos' => 60];
-                    } elseif ($k >= 5) { // n=4 (5 символов)
-                        return ['min_w' => 30, 'max_w' => 45, 'max_pos' => 55];
-                    } elseif ($k >= 4) { // n=3 (4 символа)
-                        return ['min_w' => 35, 'max_w' => 50, 'max_pos' => 50];
-                    } else { // n=2 (3 символа)
-                        return ['min_w' => 40, 'max_w' => 55, 'max_pos' => 45];
-                    }
+       <?php if (!empty($all_cards_indices)): ?>
+            
+            <?php
+            /**
+             * Функция-хелпер "Слотов Макет"
+             * Возвращает массив предопределенных, безопасных координат для каждого 'k' (количества символов).
+             * Каждый слот - это [ 'size' => %, 'top' => %, 'left' => % ]
+             * Эти координаты рассчитаны так, чтобы имитировать вид Dobble (1 большой, N маленьких)
+             * и гарантированно не перекрываться и помещаться в круг.
+             */
+            function getSymbolLayoutSlots($k) {
+                switch ($k) {
+                    case 8: // 1 Большой (Центр) + 7 Маленьких (Орбита)
+                        return [
+                            ['size' => 40, 'top' => 30, 'left' => 30], // Центр
+                            ['size' => 25, 'top' => 5,  'left' => 37], // Верх
+                            ['size' => 25, 'top' => 15, 'left' => 10], // Верх-Лево
+                            ['size' => 25, 'top' => 15, 'left' => 65], // Верх-Право
+                            ['size' => 25, 'top' => 40, 'left' => 5],  // Середина-Лево
+                            ['size' => 25, 'top' => 40, 'left' => 70], // Середина-Право
+                            ['size' => 25, 'top' => 65, 'left' => 20], // Низ-Лево
+                            ['size' => 25, 'top' => 65, 'left' => 55], // Низ-Право
+                        ];
+                    case 6: // 1 Большой (Центр) + 5 Маленьких (Пятиугольник)
+                        return [
+                            ['size' => 45, 'top' => 27.5,'left' => 27.5], // Центр
+                            ['size' => 30, 'top' => 5,  'left' => 20], // Верх-Лево
+                            ['size' => 30, 'top' => 5,  'left' => 50], // Верх-Право
+                            ['size' => 30, 'top' => 35, 'left' => 65], // Середина-Право
+                            ['size' => 30, 'top' => 60, 'left' => 45], // Низ-Право
+                            ['size' => 30, 'top' => 60, 'left' => 15], // Низ-Лево
+                        ];
+                    case 5: // 1 Большой (Центр) + 4 Маленьких (Углы) - "Кости"
+                        return [
+                            ['size' => 45, 'top' => 27.5, 'left' => 27.5], // Центр
+                            ['size' => 30, 'top' => 10, 'left' => 10], // Верх-Лево
+                            ['size' => 30, 'top' => 10, 'left' => 60], // Верх-Право
+                            ['size' => 30, 'top' => 60, 'left' => 10], // Низ-Лево
+                            ['size' => 30, 'top' => 60, 'left' => 60], // Низ-Право
+                        ];
+                    case 4: // 1 Большой (Центр) + 3 Маленьких (Треугольник)
+                        return [
+                            ['size' => 50, 'top' => 25, 'left' => 25], // Центр
+                            ['size' => 35, 'top' => 10, 'left' => 45], // Верх-Право
+                            ['size' => 35, 'top' => 55, 'left' => 10], // Низ-Лево
+                            ['size' => 35, 'top' => 55, 'left' => 55], // Низ-Право
+                        ];
+                    case 3: // 1 Большой + 2 Средних
+                    default:
+                        return [
+                            ['size' => 50, 'top' => 25, 'left' => 25], // Центр
+                            ['size' => 40, 'top' => 10, 'left' => 5],  // Верх-Лево
+                            ['size' => 40, 'top' => 50, 'left' => 55], // Низ-Право
+                        ];
                 }
-                ?>
+            }
+            ?>
 
-<?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
+            <div class="cards-container">
+                <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
                     
                     <?php
-                    // Перемешиваем порядок символов (индексов от 0 до k-1) для этой карты
-                    shuffle($symbol_indices_array); 
-                    $k = count($symbol_indices_array); // k = 8, 6, 5, 4, или 3
+                    $k = count($symbol_indices_array);
+                    // 1. Получаем массив предопределенных макетов (слотов)
+                    $layout_slots = getSymbolLayoutSlots($k);
+                    
+                    // 2. КЛЮЧЕВОЙ МОМЕНТ: Мы перемешиваем массив слотов.
+                    // (Первый слот в массиве всегда "Большой", остальные "Маленькие").
+                    // Перемешивая их, мы гарантируем, что "Большой" слот достанется случайному символу.
+                    shuffle($layout_slots);
                     ?>
 
-                    <div class="dobble-card layout-k<?= $k ?>"> 
+                    <div class="dobble-card"> 
                         <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
                         
                         <?php 
-                        // Мы перебираем массив $symbol_indices_array. 
-                        // $key будет индексом ячейки (0, 1, 2, 3...)
-                        // $symbol_db_index будет индексом символа из БД (например, 42, 15, 3...)
+                        // Мы перебираем символы как $key => $symbol_db_index
+                        // $key будет 0, 1, 2... (до $k-1)
                         foreach ($symbol_indices_array as $key => $symbol_db_index): 
                         ?>
                             <?php 
-                            // Получаем данные символа (имя, файл) по его ID из БД
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             
-                            // --- ЛОГИКА ДЛЯ CSS GRID ---
-                            // Нам больше не нужны top/left. Нам нужен только случайный поворот
-                            // и, возможно, небольшой случайный размер (в % от ячейки сетки).
-                            $rotation = rand(-90, 90);      // Случайный поворот
-                            $size_percent = rand(80, 95);   // Символ займет 80-95% своей ячейки сетки
+                            // 3. Получаем соответствующий (теперь перемешанный) слот для этого ключа
+                            // $symbol_indices_array[0] (напр. "кошка") получит $layout_slots[0] (напр. "Маленький слот Вверху-Слева")
+                            // $symbol_indices_array[1] (напр. "дерево") получит $layout_slots[1] (напр. "Большой слот в Центре")
+                            $slot = $layout_slots[$key];
                             
-                            // Мы применяем только размер и поворот. Позиционированием займется CSS Grid.
-                            $style = "width: {$size_percent}%; max-height: {$size_percent}%; transform: rotate({$rotation}deg);";
+                            // 4. Добавляем случайный поворот
+                            $rotation = rand(-180, 180);      
+                            
+                            // 5. Собираем стиль: position: absolute с ДЕТЕРМИНИРОВАННЫМИ координатами из слота.
+                            $style = "position: absolute; " .
+                                     "width: {$slot['size']}%; " .
+                                     "height: {$slot['size']}%; " . // Гарантируем квадратность для aspect-ratio
+                                     "top: {$slot['top']}%; " .
+                                     "left: {$slot['left']}%; " .
+                                     "transform: rotate({$rotation}deg);";
                             ?>
                             
-                            <div class="symbol-cell symbol-cell-<?= $key ?>">
-                                <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
-                                     alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
-                                     title="<?= htmlspecialchars($symbol_data['name']) ?>"
-                                     class="symbol" 
-                                     style="<?= $style ?>">
-                            </div>
+                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
+                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
+                                 title="<?= htmlspecialchars($symbol_data['name']) ?>"
+                                 class="symbol" 
+                                 style="<?= $style ?>">
                         <?php endforeach; // Конец цикла по символам ?>
                     </div>
-                <?php endforeach;?>
+                <?php endforeach; // Конец цикла по картам ?>
+
+            </div> <?php endif; ?>
 
             </div>
 
