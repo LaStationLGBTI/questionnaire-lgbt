@@ -41,74 +41,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     $all_cards_indices = [];
     $symbols_to_use = [];
+    $categories_list = [];
     $generation_error = '';
     $generation_message = '';
+    $selected_category_get = '';
     $uploadDir = 'dopplegenImages/';
 
     try {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // 1. Récupérer TOUS les symboles
-        $stmt = $pdo->query("SELECT id, name, image_name FROM dopplegen ORDER BY id ASC");
-        $all_symbols_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $total_symbols_available = count($all_symbols_db);
+        // 1. Toujours récupérer la liste des catégories pour le formulaire
+        $categories_list_stmt = $pdo->query("SELECT DISTINCT category FROM dopplegen ORDER BY category ASC");
+        $categories_list = $categories_list_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 2. Déterminer le plus grand ordre (n) possible
-        $n = 0; // Ordre
-        if ($total_symbols_available >= 57) {
-            $n = 7;
-        } elseif ($total_symbols_available >= 31) {
-            $n = 5;
-        } elseif ($total_symbols_available >= 21) {
-            $n = 4;
-        } elseif ($total_symbols_available >= 13) {
-            $n = 3;
-        } elseif ($total_symbols_available >= 7) {
-            $n = 2;
-        }
-
-        // 3. Générer ou définir une erreur
-        if ($n === 0) {
-            $generation_error = "Erreur : Vous avez besoin d'au moins 7 symboles dans la base de données pour générer un jeu. Vous n'en avez que $total_symbols_available.";
-        } else {
-            // Calculer les propriétés du jeu
-            $symbols_needed = $n * $n + $n + 1;
-            $symbols_per_card = $n + 1;
-            $symbols_to_use = array_slice($all_symbols_db, 0, $symbols_needed);
+        // 2. Vérifier si une génération est demandée (via le bouton)
+        if (isset($_GET['generate'])) {
+            $selected_category_get = $_GET['category'];
             
-            $generation_message = "Jeu généré (Ordre <strong>$n</strong>). Total cartes : <strong>$symbols_needed</strong>. Symboles par carte : <strong>$symbols_per_card</strong>. (Basé sur vos <strong>$total_symbols_available</strong> symboles disponibles)";
-
-            // --- ALGORITHME DU PLAN PROJECTIF (GÉNÉRIQUE) ---
-            $card_zero = [];
-            for($i = 0; $i < $symbols_per_card; $i++) {
-                $card_zero[] = $i; 
+            // Préparer la requête SQL pour récupérer les symboles
+            $sql = "SELECT id, name, image_name FROM dopplegen";
+            $params = [];
+            
+            if (!empty($selected_category_get)) {
+                $sql .= " WHERE category = ?";
+                $params[] = $selected_category_get;
             }
-            $all_cards_indices[] = $card_zero;
+            $sql .= " ORDER BY RAND()"; // Mélanger les symboles pour un jeu différent à chaque fois
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $all_symbols_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $total_symbols_available = count($all_symbols_db);
 
-            for ($i = 0; $i < $n; $i++) { 
-                for ($j = 0; $j < $n; $j++) { 
-                    $card = [];
-                    $card[] = $i + 1; 
-                    for ($x = 0; $x < $n; $x++) {
-                        $y = ($i * $x + $j) % $n;
-                        $symbol_index = ($n + 1) + ($x * $n) + $y;
-                        $card[] = $symbol_index;
+            // 3. Déterminer l'ordre (n) possible
+            $n = 0; 
+            if ($total_symbols_available >= 57) $n = 7;
+            elseif ($total_symbols_available >= 31) $n = 5;
+            elseif ($total_symbols_available >= 21) $n = 4;
+            elseif ($total_symbols_available >= 13) $n = 3;
+            elseif ($total_symbols_available >= 7) $n = 2;
+
+            // 4. Générer ou définir une erreur
+            if ($n === 0) {
+                $generation_error = "Erreur : Vous avez besoin d'au moins 7 symboles dans cette catégorie pour générer un jeu. Symboles trouvés : $total_symbols_available.";
+            } else {
+                $symbols_needed = $n * $n + $n + 1;
+                $symbols_per_card = $n + 1;
+                $symbols_to_use = array_slice($all_symbols_db, 0, $symbols_needed);
+                
+                $generation_message = "Jeu généré (Ordre <strong>$n</strong>). Total cartes : <strong>$symbols_needed</strong>. Symboles par carte : <strong>$symbols_per_card</strong>. (Utilisant $symbols_needed symboles sur $total_symbols_available trouvés)";
+
+                // --- ALGORITHME DU PLAN PROJECTIF (GÉNÉRIQUE) ---
+                $card_zero = [];
+                for($i = 0; $i < $symbols_per_card; $i++) $card_zero[] = $i;
+                $all_cards_indices[] = $card_zero;
+
+                for ($i = 0; $i < $n; $i++) {
+                    for ($j = 0; $j < $n; $j++) {
+                        $card = [$i + 1];
+                        for ($x = 0; $x < $n; $x++) {
+                            $y = ($i * $x + $j) % $n;
+                            $card[] = ($n + 1) + ($x * $n) + $y;
+                        }
+                        $all_cards_indices[] = $card;
+                    }
+                }
+                for ($j = 0; $j < $n; $j++) {
+                    $card = [0];
+                    for ($y = 0; $y < $n; $y++) {
+                        $card[] = ($n + 1) + ($j * $n) + $y;
                     }
                     $all_cards_indices[] = $card;
                 }
             }
-            for ($j = 0; $j < $n; $j++) { 
-                $card = [];
-                $card[] = 0;
-                for ($y = 0; $y < $n; $y++) {
-                    $x = $j;
-                    $symbol_index = ($n + 1) + ($x * $n) + $y;
-                    $card[] = $symbol_index;
-                }
-                $all_cards_indices[] = $card;
-            }
-        }
+        } // Fin de if(isset($_GET['generate']))
 
     } catch (PDOException $e) {
         $generation_error = "Erreur de base de données : " . $e->getMessage();
@@ -125,11 +132,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; box-sizing: border-box; }
         h1, h2 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
         .login-container { max-width: 400px; margin: 50px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 1rem; border-radius: 5px; }
-        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 1rem; border-radius: 5px; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 1rem; border-radius: 5px; margin-top: 10px; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 1rem; border-radius: 5px; margin-top: 10px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; color: #555; }
-        input[type="text"], input[type="password"] {
+        input[type="text"], input[type="password"], select {
             width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1rem;
         }
         button {
@@ -139,7 +146,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .logout-button { background-color: #6c757d; position: absolute; top: 20px; right: 20px; }
         .print-button { background-color: #28a745; position: fixed; bottom: 20px; right: 20px; z-index: 100; }
         
-        /* Conteneur des cartes */
+        /* --- STYLES DE CARTE MIS À JOUR --- */
         .cards-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -149,61 +156,53 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .dobble-card {
             background: #fff;
             border: 2px dashed #ccc;
-            border-radius: 50%; /* --- СДЕЛАЕМ ИХ КРУГЛЫМИ --- */
-            padding: 10px;
+            border-radius: 50%; /* Cartes circulaires */
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
-            position: relative;
-            /* Используем flex для размещения символов */
-            display: flex; 
-            flex-wrap: wrap;
-            justify-content: center; /* Центрируем по горизонтали */
-            align-items: center;    /* Центрируем по вертикали */
-            overflow: hidden; /* Скрываем все, что выходит за круг */
+            position: relative; /* IMPORTANT pour le positionnement absolu des enfants */
+            overflow: hidden; /* IMPORTANT: Coupe tout ce qui dépasse du cercle */
         }
         .card-header {
-            position: absolute;
-            top: 5px;
-            left: 15px;
-            font-size: 0.8rem;
-            color: #aaa;
+            position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 1;
         }
-
-        /* --- CSS ИЗМЕНЕНО ЗДЕСЬ --- */
         .dobble-card .symbol {
-            /* Убраны flex-basis и max-width, размер задается в PHP */
+            position: absolute; /* Placement absolu à l'intérieur de la carte */
             height: auto;
-            margin: 2px;
             object-fit: contain;
             transition: transform 0.3s ease;
         }
         .dobble-card .symbol:hover {
-            transform: scale(1.2); /* Эффект при наведении */
+            transform: scale(1.2) !important; /* Agrandir au survol (le !important est pour outrepasser le style inline) */
             z-index: 10;
-            position: relative; /* Чтобы :hover был поверх других */
         }
-        /* --- КОНЕЦ ИЗМЕНЕНИЙ CSS --- */
 
-        /* --- Styles pour l'impression PDF --- */
+        .generator-form {
+            background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        /* --- STYLES D'IMPRESSION MIS À JOUR (POUR 6 CARTES/PAGE) --- */
         @media print {
             body { background: #fff; padding: 0; margin: 0; }
-            .no-print, .logout-button, .print-button, h1, .info, .error {
-                display: none !important; 
+            .no-print, .logout-button, .print-button, h1, .info, .error, .generator-form {
+                display: none !important; /* Cacher toute l'interface */
             }
             .cards-container {
                 display: grid;
-                grid-template-columns: 1fr 1fr; 
-                gap: 10mm;
-                page-break-inside: avoid;
+                grid-template-columns: 1fr 1fr; /* 2 colonnes */
+                gap: 5mm; /* Espace entre les cartes */
+                padding: 5mm;
+                margin: 0;
             }
             .dobble-card {
                 box-shadow: none;
                 border: 2px solid #000;
-                border-radius: 50%; /* Печатаем их круглыми */
-                page-break-inside: avoid; 
+                border-radius: 50%;
+                page-break-inside: avoid;
+                width: 95mm; /* Taille fixe pour A4 */
+                height: 95mm; /* Taille fixe pour A4 */
             }
             .card-header { display: none; }
-            .dobble-card .symbol { margin: 1%; } /* Уменьшаем отступы для печати */
+            .dobble-card .symbol { transition: none; } /* Désactiver les transitions pour l'impression */
         }
     </style>
 </head>
@@ -215,30 +214,52 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             <button type="submit" name="logout" class="logout-button no-print">Déconnexion</button>
         </form>
         
-        <button onclick="window.print()" class="print-button no-print">🖨️ Imprimer / Exporter en PDF</button>
+        <?php if (!empty($all_cards_indices)): // N'afficher le bouton d'impression que si des cartes sont générées ?>
+            <button onclick="window.print()" class="print-button no-print">🖨️ Imprimer / Exporter en PDF</button>
+        <?php endif; ?>
 
         <h1>Générateur de Cartes Dopplegen</h1>
+
+        <div class="generator-form no-print">
+            <h2>Paramètres de génération</h2>
+            <form action="" method="GET">
+                <div class="form-group">
+                    <label for="category">Choisir une catégorie de symboles :</label>
+                    <select id="category" name="category">
+                        <option value="">-- Toutes les catégories --</option>
+                        <?php foreach ($categories_list as $cat): ?>
+                            <option value="<?= htmlspecialchars($cat['category']) ?>" <?= ($cat['category'] == $selected_category_get) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cat['category']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" name="generate">Générer / Régénérer</button>
+            </form>
+        </div>
+
         
         <?php if (!empty($generation_error)): ?>
             <p class="error"><?= $generation_error ?></p>
         
-        <?php elseif (empty($all_cards_indices)): ?>
-            <p class="error">Une erreur inconnue est survenue lors de la génération.</p>
-            
-        <?php else: ?>
-            <p class="info"><?= $generation_message ?></p>
+        <?php elseif (!empty($generation_message)): ?>
+             <p class="info"><?= $generation_message ?></p>
+        <?php endif; ?>
+
+
+        <?php if (!empty($all_cards_indices)): ?>
             <div class="cards-container">
                 
                 <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
                     <div class="dobble-card">
                         <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
                         
-                        <?php shuffle($symbol_indices_array); ?>
+                        <?php shuffle($symbol_indices_array); // Mélanger les symboles pour l'affichage ?>
                         
                         <?php
-                        // Рассчитываем диапазон размеров в зависимости от кол-ва символов
-                        $k = count($symbol_indices_array); // k = символов на карте (напр. 8, 6, 4...)
-                        $min_size_percent = ($k <= 4) ? 35 : (($k <= 6) ? 30 : 25); // Чем меньше символов, тем они крупнее
+                        $k = count($symbol_indices_array); // Symboles par carte (ex: 8, 6...)
+                        // Définir les plages de taille en fonction du nombre de symboles
+                        $min_size_percent = ($k <= 4) ? 35 : (($k <= 6) ? 30 : 25);
                         $max_size_percent = ($k <= 4) ? 50 : (($k <= 6) ? 45 : 40);
                         ?>
 
@@ -246,12 +267,17 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                             <?php 
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             
-                            // Генерируем случайные стили для КАЖДОГО символа
-                            $size = rand($min_size_percent, $max_size_percent); // Случайный % ширины
-                            $rotation = rand(-180, 180); // Случайный угол
+                            // --- NOUVELLE LOGIQUE DE POSITIONNEMENT ALÉATOIRE ---
+                            $size = rand($min_size_percent, $max_size_percent); // Taille aléatoire
+                            $rotation = rand(-180, 180); // Rotation aléatoire
                             
-                            // Собираем CSS в строку
-                            $style = "width: {$size}%; height: auto; max-width: {$size}%; transform: rotate({$rotation}deg);";
+                            // Position aléatoire (Top, Left)
+                            // On s'assure que l'image ne sort pas (en gardant une marge basée sur sa taille)
+                            $max_pos = 95 - $size; // ex: si taille=40, max_pos=55 (position de 5% à 55%)
+                            $top = rand(5, max(5, $max_pos));
+                            $left = rand(5, max(5, $max_pos));
+
+                            $style = "width: {$size}%; top: {$top}%; left: {$left}%; transform: rotate({$rotation}deg);";
                             ?>
                             
                             <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
@@ -259,11 +285,12 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                                  title="<?= htmlspecialchars($symbol_data['name']) ?>"
                                  class="symbol"
                                  style="<?= $style ?>"> <?php endforeach; ?>
-                        </div>
+                    </div>
                 <?php endforeach; ?>
 
             </div>
         <?php endif; ?>
+        
 
     <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
         <div class="login-container">
