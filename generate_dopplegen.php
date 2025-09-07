@@ -146,7 +146,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .logout-button { background-color: #6c757d; position: absolute; top: 20px; right: 20px; }
         .print-button { background-color: #28a745; position: fixed; bottom: 20px; right: 20px; z-index: 100; }
         
-        /* --- STYLES DE CARTE MIS À JOUR --- */
+        .generator-form {
+            background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        /* --- NOUVEAUX STYLES DE CARTE (GRID) --- */
         .cards-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -156,40 +160,84 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .dobble-card {
             background: #fff;
             border: 2px dashed #ccc;
-            border-radius: 50%; /* Cartes circulaires */
+            border-radius: 50%;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
-            position: relative; /* IMPORTANT pour le positionnement absolu des enfants */
-            overflow: hidden; /* IMPORTANT: Coupe tout ce qui dépasse du cercle */
+            position: relative;
+            overflow: hidden; /* Toujours couper ce qui dépasse */
+            padding: 15px;
+            box-sizing: border-box;
+            
+            /* DÉFINITION DE LA GRILLE PRINCIPALE */
+            display: grid; 
         }
         .card-header {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 1;
         }
         .dobble-card .symbol {
-            position: absolute; /* Placement absolu à l'intérieur de la carte */
-            height: auto;
+            /* Le symbole est maintenant un enfant de la grille */
+            max-width: 95%; /* Taille max par rapport à sa cellule */
+            max-height: 95%;
             object-fit: contain;
+            margin: auto; /* Centrer dans la cellule de la grille */
             transition: transform 0.3s ease;
         }
         .dobble-card .symbol:hover {
-            transform: scale(1.2) !important; /* Agrandir au survol (le !important est pour outrepasser le style inline) */
+            transform: scale(1.2) !important;
             z-index: 10;
+            position: relative;
         }
 
-        .generator-form {
-            background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
+        /* --- GRILLES DE LAYOUT POUR CHAQUE ORDRE (k = symboles par carte) --- */
 
-        /* --- STYLES D'IMPRESSION MIS À JOUR (POUR 6 CARTES/PAGE) --- */
+        /* Layout pour 8 symboles (k=8, Ordre n=7) */
+        .layout-k8 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
+        .layout-k8 .symbol-cell-0 { grid-area: 1 / 1; }
+        .layout-k8 .symbol-cell-1 { grid-area: 1 / 2; }
+        .layout-k8 .symbol-cell-2 { grid-area: 1 / 3; }
+        .layout-k8 .symbol-cell-3 { grid-area: 2 / 1; }
+        .layout-k8 .symbol-cell-4 { grid-area: 2 / 3; } /* Centre sauté */
+        .layout-k8 .symbol-cell-5 { grid-area: 3 / 1; }
+        .layout-k8 .symbol-cell-6 { grid-area: 3 / 2; }
+        .layout-k8 .symbol-cell-7 { grid-area: 3 / 3; }
+
+        /* Layout pour 6 symboles (k=6, Ordre n=5) */
+        .layout-k6 { grid-template: 1fr 1fr 1fr / 1fr 1fr; place-items: center; gap: 5px; }
+        .layout-k6 .symbol-cell-0 { grid-area: 1 / 1; }
+        .layout-k6 .symbol-cell-1 { grid-area: 1 / 2; }
+        .layout-k6 .symbol-cell-2 { grid-area: 2 / 1; }
+        .layout-k6 .symbol-cell-3 { grid-area: 2 / 2; }
+        .layout-k6 .symbol-cell-4 { grid-area: 3 / 1; }
+        .layout-k6 .symbol-cell-5 { grid-area: 3 / 2; }
+        
+        /* Layout pour 5 symboles (k=5, Ordre n=4) */
+        .layout-k5 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
+        .layout-k5 .symbol-cell-0 { grid-area: 1 / 1; }
+        .layout-k5 .symbol-cell-1 { grid-area: 1 / 3; }
+        .layout-k5 .symbol-cell-2 { grid-area: 2 / 2; } /* Centre */
+        .layout-k5 .symbol-cell-3 { grid-area: 3 / 1; }
+        .layout-k5 .symbol-cell-4 { grid-area: 3 / 3; }
+
+        /* Layout pour 4 symboles (k=4, Ordre n=3) */
+        .layout-k4 { grid-template: 1fr 1fr / 1fr 1fr; place-items: center; gap: 10px; padding: 10%; }
+        /* Les classes (symbol-cell-0 à 3) seront assignées automatiquement */
+        
+        /* Layout pour 3 symboles (k=3, Ordre n=2) */
+        .layout-k3 { grid-template: 1fr 1fr 1fr / 1fr; place-items: center; gap: 10px; padding: 15%; }
+        /* Les classes (symbol-cell-0 à 2) seront assignées automatiquement */
+
+
+        /* --- Styles d'impression (6 cartes par page A4) --- */
         @media print {
             body { background: #fff; padding: 0; margin: 0; }
             .no-print, .logout-button, .print-button, h1, .info, .error, .generator-form {
-                display: none !important; /* Cacher toute l'interface */
+                display: none !important; 
             }
             .cards-container {
                 display: grid;
                 grid-template-columns: 1fr 1fr; /* 2 colonnes */
-                gap: 5mm; /* Espace entre les cartes */
+                grid-template-rows: auto auto auto; /* 3 rangées */
+                gap: 5mm; 
                 padding: 5mm;
                 margin: 0;
             }
@@ -198,13 +246,15 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 border: 2px solid #000;
                 border-radius: 50%;
                 page-break-inside: avoid;
-                width: 95mm; /* Taille fixe pour A4 */
-                height: 95mm; /* Taille fixe pour A4 */
+                width: 95mm; /* Taille fixe */
+                height: 95mm; /* Taille fixe */
+                padding: 8px; /* Réduire le padding pour l'impression */
             }
             .card-header { display: none; }
-            .dobble-card .symbol { transition: none; } /* Désactiver les transitions pour l'impression */
+            .dobble-card .symbol { transition: none; } 
         }
     </style>
+</head>
 </head>
 <body>
 
@@ -251,40 +301,40 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             <div class="cards-container">
                 
                 <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
-                    <div class="dobble-card">
-                        <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
-                        
-                        <?php shuffle($symbol_indices_array); // Mélanger les symboles pour l'affichage ?>
-                        
-                        <?php
-                        $k = count($symbol_indices_array); // Symboles par carte (ex: 8, 6...)
-                        // Définir les plages de taille en fonction du nombre de symboles
-                        $min_size_percent = ($k <= 4) ? 35 : (($k <= 6) ? 30 : 25);
-                        $max_size_percent = ($k <= 4) ? 50 : (($k <= 6) ? 45 : 40);
-                        ?>
+                    
+                    <?php
+                    // --- CHANGEMENT ICI ---
+                    // Récupérer le nombre de symboles (k) et définir la classe de layout
+                    $k = count($symbol_indices_array);
+                    $layout_class = 'layout-k' . $k;
+                    shuffle($symbol_indices_array); // Mélanger les symboles
+                    
+                    // Définir la plage de taille (maintenant relative à la cellule de la grille, pas à la carte entière)
+                    $min_size_percent = 70; // Le symbole occupera 70% à 100% de sa cellule de grille
+                    $max_size_percent = 100;
+                    ?>
 
+                    <div class="dobble-card <?= $layout_class ?>"> <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
+                        
                         <?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
                             <?php 
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             
-                            // --- NOUVELLE LOGIQUE DE POSITIONNEMENT ALÉATOIRE ---
-                            $size = rand($min_size_percent, $max_size_percent); // Taille aléatoire
-                            $rotation = rand(-180, 180); // Rotation aléatoire
+                            // Générer des styles aléatoires
+                            $size = rand($min_size_percent, $max_size_percent); // Taille % DANS LA CELLULE
+                            $rotation = rand(-180, 180); // Rotation
                             
-                            // Position aléatoire (Top, Left)
-                            // On s'assure que l'image ne sort pas (en gardant une marge basée sur sa taille)
-                            $max_pos = 95 - $size; // ex: si taille=40, max_pos=55 (position de 5% à 55%)
-                            $top = rand(5, max(5, $max_pos));
-                            $left = rand(5, max(5, $max_pos));
-
-                            $style = "width: {$size}%; top: {$top}%; left: {$left}%; transform: rotate({$rotation}deg);";
+                            $style = "width: {$size}%; max-width: {$size}%; transform: rotate({$rotation}deg);";
+                            
+                            // Assigner la classe de cellule de grille
+                            $cell_class = 'symbol-cell-' . $key;
                             ?>
                             
                             <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
                                  alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
                                  title="<?= htmlspecialchars($symbol_data['name']) ?>"
-                                 class="symbol"
-                                 style="<?= $style ?>"> <?php endforeach; ?>
+                                 class="symbol <?= $cell_class ?>" style="<?= $style ?>"> 
+                        <?php endforeach; ?>
                     </div>
                 <?php endforeach; ?>
 
