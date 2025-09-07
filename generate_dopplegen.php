@@ -129,7 +129,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     <title>Générateur de Cartes Dopplegen</title>
     <style>
         /* Styles de base (écran) */
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; box-sizing: border-box; }
         h1, h2 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
         .login-container { max-width: 400px; margin: 50px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 1rem; border-radius: 5px; margin-top: 10px; }
@@ -150,7 +150,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
             background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
 
-        /* --- СТИЛИ КАРТОЧКИ ОБНОВЛЕНЫ (УБРАН GRID) --- */
+        /* --- STYLES DE CARTE (GRID) --- */
         .cards-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -163,43 +163,61 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
             border-radius: 50%;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
-            position: relative; /* Обязательно для абсолютного позиционирования детей */
-            overflow: hidden; /* Обязательно для обрезки по кругу */
-            padding: 10px;
+            position: relative;
+            overflow: hidden; 
+            padding: 10px; /* Даем небольшой отступ от края круга */
             box-sizing: border-box;
-            /* display: grid; -- УБРАН */
+            display: grid; 
         }
         .card-header {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 1;
         }
 
-        /* --- СТИЛИ СИМВОЛА ОБНОВЛЕНЫ --- */
+        /* Контейнер-обертка. Он занимает ячейку сетки. */
+        .symbol-cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* Обрезает повернутое изображение */
+            width: 100%;
+            height: 100%;
+            min-width: 0; /* Исправление для grid/flex */
+            min-height: 0; /* Исправление для grid/flex */
+        }
+
+        /* Само изображение */
         .dobble-card .symbol {
-            position: absolute; /* 100% случайное позиционирование */
+            max-width: 100%; 
+            max-height: 100%;
             object-fit: contain;
             transition: transform 0.3s ease;
-            height: auto; /* Высота автоматическая, управляем шириной */
+            /* PHP применяет к нему случайные width и transform */
         }
         .dobble-card .symbol:hover {
-            transform: scale(1.2) !important; 
+            transform: scale(1.2) !important;
             z-index: 10;
+            position: relative;
         }
 
         /* --- Все раскладки (layout) остаются БЕЗ ИЗМЕНЕНИЙ --- */
         
         /* Layout pour 8 symboles (k=8, Ordre n=7) */
-        .layout-k8 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
+.layout-k8 { 
+            grid-template: 1fr 1fr 1fr 1fr / 1fr 1fr 1fr 1fr; 
+            place-items: center; 
+            padding: 5%; /* Небольшой отступ от края */
+        }
         .layout-k8 .symbol-cell-0 { grid-area: 1 / 1; }
-        .layout-k8 .symbol-cell-1 { grid-area: 1 / 2; }
-        .layout-k8 .symbol-cell-2 { grid-area: 1 / 3; }
-        .layout-k8 .symbol-cell-3 { grid-area: 2 / 1; }
-        .layout-k8 .symbol-cell-4 { grid-area: 2 / 3; } 
-        .layout-k8 .symbol-cell-5 { grid-area: 3 / 1; }
-        .layout-k8 .symbol-cell-6 { grid-area: 3 / 2; }
-        .layout-k8 .symbol-cell-7 { grid-area: 3 / 3; }
+        .layout-k8 .symbol-cell-1 { grid-area: 1 / 3; }
+        .layout-k8 .symbol-cell-2 { grid-area: 2 / 2; }
+        .layout-k8 .symbol-cell-3 { grid-area: 2 / 4; }
+        .layout-k8 .symbol-cell-4 { grid-area: 3 / 1; }
+        .layout-k8 .symbol-cell-5 { grid-area: 3 / 3; }
+        .layout-k8 .symbol-cell-6 { grid-area: 4 / 2; }
+        .layout-k8 .symbol-cell-7 { grid-area: 4 / 4; }
 
-        /* Layout pour 6 symboles (k=6, Ordre n=5) */
-        .layout-k6 { grid-template: 1fr 1fr 1fr / 1fr 1fr; place-items: center; gap: 5px; }
+        /* Layout pour 6 symboles (k=6) - 2x3 сетка (хорошая раскладка) */
+        .layout-k6 { grid-template: 1fr 1fr 1fr / 1fr 1fr; place-items: center; gap: 5px; padding: 5%; }
         .layout-k6 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k6 .symbol-cell-1 { grid-area: 1 / 2; }
         .layout-k6 .symbol-cell-2 { grid-area: 2 / 1; }
@@ -207,26 +225,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
         .layout-k6 .symbol-cell-4 { grid-area: 3 / 1; }
         .layout-k6 .symbol-cell-5 { grid-area: 3 / 2; }
         
-        /* Layout pour 5 symboles (k=5, Ordre n=4) */
-        .layout-k5 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
+        /* Layout pour 5 symboles (k=5) - "Кости" (хорошая раскладка) */
+        .layout-k5 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; padding: 10%; }
         .layout-k5 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k5 .symbol-cell-1 { grid-area: 1 / 3; }
-        .layout-k5 .symbol-cell-2 { grid-area: 2 / 2; }
+        .layout-k5 .symbol-cell-2 { grid-area: 2 / 2; } /* Центр */
         .layout-k5 .symbol-cell-3 { grid-area: 3 / 1; }
         .layout-k5 .symbol-cell-4 { grid-area: 3 / 3; }
 
-        /* Layout pour 4 symboles (k=4, Ordre n=3) */
+        /* Layout pour 4 symboles (k=4) - Раскладка "Ромб" (ИСПРАВЛЕНО) */
         .layout-k4 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; padding: 10%; }
-        .layout-k4 .symbol-cell-0 { grid-area: 1 / 1; }
-        .layout-k4 .symbol-cell-1 { grid-area: 1 / 3; }
-        .layout-k4 .symbol-cell-2 { grid-area: 3 / 1; }
-        .layout-k4 .symbol-cell-3 { grid-area: 3 / 3; }
+        .layout-k4 .symbol-cell-0 { grid-area: 1 / 2; } /* Верх */
+        .layout-k4 .symbol-cell-1 { grid-area: 2 / 1; } /* Лево */
+        .layout-k4 .symbol-cell-2 { grid-area: 2 / 3; } /* Право */
+        .layout-k4 .symbol-cell-3 { grid-area: 3 / 2; } /* Низ */
         
-        /* Layout pour 3 symboles (k=3, Ordre n=2) */
-        .layout-k3 { grid-template: 1fr 1fr / 1fr 1fr; place-items: center; gap: 5px; padding: 15%; }
-        .layout-k3 .symbol-cell-0 { grid-area: 1 / 1; grid-column-start: 1; grid-column-end: 3; }
-        .layout-k3 .symbol-cell-1 { grid-area: 2 / 1; }
-        .layout-k3 .symbol-cell-2 { grid-area: 2 / 2; }
+        /* Layout pour 3 symboles (k=3) - Раскладка "Треугольник" (ИСПРАВЛЕНО) */
+        .layout-k3 { grid-template: 1fr 1fr / 1fr 1fr 1fr; place-items: center; padding: 15%; }
+        .layout-k3 .symbol-cell-0 { grid-area: 1 / 1 / 1 / 4; } /* Верхний центр (объединяет 3 колонки) */
+        .layout-k3 .symbol-cell-1 { grid-area: 2 / 1; } /* Низ-лево */
+        .layout-k3 .symbol-cell-2 { grid-area: 2 / 3; } /* Низ-право */
+        
         
         /* Стили печати остаются БЕЗ ИЗМЕНЕНИЙ */
         @media print {
