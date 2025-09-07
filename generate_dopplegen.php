@@ -307,6 +307,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         <?php endif; ?>
 
 
+        <?php if (!empty($all_cards_indices)): ?>
+            
 <?php
             /**
              * =======================================================================
@@ -430,6 +432,46 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 
                 // 3. Построить и вернуть массив слотов на основе этого рецепта
                 return build_slots($chosen_recipe_layers);
+            }
+            ?>
+
+                // 1. Создать центральный слот
+                $cs = $layout_params['center_size'];
+                $slots[] = [
+                    'size' => $cs,
+                    'top' => $center_y - ($cs / 2),  // 50% - (половина размера) = верхний левый угол
+                    'left' => $center_x - ($cs / 2), // 50% - (половина размера) = верхний левый угол
+                    'z_index' => 10 // Центральный всегда выше
+                ];
+
+                // 2. Создать (k-1) орбитальных слотов
+                $num_orbit = $k - 1;
+                if ($num_orbit <= 0) {
+                    return $slots; // На случай, если k=1 (хотя это невозможно по алгоритму игры)
+                }
+
+                $os = $layout_params['orbit_size'];
+                $or = $layout_params['orbit_radius'];
+                $angle_step = (M_PI * 2) / $num_orbit;
+                $angle_offset = M_PI / $num_orbit; // Смещаем на половину шага, чтобы ни один символ не был ровно "в 3 часа"
+
+                for ($i = 0; $i < $num_orbit; $i++) {
+                    $angle = ($angle_step * $i) + $angle_offset;
+                    
+                    // Рассчитываем ЦЕНТР символа на орбите
+                    $x = $center_x + $or * cos($angle);
+                    $y = $center_y + $or * sin($angle);
+
+                    // Рассчитываем ВЕРХНИЙ ЛЕВЫЙ УГОЛ (top, left) из центра и размера
+                    $slots[] = [
+                        'size' => $os,
+                        'top' => $y - ($os / 2), // Центрируем символ относительно точки (x,y)
+                        'left' => $x - ($os / 2),// Центрируем символ относительно точки (x,y)
+                        'z_index' => 5
+                    ];
+                }
+                
+                return $slots;
             }
             ?>
 
