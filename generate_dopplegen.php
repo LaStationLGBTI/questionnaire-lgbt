@@ -47,6 +47,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     $selected_category_get = '';
     $uploadDir = 'dopplegenImages/';
 
+    // --- НОВОЕ: Получаем значения слайдеров (или значения по умолчанию) ---
+    $min_variance_mod = isset($_GET['min_var']) ? (int)$_GET['min_var'] : 60;
+    $max_variance_mod = isset($_GET['max_var']) ? (int)$_GET['max_var'] : 100;
+
+
     try {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -67,7 +72,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 $sql .= " WHERE category = ?";
                 $params[] = $selected_category_get;
             }
-            $sql .= " ORDER BY RAND()"; // Mélanger les symboles pour un jeu différent à chaque fois
+            $sql .= " ORDER BY RAND()"; // Mélanger les symboles pour un jeu différent à каждый раз
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -139,6 +144,12 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         input[type="text"], input[type="password"], select {
             width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1rem;
         }
+        /* --- НОВЫЕ СТИЛИ ДЛЯ СЛАЙДЕРОВ --- */
+        input[type="range"] { width: 100%; margin-top: 5px; }
+        .slider-label { font-size: 0.9rem; color: #333; }
+        .slider-value { font-weight: bold; color: #007bff; background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; display: inline-block; min-width: 25px; text-align: center; }
+        .slider-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        
         button {
             background-color: #007bff; color: white; padding: 10px 18px; border: none; border-radius: 5px;
             font-size: 1rem; cursor: pointer; transition: background-color 0.3s;
@@ -169,7 +180,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             box-sizing: border-box;
             display: flex; /* Используем flexbox для центрирования содержимого */
             justify-content: center;
-            align-items: center;
+            align: items-center;
         }
         .card-header {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 10;
@@ -294,6 +305,20 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                         <?php endforeach; ?>
                     </select>
                 </div>
+
+                <p class="slider-label">Ajuster la plage de taille aléatoire (en % de la taille de sécurité maximale) :</p>
+                <div class="slider-container">
+                    <div class="form-group">
+                        <label for="min_var">Taille Minimale: <span id="minValLabel" class="slider-value"><?= $min_variance_mod ?></span>%</label>
+                        <input type="range" id="min_var" name="min_var" min="10" max="100" value="<?= $min_variance_mod ?>" 
+                               oninput="document.getElementById('minValLabel').innerText = this.value">
+                    </div>
+                    <div class="form-group">
+                        <label for="max_var">Taille Maximale: <span id="maxValLabel" class="slider-value"><?= $max_variance_mod ?></span>%</label>
+                        <input type="range" id="max_var" name="max_var" min="10" max="100" value="<?= $max_variance_mod ?>"
+                               oninput="document.getElementById('maxValLabel').innerText = this.value">
+                    </div>
+                </div>
                 <button type="submit" name="generate">Générer / Régénérer</button>
             </form>
         </div>
@@ -311,30 +336,26 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             
             <?php
             /**
-             * =======================================================================
-             * НОВЫЙ МЕХАНИЗМ МАКЕТИРОВАНИЯ (РЕШЕНИЕ ВАШЕЙ ПРОБЛЕМЫ)
-             * МЫ ИСПОЛЬЗУЕМ ДВЕ ФУНКЦИИ:
-             * 1. build_slots() - Помощник, который строит слоты по "рецепту".
-             * 2. getSymbolLayoutSlots() - Основная функция, которая содержит НАБОР рецептов
-             * для каждого 'k' и СЛУЧАЙНО выбирает один из них при каждой генерации.
-             * =======================================================================
+             * ФУНКЦИЯ-ПОМОЩНИК (Обновленная версия 3.0)
+             * Теперь принимает модификаторы min/max от слайдеров.
              */
-
-            /**
-             * ФУНКЦИЯ-ПОМОЩНИК
-             * Строит массив слотов на основе "рецепта" (массива слоев).
-             */
-            function build_slots($config_layers, $center_x = 50, $center_y = 50) {
+            function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center_y = 50) {
                 $slots = [];
                 $layer_index = 0;
 
+                // --- НОВОЕ: Проверка слайдеров ---
+                // Убедимся, что мин. модификатор не больше макс. модификатора
+                if ($min_mod > $max_mod) {
+                    $min_mod = $max_mod; 
+                }
+
                 foreach ($config_layers as $layer) {
-                    $s = $layer['size'];    // Размер (size)
-                    $c = $layer['count'];   // Количество (count)
-                    $r = $layer['radius'];  // Радиус (radius)
+                    $s = $layer['size'];    // Максимально БЕЗОПАСНЫЙ размер из рецепта
+                    $c = $layer['count'];   // Количество
+                    $r = $layer['radius'];  // Радиус
                     
                     if ($r == 0) {
-                        // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: Используем фиксированный размер для стабильности макета.
+                        // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: Используем фиксированный размер (не зависит от слайдеров).
                         for ($i = 0; $i < $c; $i++) { 
                             $slots[] = [
                                 'size' => $s,
@@ -344,29 +365,34 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                             ];
                         }
                     } else {
-                        // ЭТО ОРБИТАЛЬНЫЙ СЛОЙ: Применяем вариативность размера.
+                        // ЭТО ОРБИТАЛЬНЫЙ СЛОЙ: Применяем вариативность размера НА ОСНОВЕ СЛАЙДЕРОВ.
                         $angle_step = (M_PI * 2) / $c;
                         $angle_offset = (mt_rand() / mt_getrandmax()) * (M_PI * 2); 
                         
-                        $max_size = $s;
+                        // Максимально безопасный размер из рецепта
+                        $recipe_max_size = $s; 
                         
-                        // !!! ИЗМЕНЕНИЕ ЗДЕСЬ !!!
-                        // Раньше было 0.80. Теперь диапазон 60%-100% от макс. размера.
-                        // Это сделает разницу в размерах гораздо более заметной.
-                        $min_size = $max_size * 0.60; 
+                        // Рассчитываем фактический мин/макс размер на основе % от слайдеров
+                        $actual_max_size = $recipe_max_size * ($max_mod / 100.0);
+                        $actual_min_size = $recipe_max_size * ($min_mod / 100.0);
+
+                        // Защита от деления на ноль или некорректных значений
+                        if ($actual_min_size < 0.1) $actual_min_size = 0.1;
+                        if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
+
 
                         for ($i = 0; $i < $c; $i++) {
                             $angle = ($angle_step * $i) + $angle_offset;
                             $x = $center_x + $r * cos($angle);
                             $y = $center_y + $r * sin($angle);
                             
-                            // Генерируем СЛУЧАЙНЫЙ РАЗМЕР для КАЖДОГО слота на орбите
-                            $current_size = mt_rand($min_size * 100, $max_size * 100) / 100;
+                            // Генерируем случайный размер В ДИАПАЗОНЕ, УКАЗАННОМ СЛАЙДЕРАМИ
+                            $current_size = mt_rand($actual_min_size * 100, $actual_max_size * 100) / 100;
 
                             $slots[] = [
-                                'size' => $current_size, // <-- Используем случайный размер
-                                'top' => $y - ($current_size / 2), // <-- Центрируем на основе случайного размера
-                                'left' => $x - ($current_size / 2),// <-- Центрируем на основе случайного размера
+                                'size' => $current_size, 
+                                'top' => $y - ($current_size / 2),
+                                'left' => $x - ($current_size / 2),
                                 'z_index' => 5 - $layer_index
                             ];
                         }
@@ -377,53 +403,40 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             }
 
             /**
-             * ОСНОВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ МАКЕТА (ЗАМЕНЯЕТ ВАШУ СТАРУЮ)
-             * Содержит массив безопасных "рецептов" макета и СЛУЧАЙНО выбирает один.
+             * ОСНОВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ МАКЕТА (Обновленная версия 3.0)
+             * Теперь принимает $min_mod и $max_mod и передает их в build_slots.
+             * Все рецепты (размеры) основаны на 100% безопасном размере (с учетом вращения).
              */
-            function getSymbolLayoutSlots($k) {
-                $all_recipes = []; // Хранилище всех рецептов, с ключом по $k
+            function getSymbolLayoutSlots($k, $min_mod, $max_mod) {
+                $all_recipes = []; 
 
                 // --- K = 8 (Порядок 7, 8 слотов) ---
-                // Старые рецепты были слишком большими и вызывали наложения при вращении.
                 $all_recipes[8] = [
-                    // Рецепт A: 1 Центр (средний), 7 на Орбите (поменьше)
                     [ ['size' => 27, 'count' => 1, 'radius' => 0], ['size' => 21, 'count' => 7, 'radius' => 34.4] ],
-                    // Рецепт Б: Нет центра, 8 на одной орбите
                     [ ['size' => 19, 'count' => 8, 'radius' => 35.5] ]
-                    // Примечание: Макет 1-Большой-Центр + 7-Орбита или 4-Внутр + 4-Внешн геометрически невозможен без наложений при вращении.
                 ];
                 
                 // --- K = 6 (Порядок 5, 6 слотов) ---
                 $all_recipes[6] = [
-                    // A: 1 маленький центр, 5 на орбите
                     [ ['size' => 18, 'count' => 1, 'radius' => 0], ['size' => 25, 'count' => 5, 'radius' => 31] ],
-                    // Б: Нет центра, 6 на одной орбите
                     [ ['size' => 23, 'count' => 6, 'radius' => 33] ]
-                    // Примечание: Макет 1-Большой-Центр + 5-Орбита также невозможен без наложений.
                 ];
 
                 // --- K = 5 (Порядок 4, 5 слотов) ---
                 $all_recipes[5] = [
-                    // A: 1 маленький центр, 4 на орбите
                     [ ['size' => 12, 'count' => 1, 'radius' => 0], ['size' => 28, 'count' => 4, 'radius' => 29] ],
-                    // Б: Нет центра, 5 на одной орбите
                     [ ['size' => 25, 'count' => 5, 'radius' => 31] ]
                 ];
                 
                 // --- K = 4 (Порядок 3, 4 слота) ---
                 $all_recipes[4] = [
-                    // A: Нет центра, 4 на одной орбите (единственный стабильный макет)
                     [ ['size' => 28, 'count' => 4, 'radius' => 29] ],
-                     // Б: Добавим вариативности радиуса
                     [ ['size' => 27, 'count' => 4, 'radius' => 30] ]
                 ];
                 
                 // --- K = 3 (Порядок 2, 3 слота) ---
-                // Используем как значение по умолчанию
                 $all_recipes[3] = [
-                    // A: Сбалансированный (1 центр, 2 на орбите, все одного размера)
                     [ ['size' => 23, 'count' => 1, 'radius' => 0], ['size' => 23, 'count' => 2, 'radius' => 33] ],
-                    // Б: Нет центра, 3 на одной орбите
                     [ ['size' => 32, 'count' => 3, 'radius' => 26.5] ]
                 ];
 
@@ -433,8 +446,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 // 2. Случайно выбрать ОДИН рецепт из списка
                 $chosen_recipe_layers = $recipes_for_k[array_rand($recipes_for_k)];
                 
-                // 3. Построить и вернуть массив слотов на основе этого рецепта
-                return build_slots($chosen_recipe_layers);
+                // 3. Построить и вернуть массив слотов, ПЕРЕДАВ МОДИФИКАТОРЫ СЛАЙДЕРОВ
+                return build_slots($chosen_recipe_layers, $min_mod, $max_mod);
             }
             ?>
 
@@ -443,11 +456,10 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     
                     <?php
                     $k = count($symbol_indices_array);
-                    // Получаем массив предопределенных макетов (слотов) ИЗ СЛУЧАЙНОГО ШАБЛОНА
-                    $layout_slots = getSymbolLayoutSlots($k);
+                    // Получаем массив слотов, ПЕРЕДАВАЯ значения слайдеров в генератор
+                    $layout_slots = getSymbolLayoutSlots($k, $min_variance_mod, $max_variance_mod);
                     
-                    // Перемешиваем массив слотов. Это гарантирует, что каждый символ 
-                    // получит случайный слот (размер и позицию).
+                    // Перемешиваем массив слотов.
                     shuffle($layout_slots);
                     ?>
 
@@ -456,28 +468,21 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                         
                         <?php 
                         foreach ($symbol_indices_array as $key => $symbol_db_index): 
-                            // Проверяем, что слот существует для данного ключа
                             if (!isset($layout_slots[$key])) {
-                                // Это может случиться, если 'k' не соответствует количеству сгенерированных слотов
-                                // В данном случае, просто пропустим символ или используем дефолтный слот
                                 continue; 
                             }
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             $slot = $layout_slots[$key];
                             
-                            // Добавляем случайный поворот
                             $rotation = rand(-180, 180);      
                             
-                            // Собираем стиль: position: absolute с ДЕТЕРМИНИРОВАННЫМИ координатами из слота.
-                            // Теперь размеры и координаты top/left рассчитываются так, чтобы символ 
-                            // был центрирован относительно своей точки орбиты.
                             $style = "position: absolute; " .
                                      "width: {$slot['size']}%; " .
-                                     "height: {$slot['size']}%; " . // Гарантируем квадратность
+                                     "height: {$slot['size']}%; " .
                                      "top: {$slot['top']}%; " .
                                      "left: {$slot['left']}%; " .
                                      "transform: rotate({$rotation}deg); " .
-                                     "z-index: {$slot['z_index']};"; // Управляем z-index для порядка наложения
+                                     "z-index: {$slot['z_index']};";
                             ?>
                             
                             <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
@@ -508,7 +513,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                                          alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
                                          class="legend-img">
                                 </td>
-                                <td><?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?></td>
+                                <td><?= htmlspecialchars($symbol_data['name']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
