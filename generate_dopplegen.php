@@ -172,27 +172,37 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .card-header {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 1;
         }
+
+        /* --- БЛОК ИЗМЕНЕН --- */
+        /* 1. ЭТО НОВЫЙ КОНТЕЙНЕР-ОБЕРТКА. Он является ячейкой сетки. */
         .symbol-cell {
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; 
+            overflow: hidden; /* <-- ЭТО ГЛАВНОЕ ИСПРАВЛЕНИЕ. Обрезает повернутое изображение. */
             width: 100%;
             height: 100%;
         }
+
+        /* 2. Само изображение (символ) теперь просто заполняет свой контейнер */
         .dobble-card .symbol {
             max-width: 100%; 
             max-height: 100%;
             object-fit: contain;
             transition: transform 0.3s ease;
+            /* margin: auto; - больше не нужен, flex-контейнер делает это */
         }
+        /* --- КОНЕЦ ИЗМЕНЕНИЙ --- */
+
         .dobble-card .symbol:hover {
             transform: scale(1.2) !important;
             z-index: 10;
             position: relative;
         }
 
-        /* --- GRILLES DE LAYOUT (Без изменений) --- */
+        /* --- Все раскладки (layout) остаются БЕЗ ИЗМЕНЕНИЙ --- */
+        
+        /* Layout pour 8 symboles (k=8, Ordre n=7) */
         .layout-k8 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
         .layout-k8 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k8 .symbol-cell-1 { grid-area: 1 / 2; }
@@ -203,6 +213,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .layout-k8 .symbol-cell-6 { grid-area: 3 / 2; }
         .layout-k8 .symbol-cell-7 { grid-area: 3 / 3; }
 
+        /* Layout pour 6 symboles (k=6, Ordre n=5) */
         .layout-k6 { grid-template: 1fr 1fr 1fr / 1fr 1fr; place-items: center; gap: 5px; }
         .layout-k6 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k6 .symbol-cell-1 { grid-area: 1 / 2; }
@@ -211,6 +222,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .layout-k6 .symbol-cell-4 { grid-area: 3 / 1; }
         .layout-k6 .symbol-cell-5 { grid-area: 3 / 2; }
         
+        /* Layout pour 5 symboles (k=5, Ordre n=4) */
         .layout-k5 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
         .layout-k5 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k5 .symbol-cell-1 { grid-area: 1 / 3; }
@@ -218,32 +230,26 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .layout-k5 .symbol-cell-3 { grid-area: 3 / 1; }
         .layout-k5 .symbol-cell-4 { grid-area: 3 / 3; }
 
+        /* Layout pour 4 symboles (k=4, Ordre n=3) */
         .layout-k4 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; padding: 10%; }
         .layout-k4 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k4 .symbol-cell-1 { grid-area: 1 / 3; }
         .layout-k4 .symbol-cell-2 { grid-area: 3 / 1; }
         .layout-k4 .symbol-cell-3 { grid-area: 3 / 3; }
         
+        /* Layout pour 3 symboles (k=3, Ordre n=2) */
         .layout-k3 { grid-template: 1fr 1fr / 1fr 1fr; place-items: center; gap: 5px; padding: 15%; }
         .layout-k3 .symbol-cell-0 { grid-area: 1 / 1; grid-column-start: 1; grid-column-end: 3; }
         .layout-k3 .symbol-cell-1 { grid-area: 2 / 1; }
         .layout-k3 .symbol-cell-2 { grid-area: 2 / 2; }
-
         
-        /* --- НОВЫЙ БЛОК CSS: Стили для Легенды (Скрыто на экране) --- */
-        #symbol-legend {
-            display: none;
-        }
-
-
-        /* --- Styles d'impression (6 cartes par page A4) --- */
+        /* Стили печати остаются БЕЗ ИЗМЕНЕНИЙ */
         @media print {
             body { background: #fff; padding: 0; margin: 0; }
             .no-print, .logout-button, .print-button, h1, .info, .error, .generator-form {
                 display: none !important; 
             }
             .cards-container {
-                width: 100%; 
                 display: grid;
                 grid-template-columns: 1fr 1fr; 
                 grid-auto-rows: 80mm; 
@@ -265,48 +271,51 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; } 
-            
-            /* --- НОВЫЙ БЛОК CSS: Стили Легенды для Печати --- */
-            #symbol-legend {
-                display: block;             /* Показать блок при печати */
-                page-break-before: always;  /* Начать с новой страницы (сделает ее последней) */
-                padding-top: 10mm;
-                width: 190mm; /* Ширина области печати A4 (210мм - 20мм полей) */
-                margin: 0 auto;
-            }
-            #symbol-legend h2 {
-                text-align: center;
-                font-size: 16pt;
-                margin-bottom: 5mm;
-                border-bottom: 2px solid #000;
-            }
-            .legend-table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 9pt; /* Мелкий шрифт, чтобы все влезло */
-            }
-            .legend-table th, .legend-table td {
-                border: 1px solid #aaa;
-                padding: 2mm;
-                text-align: left;
-                vertical-align: middle;
-                page-break-inside: avoid; /* Не разрывать строку таблицы */
-            }
-            .legend-table th {
-                background-color: #eee;
-                font-size: 11pt;
-            }
-            .legend-table img {
-                width: 40px;   /* Фиксированный маленький размер */
-                height: 40px;  /* Фиксированный маленький размер */
-                object-fit: contain;
-                vertical-align: middle;
-            }
-            .legend-table td:first-child { /* Ячейка с картинкой */
-                width: 45px;
-                text-align: center;
-            }
-            /* --- КОНЕЦ НОВЫХ CSS-СТИЛЕЙ ПЕЧАТИ --- */
+            /* --- Styles pour l'impression de la Légende --- */
+        .symbol-legend-container {
+            page-break-before: always; /* ФОРСИРУЕТ ЛЕГЕНДУ НА НОВУЮ (ПОСЛЕДНЮЮ) СТРАНИЦУ */
+            margin-top: 0;
+            padding: 0;
+            box-shadow: none;
+            border: none;
+        }
+        .legend-table {
+            width: 100%;
+        }
+        .legend-img {
+            width: 40px; /* Чуть меньше для печати */
+            height: 40px;
+        }
+        }
+        /* --- Styles pour la Légende des Symboles --- */
+        .symbol-legend-container {
+            margin-top: 40px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .legend-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .legend-table th, .legend-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+        .legend-table th {
+            background-color: #f9f9f9;
+        }
+        .legend-img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            background: #fdfdfd;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -352,34 +361,79 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         <?php endif; ?>
 
 
-<?php if (!empty($all_cards_indices)): ?>
-            
+        <?php if (!empty($all_cards_indices)): ?>
             <div class="cards-container">
-                </div> <?php endif; ?> <?php if (!empty($symbols_to_use)): // Мы используем $symbols_to_use, так как он содержит все 57 (или 31, 21...) символов ?>
-            <div id="symbol-legend">
+                
+                <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
+                    
+                    <?php
+                    // PHP-логика здесь не меняется
+                    $k = count($symbol_indices_array);
+                    $layout_class = 'layout-k' . $k;
+                    shuffle($symbol_indices_array); 
+                    
+                    $min_size_percent = 70; 
+                    $max_size_percent = 100;
+                    ?>
+
+                    <div class="dobble-card <?= $layout_class ?>"> 
+                        <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
+                        
+<?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
+                            <?php 
+                            $symbol_data = $symbols_to_use[$symbol_db_index];
+                            
+$min_size_percent_base = 50; // Базовый минимальный размер
+                            $max_size_percent_base = 85; // Базовый максимальный размер
+                            
+                            // Вы можете настроить эти значения, чтобы найти идеальный баланс
+                            $size = rand($min_size_percent_base, $max_size_percent_base); 
+                            $rotation = rand(-180, 180);
+                            
+                            $img_style = "width: {$size}%; max-width: {$size}%; transform: rotate({$rotation}deg);";
+                            
+                            $cell_class = 'symbol-cell-' . $key;
+                            ?>
+                            
+                            <div class="symbol-cell <?= $cell_class ?>">
+                                <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
+                                     alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
+                                     title="<?= htmlspecialchars($symbol_data['name']) ?>"
+                                     class="symbol"
+                                     style="<?= $img_style ?>">
+                            </div>
+                            <?php endforeach; ?>
+                    </div>
+                <?php endforeach; ?>
+
+</div> <div class="symbol-legend-container">
                 <h2>Symboles (Légende)</h2>
+                <p>Liste de tous les symboles uniques (<?= count($symbols_to_use) ?>) utilisés dans ce jeu.</p>
                 <table class="legend-table">
                     <thead>
                         <tr>
-                            <th>Image</th>
+                            <th>Image (mini)</th>
                             <th>Nom du Symbole</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($symbols_to_use as $symbol): ?>
+                        <?php foreach ($symbols_to_use as $symbol_data): ?>
                             <tr>
                                 <td>
-                                    <img src="<?= htmlspecialchars($uploadDir . $symbol['image_name']) ?>" 
-                                         alt="<?= htmlspecialchars($symbol['name']) ?>">
+                                    <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
+                                         alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
+                                         class="legend-img">
                                 </td>
-                                <td><?= htmlspecialchars($symbol['name']) ?></td>
+                                <td><?= htmlspecialchars($symbol_data['name']) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-        <?php endif; ?>
-        <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+            <?php endif; ?>
+        
+
+    <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
         <div class="login-container">
             <h1>Accès Bloqué</h1>
             <p class="error">Vous avez échoué 3 tentatives de connexion. Accès verrouillé.</p>
