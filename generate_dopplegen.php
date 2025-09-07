@@ -235,28 +235,38 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
 
         /* --- Styles d'impression (6 cartes par page A4) --- */
+/* --- Styles d'impression (MIS À JOUR POUR 6 CARTES/PAGE - GARANTI) --- */
         @media print {
-            body { background: #fff; padding: 0; margin: 0; }
+            @page {
+                /* Мы можем предложить поля, но лучше полагаться на настройки пользователя */
+                /* margin: 10mm; */
+            }
+            body { 
+                background: #fff; padding: 0; margin: 0; 
+            }
             .no-print, .logout-button, .print-button, h1, .info, .error, .generator-form {
                 display: none !important; 
             }
             .cards-container {
+                width: 100%; /* Использовать всю доступную ширину печати */
                 display: grid;
-                grid-template-columns: 1fr 1fr; /* 2 colonnes */
-                grid-auto-rows: 70mm; /* --- ИЗМЕНЕНО: Фиксированная высота ряда --- */
-                gap: 10mm; /* --- ИЗМЕНЕНО: Отступ 10мм --- */
-                padding: 5mm; /* Небольшой отступ от края страницы */
-                margin: 0;
+                grid-template-columns: 1fr 1fr; /* 2 колонки */
+                grid-auto-rows: 80mm; /* --- НОВЫЙ РАЗМЕР --- */
+                gap: 5mm;              /* --- НОВЫЙ РАЗМЕР (меньше) --- */
+                padding: 0;            /* Убираем padding у контейнера */
+                margin: 0 auto;        /* Центрируем сетку */
+                box-sizing: border-box;
             }
             .dobble-card {
                 box-shadow: none;
                 border: 2px solid #000;
                 border-radius: 50%;
                 page-break-inside: avoid;
-                width: 85mm;  /* --- ИЗМЕНЕНО: Уменьшен размер --- */
-                height: 85mm; /* --- ИЗМЕНЕНО: Уменьшен размер --- */
-                padding: 8px; 
-                margin: 0; /* Сетка управляет отступами */
+                width: 80mm;  /* --- НОВЫЙ РАЗМЕР (гарантированно влезает) --- */
+                height: 80mm; /* --- НОВЫЙ РАЗМЕР --- */
+                padding: 7px; /* Немного уменьшен padding */
+                margin: 0;
+                box-sizing: border-box;
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; } 
