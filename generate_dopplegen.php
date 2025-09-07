@@ -49,7 +49,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
     // --- НОВОЕ: Получаем значения слайдеров (или значения по умолчанию) ---
     $min_variance_mod = isset($_GET['min_var']) ? (int)$_GET['min_var'] : 60;
-    $max_variance_mod = isset($_GET['max_var']) ? (int)$_GET['max_var'] : 100;
+    $max_variance_mod = isset($_GET['max_var']) ? (int)$_GET['max_var'] : 130;
 
 
     try {
