@@ -16,28 +16,36 @@ if (isset($_POST['logout'])) {
     header('Location: ' . $_SERVER['PHP_SELF']);
     exit();
 }
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($_SESSION['login_attempts'] < 3) {
-        $login = $_POST['identifiant'];
-        $pass = $_POST['mot_de_passe'];
-        try {
-            $pdo_login = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo_login->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo_login->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
-            $stmt->execute([$login]);
-            $user = $stmt->fetch();
-            if ($user && $pass === $user['passconn']) {
-                $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_entry'])) {
+        $category = trim($_POST['category']);
+        $name = trim($_POST['name']);
+        $imageFile = $_FILES['image'];
+
+        // --- ДОБАВЛЕНО: Сохраняем категорию в сессию ---
+        $_SESSION['last_category'] = $category;
+        // ---------------------------------------------
+
+        if (!empty($category) && !empty($name) && $imageFile['error'] === UPLOAD_ERR_OK) {
+            $fileExtension = pathinfo($imageFile['name'], PATHINFO_EXTENSION);
+            $safeFilename = uniqid('img_', true) . '.' . strtolower($fileExtension);
+            $targetFile = $uploadDir . $safeFilename;
+            $allowedTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+            if (in_array(strtolower($fileExtension), $allowedTypes)) {
+                if (move_uploaded_file($imageFile['tmp_name'], $targetFile)) {
+                    $stmt = $pdo->prepare("INSERT INTO dopplegen (category, name, image_name) VALUES (?, ?, ?)");
+                    $stmt->execute([$category, $name, $safeFilename]);
+                    $message = "<p class='msg success'>Entrée ajoutée avec succès !</p>";
+                } else {
+                    $message = "<p class='msg error'>Erreur lors du téléchargement de l'image.</p>";
+                }
             } else {
-                $_SESSION['login_attempts']++;
-                $login_error = "Identifiant ou mot de passe incorrect.";
+                $message = "<p class='msg error'>Type de fichier non autorisé.</p>";
             }
-        } catch (PDOException $e) {
-            $login_error = "Erreur de connexion : " . $e->getMessage();
+        } else {
+            $message = "<p class='msg error'>Veuillez remplir tous les champs et choisir une image.</p>";
         }
     }
-}
 
 // ---- Logique de la page (UNIQUEMENT SI CONNECTÉ) ----
 if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
@@ -158,12 +166,13 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         <?php if ($message) echo $message; ?>
 
         <div class="main-container">
-            <div class="panel panel-left">
+<div class="panel panel-left">
                 <h2>Ajouter une nouvelle entrée</h2>
                 <form action="manage_dopplegen.php" method="POST" enctype="multipart/form-data">
                     <div class="form-group">
                         <label for="category">Catégorie :</label>
-                        <input type="text" id="category" name="category" required>
+                        <input type="text" id="category" name="category" required 
+                               value="<?= htmlspecialchars(isset($_SESSION['last_category']) ? $_SESSION['last_category'] : '') ?>">
                     </div>
                     <div class="form-group">
                         <label for="name">Nom / Titre :</label>
