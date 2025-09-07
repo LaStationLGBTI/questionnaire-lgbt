@@ -3,7 +3,7 @@
 require_once 'conf.php';
 session_start();
 
-// --- Logique de connexion (IDENTIQUE AU FICHIER 1) ---
+// --- Logique de connexion (IDENTIQUE) ---
 if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['login_attempts'] = 0;
 }
@@ -39,75 +39,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
 // --- Logique du générateur Dobble (UNIQUEMENT SI CONNECTÉ) ---
 if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
-    $all_cards = [];
-    $symbols = [];
+    $all_cards_indices = [];
+    $symbols_to_use = [];
     $generation_error = '';
+    $generation_message = '';
     $uploadDir = 'dopplegenImages/';
 
     try {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // 1. Récupérer 57 symboles de la BDD
-        // Nous prenons simplement les 57 premiers trouvés.
-        $stmt = $pdo->query("SELECT id, name, image_name FROM dopplegen LIMIT 57");
-        $symbols = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // 1. Récupérer TOUS les symboles de la BDD
+        $stmt = $pdo->query("SELECT id, name, image_name FROM dopplegen ORDER BY id ASC");
+        $all_symbols_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $total_symbols_available = count($all_symbols_db);
 
-        // 2. Vérifier si nous avons assez de symboles
-        if (count($symbols) < 57) {
-            $generation_error = "Erreur : Impossible de générer le jeu. Il faut au moins 57 symboles (images) dans la base de données. Vous n'en avez que " . count($symbols) . ".";
-        } else {
-            
-            // --- ALGORITHME DU PLAN PROJECTIF (ORDRE n=7) ---
-            // Total symboles : n^2 + n + 1 = 49 + 7 + 1 = 57 (indices 0 à 56 de notre array $symbols)
-            // Total cartes : 57
-            // Symboles par carte : n + 1 = 8
-
+        // 2. Déterminer le plus grand ordre (n) possible
+        $n = 0; // Ordre
+        if ($total_symbols_available >= 57) {
             $n = 7;
-            $all_cards_indices = []; // Contiendra 57 tableaux, chacun avec 8 indices de symboles (0-56)
+        } elseif ($total_symbols_available >= 31) {
+            $n = 5;
+        } elseif ($total_symbols_available >= 21) {
+            $n = 4;
+        } elseif ($total_symbols_available >= 13) {
+            $n = 3;
+        } elseif ($total_symbols_available >= 7) {
+            $n = 2;
+        }
 
+        // 3. S'il n'y a pas assez de symboles, définir une erreur. Sinon, générer.
+        if ($n === 0) {
+            $generation_error = "Erreur : Vous avez besoin d'au moins 7 symboles dans la base de données pour générer un jeu. Vous n'en avez que $total_symbols_available.";
+        } else {
+            // Calculer les propriétés du jeu
+            $symbols_needed = $n * $n + $n + 1;
+            $symbols_per_card = $n + 1;
+            
+            // Prendre seulement les symboles nécessaires pour cet ordre
+            $symbols_to_use = array_slice($all_symbols_db, 0, $symbols_needed);
+            
+            $generation_message = "Jeu généré (Ordre <strong>$n</strong>). Total cartes : <strong>$symbols_needed</strong>. Symboles par carte : <strong>$symbols_per_card</strong>. (Basé sur vos <strong>$total_symbols_available</strong> symboles disponibles)";
+
+            // --- ALGORITHME DU PLAN PROJECTIF (GÉNÉRIQUE) ---
+            
             // Carte 0 (La ligne à l'infini)
-            // Contient les 8 premiers symboles (indices 0 à 7)
-            $all_cards_indices[] = [0, 1, 2, 3, 4, 5, 6, 7];
+            $card_zero = [];
+            for($i = 0; $i < $symbols_per_card; $i++) {
+                $card_zero[] = $i; // Indices 0 à n
+            }
+            $all_cards_indices[] = $card_zero;
 
-            // Ensemble de cartes 2 : Lignes avec pente (n*n = 49 cartes)
+            // Ensemble de cartes 2 : Lignes avec pente (n*n cartes)
             for ($i = 0; $i < $n; $i++) { // Pente 'i'
                 for ($j = 0; $j < $n; $j++) { // Ordonnée à l'origine 'j'
                     
                     $card = [];
-                    // 1. Le point à l'infini pour cette pente (symbole 1 à 7)
+                    // 1. Le point à l'infini pour cette pente (symbole 1 à n)
                     $card[] = $i + 1; 
 
-                    // 2. Les n points affines sur la ligne y = ix + j (mod n)
+                    // 2. Les n points affines
                     for ($x = 0; $x < $n; $x++) {
                         $y = ($i * $x + $j) % $n;
-                        
-                        // Mapper (x, y) à notre index de symbole (8 à 56)
-                        // Symbole P(x, y) = 8 + (x * 7) + y
-                        $symbol_index = 8 + ($x * $n) + $y;
+                        // Mapper (x, y) à notre index de symbole (commençant après les points infinis)
+                        // L'index de symbole est (n+1) + (x*n) + y
+                        $symbol_index = ($n + 1) + ($x * $n) + $y;
                         $card[] = $symbol_index;
                     }
                     $all_cards_indices[] = $card;
                 }
             }
 
-            // Ensemble de cartes 3 : Lignes verticales (n = 7 cartes)
+            // Ensemble de cartes 3 : Lignes verticales (n cartes)
             for ($j = 0; $j < $n; $j++) { // Ligne x = j
                 
                 $card = [];
                 // 1. Le point à l'infini "vertical" (symbole 0)
                 $card[] = 0;
 
-                // 2. Les n points affines sur cette ligne (où x=j)
+                // 2. Les n points affines
                 for ($y = 0; $y < $n; $y++) {
                     $x = $j;
-                    // Symbole P(x, y) = 8 + (x * 7) + y
-                    $symbol_index = 8 + ($x * $n) + $y;
+                    $symbol_index = ($n + 1) + ($x * $n) + $y;
                     $card[] = $symbol_index;
                 }
                 $all_cards_indices[] = $card;
             }
-            // À ce stade, $all_cards_indices contient 57 cartes (arrays) de 8 indices (int)
         }
 
     } catch (PDOException $e) {
@@ -126,6 +143,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         h1, h2 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
         .login-container { max-width: 400px; margin: 50px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 1rem; border-radius: 5px; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 1rem; border-radius: 5px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; color: #555; }
         input[type="text"], input[type="password"] {
@@ -148,15 +166,16 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .dobble-card {
             background: #fff;
             border: 2px dashed #ccc;
-            border-radius: 15px; /* Moins circulaire pour mieux placer les images */
-            padding: 15px;
+            border-radius: 15px;
+            padding: 10px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            aspect-ratio: 1 / 1; /* Garantit que la carte est carrée */
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* Grille 3x3 pour 8 symboles + 1 centre vide */
-            grid-template-rows: 1fr 1fr 1fr;
-            place-items: center;
+            aspect-ratio: 1 / 1;
             position: relative;
+            /* Nouveau layout flexible pour les symboles */
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            align-items: center;
         }
         .card-header {
             position: absolute;
@@ -166,25 +185,18 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             color: #aaa;
         }
         .dobble-card .symbol {
-            max-width: 80%;
-            max-height: 80%;
-            width: auto;
+            /* Ajuster la taille des symboles en fonction du nombre */
+            flex-basis: 28%; /* ~3 symboles par ligne */
+            max-width: 28%;
             height: auto;
+            margin: 2%;
+            object-fit: contain;
         }
-        /* Placer les 8 symboles dans une grille 3x3 (laissant le centre vide) */
-        .symbol-0 { grid-area: 1 / 1; }
-        .symbol-1 { grid-area: 1 / 2; }
-        .symbol-2 { grid-area: 1 / 3; }
-        .symbol-3 { grid-area: 2 / 1; }
-        .symbol-4 { grid-area: 2 / 3; }
-        .symbol-5 { grid-area: 3 / 1; }
-        .symbol-6 { grid-area: 3 / 2; }
-        .symbol-7 { grid-area: 3 / 3; }
 
         /* --- Styles pour l'impression PDF --- */
         @media print {
             body { background: #fff; padding: 0; margin: 0; }
-            .no-print, .logout-button, .print-button, h1 {
+            .no-print, .logout-button, .print-button, h1, .info, .error {
                 display: none !important; /* Cacher l'interface non nécessaire */
             }
             .cards-container {
@@ -199,6 +211,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 border-radius: 10px;
                 page-break-inside: avoid; /* Empêcher une carte d'être coupée entre deux pages */
             }
+            .card-header { display: none; }
         }
     </style>
 </head>
@@ -212,7 +225,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         
         <button onclick="window.print()" class="print-button no-print">🖨️ Imprimer / Exporter en PDF</button>
 
-        <h1>Générateur de Cartes Dopplegen (Ordre 7)</h1>
+        <h1>Générateur de Cartes Dopplegen</h1>
         
         <?php if (!empty($generation_error)): ?>
             <p class="error"><?= $generation_error ?></p>
@@ -221,7 +234,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             <p class="error">Une erreur inconnue est survenue lors de la génération.</p>
             
         <?php else: ?>
-            <p>Jeu de <strong><?= count($all_cards_indices) ?> cartes</strong> généré avec succès, utilisant <strong><?= count($symbols) ?> symboles</strong> uniques. Chaque carte contient 8 symboles.</p>
+            <p class="info"><?= $generation_message ?></p>
             <div class="cards-container">
                 
                 <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
@@ -234,11 +247,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                         ?>
                         
                         <?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
-                            <?php $symbol_data = $symbols[$symbol_db_index]; ?>
+                            <?php $symbol_data = $symbols_to_use[$symbol_db_index]; ?>
                             <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
                                  alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
                                  title="<?= htmlspecialchars($symbol_data['name']) ?>"
-                                 class="symbol symbol-<?= $key ?>">
+                                 class="symbol">
                         <?php endforeach; ?>
                     </div>
                 <?php endforeach; ?>
@@ -258,7 +271,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 <div class="form-group">
                     <label for="identifiant">Identifiant :</label>
                     <input type="text" id="identifiant" name="identifiant" required>
-                </div>
+                </form-group">
                 <div class="form-group">
                     <label for="mot_de_passe">Mot de passe :</label>
                     <input type="password" id="mot_de_passe" name="mot_de_passe" required>
