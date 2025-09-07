@@ -172,29 +172,43 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .card-header {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 1;
         }
-        .dobble-card .symbol {
-            max-width: 95%; 
-            max-height: 95%;
-            object-fit: contain;
-            margin: auto; 
-            transition: transform 0.3s ease;
-            /* Le style inline PHP ajoutera width:% et transform:rotate() */
+
+        /* --- БЛОК ИЗМЕНЕН --- */
+        /* 1. ЭТО НОВЫЙ КОНТЕЙНЕР-ОБЕРТКА. Он является ячейкой сетки. */
+        .symbol-cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* <-- ЭТО ГЛАВНОЕ ИСПРАВЛЕНИЕ. Обрезает повернутое изображение. */
+            width: 100%;
+            height: 100%;
         }
+
+        /* 2. Само изображение (символ) теперь просто заполняет свой контейнер */
+        .dobble-card .symbol {
+            max-width: 100%; 
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+            /* margin: auto; - больше не нужен, flex-контейнер делает это */
+        }
+        /* --- КОНЕЦ ИЗМЕНЕНИЙ --- */
+
         .dobble-card .symbol:hover {
             transform: scale(1.2) !important;
             z-index: 10;
             position: relative;
         }
 
-        /* --- GRILLES DE LAYOUT POUR CHAQUE ORDRE --- */
-
+        /* --- Все раскладки (layout) остаются БЕЗ ИЗМЕНЕНИЙ --- */
+        
         /* Layout pour 8 symboles (k=8, Ordre n=7) */
         .layout-k8 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
         .layout-k8 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k8 .symbol-cell-1 { grid-area: 1 / 2; }
         .layout-k8 .symbol-cell-2 { grid-area: 1 / 3; }
         .layout-k8 .symbol-cell-3 { grid-area: 2 / 1; }
-        .layout-k8 .symbol-cell-4 { grid-area: 2 / 3; } /* Centre sauté */
+        .layout-k8 .symbol-cell-4 { grid-area: 2 / 3; } 
         .layout-k8 .symbol-cell-5 { grid-area: 3 / 1; }
         .layout-k8 .symbol-cell-6 { grid-area: 3 / 2; }
         .layout-k8 .symbol-cell-7 { grid-area: 3 / 3; }
@@ -212,49 +226,36 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .layout-k5 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; }
         .layout-k5 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k5 .symbol-cell-1 { grid-area: 1 / 3; }
-        .layout-k5 .symbol-cell-2 { grid-area: 2 / 2; } /* Centre */
+        .layout-k5 .symbol-cell-2 { grid-area: 2 / 2; }
         .layout-k5 .symbol-cell-3 { grid-area: 3 / 1; }
         .layout-k5 .symbol-cell-4 { grid-area: 3 / 3; }
 
-        /* --- CSS ИСПРАВЛЕНО ЗДЕСЬ --- */
-        
-        /* Layout pour 4 symboles (k=4, Ordre n=3) - Раскладка "по углам" */
+        /* Layout pour 4 symboles (k=4, Ordre n=3) */
         .layout-k4 { grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; place-items: center; padding: 10%; }
         .layout-k4 .symbol-cell-0 { grid-area: 1 / 1; }
         .layout-k4 .symbol-cell-1 { grid-area: 1 / 3; }
         .layout-k4 .symbol-cell-2 { grid-area: 3 / 1; }
         .layout-k4 .symbol-cell-3 { grid-area: 3 / 3; }
         
-        /* Layout pour 3 symboles (k=3, Ordre n=2) - Раскладка "треугольник" */
+        /* Layout pour 3 symboles (k=3, Ordre n=2) */
         .layout-k3 { grid-template: 1fr 1fr / 1fr 1fr; place-items: center; gap: 5px; padding: 15%; }
-        .layout-k3 .symbol-cell-0 { grid-area: 1 / 1; grid-column-start: 1; grid-column-end: 3; } /* Вверху по центру */
-        .layout-k3 .symbol-cell-1 { grid-area: 2 / 1; } /* Внизу слева */
-        .layout-k3 .symbol-cell-2 { grid-area: 2 / 2; } /* Внизу справа */
+        .layout-k3 .symbol-cell-0 { grid-area: 1 / 1; grid-column-start: 1; grid-column-end: 3; }
+        .layout-k3 .symbol-cell-1 { grid-area: 2 / 1; }
+        .layout-k3 .symbol-cell-2 { grid-area: 2 / 2; }
         
-        /* --- КОНЕЦ ИСПРАВЛЕНИЙ --- */
-
-
-        /* --- Styles d'impression (6 cartes par page A4) --- */
-/* --- Styles d'impression (MIS À JOUR POUR 6 CARTES/PAGE - GARANTI) --- */
+        /* Стили печати остаются БЕЗ ИЗМЕНЕНИЙ */
         @media print {
-            @page {
-                /* Мы можем предложить поля, но лучше полагаться на настройки пользователя */
-                /* margin: 10mm; */
-            }
-            body { 
-                background: #fff; padding: 0; margin: 0; 
-            }
+            body { background: #fff; padding: 0; margin: 0; }
             .no-print, .logout-button, .print-button, h1, .info, .error, .generator-form {
                 display: none !important; 
             }
             .cards-container {
-                width: 100%; /* Использовать всю доступную ширину печати */
                 display: grid;
-                grid-template-columns: 1fr 1fr; /* 2 колонки */
-                grid-auto-rows: 80mm; /* --- НОВЫЙ РАЗМЕР --- */
-                gap: 5mm;              /* --- НОВЫЙ РАЗМЕР (меньше) --- */
-                padding: 0;            /* Убираем padding у контейнера */
-                margin: 0 auto;        /* Центрируем сетку */
+                grid-template-columns: 1fr 1fr; 
+                grid-auto-rows: 80mm; 
+                gap: 5mm;              
+                padding: 0;           
+                margin: 0 auto;        
                 box-sizing: border-box;
             }
             .dobble-card {
@@ -262,9 +263,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 border: 2px solid #000;
                 border-radius: 50%;
                 page-break-inside: avoid;
-                width: 80mm;  /* --- НОВЫЙ РАЗМЕР (гарантированно влезает) --- */
-                height: 80mm; /* --- НОВЫЙ РАЗМЕР --- */
-                padding: 7px; /* Немного уменьшен padding */
+                width: 80mm;  
+                height: 80mm; 
+                padding: 7px; 
                 margin: 0;
                 box-sizing: border-box;
             }
@@ -321,38 +322,40 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
                     
                     <?php
-                    // --- CHANGEMENT ICI ---
-                    // Récupérer le nombre de symboles (k) et définir la classe de layout
+                    // PHP-логика здесь не меняется
                     $k = count($symbol_indices_array);
                     $layout_class = 'layout-k' . $k;
-                    shuffle($symbol_indices_array); // Mélanger les symboles
+                    shuffle($symbol_indices_array); 
                     
-                    // Définir la plage de taille (maintenant relative à la cellule de la grille, pas à la carte entière)
-                    $min_size_percent = 70; // Le symbole occupera 70% à 100% de sa cellule de grille
+                    $min_size_percent = 70; 
                     $max_size_percent = 100;
                     ?>
 
-                    <div class="dobble-card <?= $layout_class ?>"> <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
+                    <div class="dobble-card <?= $layout_class ?>"> 
+                        <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
                         
                         <?php foreach ($symbol_indices_array as $key => $symbol_db_index): ?>
                             <?php 
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             
-                            // Générer des styles aléatoires
-                            $size = rand($min_size_percent, $max_size_percent); // Taille % DANS LA CELLULE
-                            $rotation = rand(-180, 180); // Rotation
+                            $size = rand($min_size_percent, $max_size_percent); 
+                            $rotation = rand(-180, 180);
                             
-                            $style = "width: {$size}%; max-width: {$size}%; transform: rotate({$rotation}deg);";
+                            // Этот стиль теперь применяется к самому <img>
+                            $img_style = "width: {$size}%; max-width: {$size}%; transform: rotate({$rotation}deg);";
                             
-                            // Assigner la classe de cellule de grille
+                            // Этот класс применяется к DIV-обертке
                             $cell_class = 'symbol-cell-' . $key;
                             ?>
                             
-                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
-                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
-                                 title="<?= htmlspecialchars($symbol_data['name']) ?>"
-                                 class="symbol <?= $cell_class ?>" style="<?= $style ?>"> 
-                        <?php endforeach; ?>
+                            <div class="symbol-cell <?= $cell_class ?>">
+                                <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
+                                     alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
+                                     title="<?= htmlspecialchars($symbol_data['name']) ?>"
+                                     class="symbol"
+                                     style="<?= $img_style ?>">
+                            </div>
+                            <?php endforeach; ?>
                     </div>
                 <?php endforeach; ?>
 
