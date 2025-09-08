@@ -174,11 +174,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             border-radius: 50%;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
-            position: relative; /* Обязательно для позиционирования символов */
-            overflow: hidden; /* Обрезает все, что выходит за круг */
-            padding: 0; /* Небольшой отступ будет внутри символов */
+            position: relative; 
+            overflow: hidden; 
+            padding: 0; 
             box-sizing: border-box;
-            display: flex; /* Используем flexbox для центрирования содержимого */
+            display: flex;
             justify-content: center;
             align-items: center;
         }
@@ -188,15 +188,15 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
         /* Общие стили для символов */
         .dobble-card .symbol {
-            position: absolute; /* Позиция управляется PHP */
-            object-fit: contain; /* Сохраняет пропорции, вписывая в рамки */
+            position: absolute; 
+            object-fit: contain; 
             transition: transform 0.3s ease;
-            max-width: none; /* Отменяем max-width, чтобы PHP-width работал */
-            max-height: none; /* Отменяем max-height, чтобы PHP-height работал */
+            max-width: none; 
+            max-height: none;
             z-index: 5;
         }
         .dobble-card .symbol:hover {
-            transform: scale(1.1) !important; /* Уменьшаем scale, чтобы не сильно выходило за круг */
+            transform: scale(1.1) !important; 
             z-index: 10;
         }
         
@@ -222,7 +222,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 page-break-inside: avoid;
                 width: 80mm;  
                 height: 80mm; 
-                padding: 7px; /* Слегка увеличим padding, чтобы символы не прилипали к краю */
+                padding: 7px; 
                 margin: 0;
                 box-sizing: border-box;
             }
@@ -230,20 +230,32 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             .dobble-card .symbol { transition: none; }
             /* --- Styles pour l'impression de la Légende --- */
             .symbol-legend-container {
-                page-break-before: always; /* ФОРСИРУЕТ ЛЕГЕНДУ НА НОВУЮ (ПОСЛЕДНЮЮ) СТРАНИЦУ */
+                page-break-before: always; 
                 margin-top: 0;
                 padding: 0;
                 box-shadow: none;
                 border: none;
             }
-            .legend-table {
-                width: 100%;
+            
+            /* --- !!! НОВЫЕ СТИЛИ ЛЕГЕНДЫ ДЛЯ ПЕЧАТИ (6 КОЛОНОК) !!! --- */
+            .legend-items-container {
+                column-count: 6; /* 6 колонок при печати */
+                column-gap: 15px;
             }
-            .legend-img {
-                width: 40px; /* Чуть меньше для печати */
+            .legend-item {
+                gap: 5px;
+                padding: 2px 0;
+                border: none; /* Убираем границы при печати */
+            }
+            .legend-item .legend-name {
+                font-size: 8pt; /* Мелкий шрифт для экономии места */
+            }
+            .legend-img { /* Существующий стиль */
+                width: 40px; 
                 height: 40px;
             }
         }
+        
         /* --- Styles pour la Légende des Symboles --- */
         .symbol-legend-container {
             margin-top: 40px;
@@ -252,28 +264,42 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        .legend-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .legend-table th, .legend-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            vertical-align: middle;
-            font-size: 0.9rem;
-        }
-        .legend-table th {
-            background-color: #f9f9f9;
-        }
-        .legend-img {
+        .legend-img { /* Общий стиль для img легенды */
             width: 50px;
             height: 50px;
             object-fit: contain;
             background: #fdfdfd;
             border-radius: 4px;
+            flex-shrink: 0; /* Предотвращает сжатие иконки */
         }
+        
+        /* --- !!! НОВЫЕ СТИЛИ ЛЕГЕНДЫ (ЗАМЕНА ТАБЛИЦЫ) !!! --- */
+        /* 3 колонки для отображения на экране */
+        .legend-items-container {
+            column-count: 3;
+            column-gap: 20px;
+            border-top: 2px solid #eee;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .legend-item {
+            display: inline-flex; /* Используем flex для красивого выравнивания иконки и текста */
+            align-items: center;
+            gap: 10px;
+            padding: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            break-inside: avoid; /* Предотвращает разрыв элемента между колонками */
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .legend-item:last-child {
+            border-bottom: none;
+        }
+        .legend-item .legend-name {
+            font-size: 0.9rem;
+            word-break: break-word; /* Перенос длинных названий */
+        }
+
     </style>
 </head>
 </head>
@@ -344,7 +370,6 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 $layer_index = 0;
 
                 // --- Проверка слайдеров ---
-                // Убедимся, что мин. модификатор не больше макс. модификатора
                 if ($min_mod > $max_mod) {
                     $min_mod = $max_mod; 
                 }
@@ -369,14 +394,12 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                         $angle_step = (M_PI * 2) / $c;
                         $angle_offset = (mt_rand() / mt_getrandmax()) * (M_PI * 2); 
                         
-                        // Максимально безопасный размер из рецепта
                         $recipe_max_size = $s; 
                         
                         // Рассчитываем фактический мин/макс размер на основе % от слайдеров
                         $actual_max_size = $recipe_max_size * ($max_mod / 100.0);
                         $actual_min_size = $recipe_max_size * ($min_mod / 100.0);
 
-                        // Защита от деления на ноль или некорректных значений
                         if ($actual_min_size < 0.1) $actual_min_size = 0.1;
                         if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
 
@@ -386,7 +409,6 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                             $x = $center_x + $r * cos($angle);
                             $y = $center_y + $r * sin($angle);
                             
-                            // Генерируем случайный размер В ДИАПАЗОНЕ, УКАЗАННОМ СЛАЙДЕРАМИ
                             $current_size = mt_rand($actual_min_size * 100, $actual_max_size * 100) / 100;
 
                             $slots[] = [
@@ -405,7 +427,6 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             /**
              * ОСНОВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ МАКЕТА (Версия 3.0)
              * Принимает $min_mod и $max_mod и передает их в build_slots.
-             * Все рецепты (размеры) основаны на 100% безопасном размере (с учетом вращения).
              */
             function getSymbolLayoutSlots($k, $min_mod, $max_mod) {
                 $all_recipes = []; 
@@ -495,32 +516,24 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 <?php endforeach; // Конец цикла по картам ?>
 
             </div> 
+            
             <div class="symbol-legend-container">
                 <h2>Symboles utilisés (Légende)</h2>
                 <p>Liste de tous les symboles uniques (<?= count($symbols_to_use) ?>) utilisés dans ce jeu.</p>
-                <table class="legend-table">
-                    <thead>
-                        <tr>
-                            <th>Image (mini)</th>
-                            <th>Nom du Symbole</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($symbols_to_use as $symbol_data): ?>
-                            <tr>
-                                <td>
-                                    <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
-                                         alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
-                                         class="legend-img">
-                                </td>
-                                <td><?= htmlspecialchars($symbol_data['name']) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                
+                <div class="legend-items-container">
+                    <?php foreach ($symbols_to_use as $symbol_data): ?>
+                        <div class="legend-item">
+                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
+                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
+                                 class="legend-img">
+                            <span class="legend-name"><?= htmlspecialchars($symbol_data['name']) ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
 
-        <?php endif; ?>
+            </div>
+            <?php endif; ?>
         
 
     <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
