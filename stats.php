@@ -112,7 +112,7 @@
                 <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
                     
                     <div id="totalCount" class="count-box">
-                        <span id="totalCountText">Всего ответов (Уровень 2): 0</span>
+                        <span id="totalCountText">Total des réponses (Niveau 2) : 0</span>
                     </div>
                     <div id="chartsContainer" class="chart-container"></div>
                 </div>
@@ -136,7 +136,7 @@
                 .then(response => response.json())
                 .then(data => {
                     const totalResponses = data.totalResponses || 0;
-                    document.getElementById('totalCountText').textContent = `Всего ответов (Уровень 2): ${totalResponses}`;
+                    document.getElementById('totalCountText').textContent = `Total des réponses (Niveau 2) : ${totalResponses}`;
 
                     data.formattedData.forEach(item => {
                         chartCounter++; // Увеличиваем счетчик для каждого нового графика
@@ -338,4 +338,5 @@
     </script>
 </body>
 </html>
+
 
