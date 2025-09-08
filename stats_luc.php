@@ -204,7 +204,7 @@
                 delete chartInstances[key];
             });
 
-            fetch(`stats_getdata.php?lang=${lang}`)
+            fetch(`stats_getdata_luc.php?lang=${lang}`)
                 .then(response => response.json())
                 .then(data => {
                     const totalText = { 'fr': 'Réponses totales', 'de': 'Gesamtanzahl der Antworten', 'all': 'Total responses' };
@@ -415,6 +415,7 @@
     </script>
 </body>
 </html>
+
 
 
 
