@@ -210,7 +210,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 display: grid;
                 grid-template-columns: 1fr 1fr; 
                 grid-auto-rows: 100mm; 
-                gap: 0;              
+                gap: 10mm;              
                 padding: 0;           
                 margin: 0 auto;       
                 box-sizing: border-box;
@@ -222,7 +222,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 page-break-inside: avoid;
                 width: 100mm;  
                 height: 100mm; 
-                padding: 7px; 
+                padding: 10px; 
                 margin: 0;
                 box-sizing: border-box;
             }
