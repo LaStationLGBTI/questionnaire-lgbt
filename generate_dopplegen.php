@@ -213,7 +213,6 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 gap: 0;              
                 padding: 0;           
                 margin: 0 auto;       
-                height: 297mm;
                 box-sizing: border-box;
             }
             .dobble-card {
@@ -226,6 +225,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 padding: 7px; 
                 margin: 0;
                 box-sizing: border-box;
+            }
+            .print-cards-section {
+                page-break-after: always; 
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; }
@@ -472,7 +474,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 return build_slots($chosen_recipe_layers, $min_mod, $max_mod);
             }
             ?>
-
+            <div class="print-cards-section">
             <div class="cards-container">
                 <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
                     
@@ -517,7 +519,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 <?php endforeach; // Конец цикла по картам ?>
 
             </div> 
-            
+                        </div> 
             <div class="symbol-legend-container">
                 <h2>Symboles utilisés (Légende)</h2>
                 <p>Liste de tous les symboles uniques (<?= count($symbols_to_use) ?>) utilisés dans ce jeu.</p>
