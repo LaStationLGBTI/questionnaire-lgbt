@@ -209,7 +209,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             .cards-container {
                 display: grid;
                 grid-template-columns: 1fr 1fr; 
-                grid-auto-rows: 80mm; 
+                grid-auto-rows: 100mm; /* ⬅️ ИЗМЕНЕНО */
                 gap: 5mm;              
                 padding: 0;           
                 margin: 0 auto;        
@@ -220,8 +220,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 border: 2px solid #000;
                 border-radius: 50%;
                 page-break-inside: avoid;
-                width: 80mm;  
-                height: 80mm; 
+                width: 100mm;  /* ⬅️ ИЗМЕНЕНО (10 см) */
+                height: 100mm; /* ⬅️ ИЗМЕНЕНО (10 см) */
                 padding: 7px; 
                 margin: 0;
                 box-sizing: border-box;
@@ -254,7 +254,6 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 width: 40px; 
                 height: 40px;
             }
-        }
         
         /* --- Styles pour la Légende des Symboles --- */
         .symbol-legend-container {
