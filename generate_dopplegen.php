@@ -210,9 +210,10 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 display: grid;
                 grid-template-columns: 1fr 1fr; 
                 grid-auto-rows: 100mm; 
-                gap: 5mm;              
+                gap: 0;              
                 padding: 0;           
-                margin: 0 auto;        
+                margin: 0 auto;       
+                height: 297mm;
                 box-sizing: border-box;
             }
             .dobble-card {
