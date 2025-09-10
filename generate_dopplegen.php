@@ -222,7 +222,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 page-break-inside: avoid;
                 width: 100mm;  
                 height: 100mm; 
-                padding: 10px; 
+                padding: 7px; 
                 margin: 0;
                 box-sizing: border-box;
             }
