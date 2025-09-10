@@ -202,43 +202,33 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         
         /* Стили печати */
         @media print {
-            @page {
-                margin: 0; /* Убираем поля страницы для печати */
-            }
-            body { 
-                background: #fff; 
-                padding: 0; 
-                margin: 0; 
-            }
+            body { background: #fff; padding: 0; margin: 0; }
             .no-print, .logout-button, .print-button, h1, .info, .error, .generator-form {
                 display: none !important; 
             }
             .cards-container {
                 display: grid;
-                grid-template-columns: 1fr 1fr; /* 2 колонки */
-                grid-auto-rows: 100mm;
-                gap: 0;  /* ⬅️ УБРАНЫ ПРОМЕЖУТКИ */
+                grid-template-columns: 1fr 1fr; 
+                grid-auto-rows: 80mm; 
+                gap: 5mm;              
                 padding: 0;           
                 margin: 0 auto;        
                 box-sizing: border-box;
-                /* Задаем точную высоту, чтобы поместилось 3 ряда */
-                height: 297mm;
-                align-content: space-between; /* Распределяет строки по всей высоте */
             }
             .dobble-card {
                 box-shadow: none;
                 border: 2px solid #000;
                 border-radius: 50%;
                 page-break-inside: avoid;
-                width: 100mm;  /* Размер 10 см */
-                height: 100mm; /* Размер 10 см */
+                width: 80mm;  
+                height: 80mm; 
                 padding: 7px; 
                 margin: 0;
                 box-sizing: border-box;
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; }
-            
+            /* --- Styles pour l'impression de la Légende --- */
             .symbol-legend-container {
                 page-break-before: always; 
                 margin-top: 0;
@@ -246,22 +236,25 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 box-shadow: none;
                 border: none;
             }
+            
+            /* --- !!! НОВЫЕ СТИЛИ ЛЕГЕНДЫ ДЛЯ ПЕЧАТИ (6 КОЛОНОК) !!! --- */
             .legend-items-container {
-                column-count: 6;
+                column-count: 6; /* 6 колонок при печати */
                 column-gap: 15px;
             }
             .legend-item {
                 gap: 5px;
                 padding: 2px 0;
-                border: none;
+                border: none; /* Убираем границы при печати */
             }
             .legend-item .legend-name {
-                font-size: 8pt;
+                font-size: 8pt; /* Мелкий шрифт для экономии места */
             }
-            .legend-img {
+            .legend-img { /* Существующий стиль */
                 width: 40px; 
                 height: 40px;
             }
+        }
         
         /* --- Styles pour la Légende des Symboles --- */
         .symbol-legend-container {
