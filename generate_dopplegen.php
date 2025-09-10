@@ -228,7 +228,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             }
             .print-cards-section {
                 page-break-after: always;
-                margin-top: -15mm; 
+                margin-top: -7mm; 
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; }
