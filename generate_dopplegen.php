@@ -214,6 +214,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 padding: 0;           
                 margin: 0 auto;       
                 box-sizing: border-box;
+                height: 297mm;
+                align-content: start;
             }
             .dobble-card {
                 box-shadow: none;
