@@ -133,6 +133,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['duplicate_category'])
         $message = "<p class='msg error'>Veuillez fournir un nom de catégorie valide et différent de l'original.</p>";
     }
 }
+    // --- LOGIQUE DE RENOMMAGE (PANNEAU DROIT) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
+    $old_category_name = $_POST['old_category_name'];
+    $new_category_name = trim($_POST['new_category_name']);
+
+    if (!empty($old_category_name) && !empty($new_category_name) && $old_category_name !== $new_category_name) {
+        // Проверяем, не существует ли уже категория с таким новым именем
+        $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM dopplegen WHERE category = ?");
+        $stmt_check->execute([$new_category_name]);
+        if ($stmt_check->fetchColumn() > 0) {
+            $message = "<p class='msg error'>Une catégorie nommée \"".htmlspecialchars($new_category_name)."\" existe déjà. Veuillez choisir un autre nom.</p>";
+        } else {
+            // Если имя свободно, переименовываем
+            $stmt_update = $pdo->prepare("UPDATE dopplegen SET category = ? WHERE category = ?");
+            $stmt_update->execute([$new_category_name, $old_category_name]);
+            
+            // Перенаправляем на страницу с уже переименованной категорией
+            header('Location: manage_dopplegen.php?category_select=' . urlencode($new_category_name));
+            exit();
+        }
+    } else {
+        $message = "<p class='msg error'>Veuillez fournir un nouveau nom de catégorie valide et différent de l'actuel.</p>";
+    }
+}
     // --- LOGIQUE D'AFFICHAGE (PANNEAU DROIT) ---
     $categories_list_stmt = $pdo->query("SELECT DISTINCT category FROM dopplegen ORDER BY category ASC");
     $categories_list = $categories_list_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -284,15 +308,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['duplicate_category'])
                 </form>
 <?php if (!empty($selected_category)): ?>
 <hr style="margin: 25px 0;">
-<form action="manage_dopplegen.php?category_select=<?= urlencode($selected_category) ?>" method="POST" style="margin-top: 15px;">
-    <h4>Dupliquer la catégorie "<?= htmlspecialchars($selected_category) ?>"</h4>
-    <div class="form-group">
-        <label for="new_category_name">Nouveau nom pour la catégorie :</label>
-        <input type="text" id="new_category_name" name="new_category_name" required>
-        <input type="hidden" name="source_category" value="<?= htmlspecialchars($selected_category) ?>">
+<hr style="margin: 25px 0;">
+<div style="display: flex; gap: 20px; flex-wrap: wrap;">
+
+    <div style="flex: 1; min-width: 250px; background: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee;">
+        <form action="manage_dopplegen.php?category_select=<?= urlencode($selected_category) ?>" method="POST">
+            <h4>Dupliquer la catégorie</h4>
+            <div class="form-group">
+                <label for="new_dup_category_name" style="font-weight: normal;">Nouveau nom :</label>
+                <input type="text" id="new_dup_category_name" name="new_category_name" required>
+                <input type="hidden" name="source_category" value="<?= htmlspecialchars($selected_category) ?>">
+            </div>
+            <button type="submit" name="duplicate_category" style="background-color: #28a745;">Dupliquer</button>
+        </form>
     </div>
-    <button type="submit" name="duplicate_category" style="background-color: #28a745;">Dupliquer</button>
-</form>
+
+    <div style="flex: 1; min-width: 250px; background: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee;">
+        <form action="manage_dopplegen.php" method="POST">
+             <h4>Renommer "<?= htmlspecialchars($selected_category) ?>"</h4>
+            <div class="form-group">
+                <label for="new_ren_category_name" style="font-weight: normal;">Nouveau nom :</label>
+                <input type="text" id="new_ren_category_name" name="new_category_name" required>
+                <input type="hidden" name="old_category_name" value="<?= htmlspecialchars($selected_category) ?>">
+            </div>
+            <button type="submit" name="rename_category" style="background-color: #ffc107; color: #212529;">Renommer</button>
+        </form>
+    </div>
+
+</div>
 <?php endif; ?>
                 <?php if (!empty($category_count_message)) echo $category_count_message; ?>
                 <?php if (!empty($selected_category) && empty($entries)): ?>
