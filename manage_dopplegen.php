@@ -234,15 +234,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
         .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .login-container { max-width: 400px; margin: 50px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         
-        .results-table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        .results-table th, .results-table td {
-            border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle;
-        }
-        .results-table th { background-color: #f9f9f9; }
-        .results-table img {
-            max-width: 100px; max-height: 100px; height: auto; width: auto; border-radius: 4px;
-        }
-        .results-table form { margin: 0; }
+/* --- Стили для сетки результатов --- */
+.results-grid {
+    display: grid;
+    /* Создает адаптивные колонки: каждая минимум 150px шириной */
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px; /* Расстояние между карточками */
+    margin-top: 20px;
+}
+.result-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.result-card img {
+    max-width: 90px; /* Делаем картинку компактнее */
+    max-height: 90px;
+    width: auto;
+    height: auto;
+    border-radius: 4px;
+    margin: 0 auto 10px auto; /* Центрируем изображение */
+}
+.result-card p {
+    margin: 0 0 10px 0;
+    font-size: 0.9em;
+    word-wrap: break-word; /* Для переноса слишком длинных названий */
+    flex-grow: 1;
+}
+.result-card form {
+    margin: 0;
+}
+.result-card .delete-button {
+    width: 100%; /* Кнопка на всю ширину карточки */
+    padding: 6px 10px;
+    font-size: 0.9em;
+}
     </style>
 </head>
 <body>
@@ -342,33 +373,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
                     <?php if (empty($category_count_message)): // Показать это, только если сообщение о счете еще не отображено (т.е. категория выбрана, но пуста) ?>
                         <p style="margin-top: 20px;">Aucune entrée trouvée pour cette catégorie.</p>
                     <?php endif; ?>
-                <?php elseif (!empty($entries)): ?>
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th>Image</th>
-                                <th>Nom</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($entries as $entry): ?>
-                            <tr>
-                                <td>
-                                    <img src="<?= htmlspecialchars($uploadDir . $entry['image_name']) ?>" alt="<?= htmlspecialchars($entry['name']) ?>">
-                                </td>
-                                <td><?= htmlspecialchars($entry['name']) ?></td>
-                                <td>
-                                    <form action="manage_dopplegen.php?category_select=<?= urlencode($selected_category) ?>" method="POST" onsubmit="return confirm('Voulez-vous vraiment supprimer cette entrée ?');">
-                                        <input type="hidden" name="delete_id" value="<?= $entry['id'] ?>">
-                                        <button type="submit" name="delete_entry" class="delete-button">Supprimer</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
+<?php elseif (!empty($entries)): ?>
+    <div class="results-grid">
+        <?php foreach ($entries as $entry): ?>
+        <div class="result-card">
+            <img src="<?= htmlspecialchars($uploadDir . $entry['image_name']) ?>" alt="<?= htmlspecialchars($entry['name']) ?>">
+            <p><?= htmlspecialchars($entry['name']) ?></p>
+            <form action="manage_dopplegen.php?category_select=<?= urlencode($selected_category) ?>" method="POST" onsubmit="return confirm('Voulez-vous vraiment supprimer cette entrée ?');">
+                <input type="hidden" name="delete_id" value="<?= $entry['id'] ?>">
+                <button type="submit" name="delete_entry" class="delete-button">Supprimer</button>
+            </form>
+        </div>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
             </div>
         </div>
         <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
