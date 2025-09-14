@@ -308,7 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
                 </form>
 <?php if (!empty($selected_category)): ?>
 <hr style="margin: 25px 0;">
-<hr style="margin: 25px 0;">
+
 <div style="display: flex; gap: 20px; flex-wrap: wrap;">
 
     <div style="flex: 1; min-width: 250px; background: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee;">
@@ -335,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
         </form>
     </div>
 
-</div>
+</div><hr style="margin: 25px 0;">
 <?php endif; ?>
                 <?php if (!empty($category_count_message)) echo $category_count_message; ?>
                 <?php if (!empty($selected_category) && empty($entries)): ?>
