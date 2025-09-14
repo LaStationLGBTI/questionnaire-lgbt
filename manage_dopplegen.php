@@ -92,7 +92,47 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             $message = "<p class='msg success'>Entrée supprimée avec succès.</p>";
         }
     }
+// --- LOGIQUE DE DUPLICATION (PANNEAU DROIT) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['duplicate_category'])) {
+    $source_category = $_POST['source_category'];
+    $new_category_name = trim($_POST['new_category_name']);
 
+    if (!empty($source_category) && !empty($new_category_name) && $source_category !== $new_category_name) {
+        // 1. Получаем все записи из исходной категории
+        $stmt_select = $pdo->prepare("SELECT name, image_name FROM dopplegen WHERE category = ?");
+        $stmt_select->execute([$source_category]);
+        $entries_to_copy = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
+
+        $pdo->beginTransaction(); // Начинаем транзакцию для безопасности
+        try {
+            $stmt_insert = $pdo->prepare("INSERT INTO dopplegen (category, name, image_name) VALUES (?, ?, ?)");
+            
+            foreach ($entries_to_copy as $entry) {
+                $originalImagePath = $uploadDir . $entry['image_name'];
+                
+                // 2. Создаем новое уникальное имя для файла изображения
+                $fileExtension = pathinfo($entry['image_name'], PATHINFO_EXTENSION);
+                $newSafeFilename = uniqid('img_', true) . '.' . strtolower($fileExtension);
+                $newImagePath = $uploadDir . $newSafeFilename;
+
+                // 3. Копируем файл и вставляем новую запись в БД
+                if (file_exists($originalImagePath) && copy($originalImagePath, $newImagePath)) {
+                    $stmt_insert->execute([$new_category_name, $entry['name'], $newSafeFilename]);
+                } else {
+                    // Если копия файла не удалась, отменяем все
+                    throw new Exception("Impossible de copier l'image : " . htmlspecialchars($entry['image_name']));
+                }
+            }
+            $pdo->commit(); // Подтверждаем изменения
+            $message = "<p class='msg success'>Catégorie \"".htmlspecialchars($source_category)."\" dupliquée avec succès vers \"".htmlspecialchars($new_category_name)."\" !</p>";
+        } catch (Exception $e) {
+            $pdo->rollBack(); // Откатываем изменения в случае ошибки
+            $message = "<p class='msg error'>Erreur lors de la duplication : " . $e->getMessage() . "</p>";
+        }
+    } else {
+        $message = "<p class='msg error'>Veuillez fournir un nom de catégorie valide et différent de l'original.</p>";
+    }
+}
     // --- LOGIQUE D'AFFICHAGE (PANNEAU DROIT) ---
     $categories_list_stmt = $pdo->query("SELECT DISTINCT category FROM dopplegen ORDER BY category ASC");
     $categories_list = $categories_list_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -133,7 +173,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             // Количество точно совпадает с одним из уровней (7, 13, 21 or 31)
             $category_count_message = "<p class='success'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: $count</strong>. <br>C'est un compte parfait pour un jeu !</p>";
         }
-        // --- КОНЕЦ НОВОГО БЛОКА ---
+        // --- Fin de logique ---
     }
 }
 ?>
@@ -242,7 +282,18 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                     </div>
                     <button type="submit">Afficher</button>
                 </form>
-
+<?php if (!empty($selected_category)): ?>
+<hr style="margin: 25px 0;">
+<form action="manage_dopplegen.php?category_select=<?= urlencode($selected_category) ?>" method="POST" style="margin-top: 15px;">
+    <h4>Dupliquer la catégorie "<?= htmlspecialchars($selected_category) ?>"</h4>
+    <div class="form-group">
+        <label for="new_category_name">Nouveau nom pour la catégorie :</label>
+        <input type="text" id="new_category_name" name="new_category_name" required>
+        <input type="hidden" name="source_category" value="<?= htmlspecialchars($selected_category) ?>">
+    </div>
+    <button type="submit" name="duplicate_category" style="background-color: #28a745;">Dupliquer</button>
+</form>
+<?php endif; ?>
                 <?php if (!empty($category_count_message)) echo $category_count_message; ?>
                 <?php if (!empty($selected_category) && empty($entries)): ?>
                     <?php if (empty($category_count_message)): // Показать это, только если сообщение о счете еще не отображено (т.е. категория выбрана, но пуста) ?>
