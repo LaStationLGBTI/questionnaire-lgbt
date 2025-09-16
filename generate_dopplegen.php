@@ -433,47 +433,47 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
              * Принимает $min_mod и $max_mod и передает их в build_slots.
              */
             function getSymbolLayoutSlots($k, $min_mod, $max_mod) {
-                $all_recipes = []; 
+    $all_recipes = []; 
 
-                // --- K = 8 (Порядок 7, 8 слотов) ---
-                $all_recipes[8] = [
-                    [ ['size' => 27, 'count' => 1, 'radius' => 0], ['size' => 21, 'count' => 7, 'radius' => 34.4] ],
-                    [ ['size' => 19, 'count' => 8, 'radius' => 35.5] ]
-                ];
-                
-                // --- K = 6 (Порядок 5, 6 слотов) ---
-                $all_recipes[6] = [
-                    [ ['size' => 18, 'count' => 1, 'radius' => 0], ['size' => 25, 'count' => 5, 'radius' => 31] ],
-                    [ ['size' => 23, 'count' => 6, 'radius' => 33] ]
-                ];
+    // --- K = 8 (Порядок 7, 8 слотов) ---
+    // Рецепт без центра удален, чтобы гарантировать центральный элемент
+    $all_recipes[8] = [
+        [ ['size' => 27, 'count' => 1, 'radius' => 0], ['size' => 21, 'count' => 7, 'radius' => 34.4] ]
+    ];
+    
+    // --- K = 6 (Порядок 5, 6 слотов) ---
+    // Рецепт без центра удален
+    $all_recipes[6] = [
+        [ ['size' => 18, 'count' => 1, 'radius' => 0], ['size' => 25, 'count' => 5, 'radius' => 31] ]
+    ];
 
-                // --- K = 5 (Порядок 4, 5 слотов) ---
-                $all_recipes[5] = [
-                    [ ['size' => 12, 'count' => 1, 'radius' => 0], ['size' => 28, 'count' => 4, 'radius' => 29] ],
-                    [ ['size' => 25, 'count' => 5, 'radius' => 31] ]
-                ];
-                
-                // --- K = 4 (Порядок 3, 4 слота) ---
-                $all_recipes[4] = [
-                    [ ['size' => 28, 'count' => 4, 'radius' => 29] ],
-                    [ ['size' => 27, 'count' => 4, 'radius' => 30] ]
-                ];
-                
-                // --- K = 3 (Порядок 2, 3 слота) ---
-                $all_recipes[3] = [
-                    [ ['size' => 23, 'count' => 1, 'radius' => 0], ['size' => 23, 'count' => 2, 'radius' => 33] ],
-                    [ ['size' => 32, 'count' => 3, 'radius' => 26.5] ]
-                ];
+    // --- K = 5 (Порядок 4, 5 слотов) ---
+    // Рецепт без центра удален
+    $all_recipes[5] = [
+        [ ['size' => 12, 'count' => 1, 'radius' => 0], ['size' => 28, 'count' => 4, 'radius' => 29] ]
+    ];
+    
+    // --- K = 4 (Порядок 3, 4 слота) ---
+    // Старые рецепты заменены на один, который всегда имеет центр
+    $all_recipes[4] = [
+        [ ['size' => 25, 'count' => 1, 'radius' => 0], ['size' => 25, 'count' => 3, 'radius' => 32] ]
+    ];
+    
+    // --- K = 3 (Порядок 2, 3 слота) ---
+    // Рецепт без центра удален
+    $all_recipes[3] = [
+        [ ['size' => 23, 'count' => 1, 'radius' => 0], ['size' => 23, 'count' => 2, 'radius' => 33] ]
+    ];
 
-                // 1. Получить список доступных рецептов для нашего $k
-                $recipes_for_k = isset($all_recipes[$k]) ? $all_recipes[$k] : $all_recipes[3];
-                
-                // 2. Случайно выбрать ОДИН рецепт из списка
-                $chosen_recipe_layers = $recipes_for_k[array_rand($recipes_for_k)];
-                
-                // 3. Построить и вернуть массив слотов, ПЕРЕДАВ МОДИФИКАТОРЫ СЛАЙДЕРОВ
-                return build_slots($chosen_recipe_layers, $min_mod, $max_mod);
-            }
+    // 1. Получить список доступных рецептов для нашего $k
+    $recipes_for_k = isset($all_recipes[$k]) ? $all_recipes[$k] : $all_recipes[3]; // Фоллбэк на k=3
+    
+    // 2. Случайно выбрать ОДИН рецепт из списка (теперь все они с центром)
+    $chosen_recipe_layers = $recipes_for_k[array_rand($recipes_for_k)];
+    
+    // 3. Построить и вернуть массив слотов, ПЕРЕДАВ МОДИФИКАТОРЫ СЛАЙДЕРОВ
+    return build_slots($chosen_recipe_layers, $min_mod, $max_mod);
+}
             ?>
             <div class="print-cards-section">
             <div class="cards-container">
