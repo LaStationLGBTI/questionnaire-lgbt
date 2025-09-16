@@ -370,63 +370,64 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
              * Принимает модификаторы min/max от слайдеров.
              */
             function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center_y = 50) {
-                $slots = [];
-                $layer_index = 0;
+    $slots = [];
+    $layer_index = 0;
 
-                // --- Проверка слайдеров ---
-                if ($min_mod > $max_mod) {
-                    $min_mod = $max_mod; 
-                }
+    // --- Проверка слайдеров ---
+    if ($min_mod > $max_mod) {
+        $min_mod = $max_mod;
+    }
 
-                foreach ($config_layers as $layer) {
-                    $s = $layer['size'];    // Максимально БЕЗОПАСНЫЙ размер из рецепта
-                    $c = $layer['count'];   // Количество
-                    $r = $layer['radius'];  // Радиус
-                    
-                    if ($r == 0) {
-                        // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: Используем фиксированный размер (не зависит от слайдеров).
-                        for ($i = 0; $i < $c; $i++) { 
-                            $slots[] = [
-                                'size' => $s,
-                                'top' => $center_y - ($s / 2),
-                                'left' => $center_x - ($s / 2),
-                                'z_index' => 10 - $layer_index
-                            ];
-                        }
-                    } else {
-                        // ЭТО ОРБИТАЛЬНЫЙ СЛОЙ: Применяем вариативность размера НА ОСНОВЕ СЛАЙДЕРОВ.
-                        $angle_step = (M_PI * 2) / $c;
-                        $angle_offset = (mt_rand() / mt_getrandmax()) * (M_PI * 2); 
-                        
-                        $recipe_max_size = $s; 
-                        
-                        // Рассчитываем фактический мин/макс размер на основе % от слайдеров
-                        $actual_max_size = $recipe_max_size * ($max_mod / 100.0);
-                        $actual_min_size = $recipe_max_size * ($min_mod / 100.0);
+    foreach ($config_layers as $layer) {
+        $s = $layer['size'];    // Максимально БЕЗОПАСНЫЙ размер из рецепта
+        $c = $layer['count'];   // Количество
+        $r = = $layer['radius'];  // Радиус
 
-                        if ($actual_min_size < 0.1) $actual_min_size = 0.1;
-                        if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
+        // --- ОБЩАЯ ЛОГИКА ВАРИАТИВНОСТИ РАЗМЕРА ---
+        // Рассчитываем фактический мин/макс размер на основе % от слайдеров для текущего слоя
+        $actual_max_size = $s * ($max_mod / 100.0);
+        $actual_min_size = $s * ($min_mod / 100.0);
+        if ($actual_min_size < 0.1) $actual_min_size = 0.1;
+        if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
+        // --- КОНЕЦ ОБЩЕЙ ЛОГИКИ ---
 
-
-                        for ($i = 0; $i < $c; $i++) {
-                            $angle = ($angle_step * $i) + $angle_offset;
-                            $x = $center_x + $r * cos($angle);
-                            $y = $center_y + $r * sin($angle);
-                            
-                            $current_size = mt_rand($actual_min_size * 100, $actual_max_size * 100) / 100;
-
-                            $slots[] = [
-                                'size' => $current_size, 
-                                'top' => $y - ($current_size / 2),
-                                'left' => $x - ($current_size / 2),
-                                'z_index' => 5 - $layer_index
-                            ];
-                        }
-                    }
-                    $layer_index++;
-                }
-                return $slots;
+        if ($r == 0) {
+            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ
+            for ($i = 0; $i < $c; $i++) {
+                // Получаем случайный размер в заданных слайдерами пределах
+                $current_size = mt_rand($actual_min_size * 100, $actual_max_size * 100) / 100;
+                $slots[] = [
+                    'size' => $current_size,
+                    'top' => $center_y - ($current_size / 2),
+                    'left' => $center_x - ($current_size / 2),
+                    'z_index' => 10 - $layer_index
+                ];
             }
+        } else {
+            // ЭТО ОРБИТАЛЬНЫЙ СЛОЙ
+            $angle_step = (M_PI * 2) / $c;
+            $angle_offset = (mt_rand() / mt_getrandmax()) * (M_PI * 2);
+
+            for ($i = 0; $i < $c; $i++) {
+                $angle = ($angle_step * $i) + $angle_offset;
+                $x = $center_x + $r * cos($angle);
+                $y = $center_y + $r * sin($angle);
+                
+                // Получаем случайный размер в заданных слайдерами пределах
+                $current_size = mt_rand($actual_min_size * 100, $actual_max_size * 100) / 100;
+
+                $slots[] = [
+                    'size' => $current_size,
+                    'top' => $y - ($current_size / 2),
+                    'left' => $x - ($current_size / 2),
+                    'z_index' => 5 - $layer_index
+                ];
+            }
+        }
+        $layer_index++;
+    }
+    return $slots;
+}
 
             /**
              * ОСНОВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ МАКЕТА (Версия 3.0)
