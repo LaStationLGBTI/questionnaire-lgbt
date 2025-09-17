@@ -365,9 +365,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         <?php if (!empty($all_cards_indices)): ?>
             
             <?php
-          /**
- * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.3)
- * Диапазон размера центрального символа смещен вверх.
+/**
+ * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.4 - Финальный тюнинг)
+ * Сбалансированный размер центрального символа.
  */
 function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center_y = 50) {
     $slots = [];
@@ -390,15 +390,15 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
         if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
 
         if ($r == 0) {
-            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: применяем новый, смещенный вверх диапазон
+            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: сбалансированный диапазон
             for ($i = 0; $i < $c; $i++) { 
-                // Минимальный размер теперь не меньше, чем у крайних (коэффициент 1.0)
+                // Минимальный размер не меньше, чем у крайних (коэффициент 1.0)
                 $min_rand = $actual_min_size * 1.0;
-                // Максимальный размер делаем еще больше (коэффициент 1.8)
-                $max_rand = $actual_max_size * 1.8;
+                // Уменьшаем максимальный коэффициент до 1.5, чтобы избежать сильного наложения
+                $max_rand = $actual_max_size * 1.5;
 
-                // Увеличиваем абсолютный лимит до 55%, чтобы символ мог быть действительно большим
-                if ($max_rand > 55) $max_rand = 55;
+                // Уменьшаем абсолютный лимит до 50% - это безопасный предел
+                if ($max_rand > 50) $max_rand = 50;
                 if ($min_rand > $max_rand) $min_rand = $max_rand;
                 
                 $current_size = mt_rand($min_rand * 100, $max_rand * 100) / 100;
