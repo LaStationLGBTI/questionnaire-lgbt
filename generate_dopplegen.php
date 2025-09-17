@@ -378,29 +378,34 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
     $slots = [];
     $layer_index = 0;
 
-    // --- Проверка слайдеров ---
     if ($min_mod > $max_mod) {
         $min_mod = $max_mod; 
     }
 
     foreach ($config_layers as $layer) {
-        $s = $layer['size'];    // Максимально БЕЗОПАСНЫЙ размер из рецепта
-        $c = $layer['count'];   // Количество
-        $r = $layer['radius'];  // Радиус
+        $s = $layer['size'];
+        $c = $layer['count'];
+        $r = $layer['radius'];
         
-        // --- Общий блок расчета диапазона размера на основе слайдеров ---
         $recipe_max_size = $s; 
         $actual_max_size = $recipe_max_size * ($max_mod / 100.0);
         $actual_min_size = $recipe_max_size * ($min_mod / 100.0);
 
         if ($actual_min_size < 0.1) $actual_min_size = 0.1;
         if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
-        // --- Конец блока расчета ---
 
         if ($r == 0) {
-            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: Теперь тоже используем вариативный размер.
+            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: применяем экстра-вариативность
             for ($i = 0; $i < $c; $i++) { 
-                $current_size = mt_rand($actual_min_size * 100, $actual_max_size * 100) / 100;
+                // Создаем более широкий диапазон для центра: от 75% минимального до 150% максимального размера
+                $min_rand = $actual_min_size * 0.75;
+                $max_rand = $actual_max_size * 1.5;
+
+                // Устанавливаем жесткий лимит, чтобы символ не стал гигантским
+                if ($max_rand > 45) $max_rand = 45;
+                if ($min_rand > $max_rand) $min_rand = $max_rand;
+                
+                $current_size = mt_rand($min_rand * 100, $max_rand * 100) / 100;
                 
                 $slots[] = [
                     'size' => $current_size,
@@ -410,7 +415,7 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
                 ];
             }
         } else {
-            // ЭТО ОРБИТАЛЬНЫЙ СЛОЙ: Используем вариативность размера.
+            // ЭТО ОРБИТАЛЬНЫЙ СЛОЙ: используем стандартную вариативность
             $angle_step = (M_PI * 2) / $c;
             $angle_offset = (mt_rand() / mt_getrandmax()) * (M_PI * 2); 
             
