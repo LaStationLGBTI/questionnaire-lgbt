@@ -365,14 +365,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         <?php if (!empty($all_cards_indices)): ?>
             
             <?php
-            /**
-             * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.0)
-             * Принимает модификаторы min/max от слайдеров.
-             */
-            /**
- * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.1)
- * Принимает модификаторы min/max от слайдеров.
- * Теперь применяет вариативность размера и к центральному элементу.
+          /**
+ * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.3)
+ * Диапазон размера центрального символа смещен вверх.
  */
 function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center_y = 50) {
     $slots = [];
@@ -395,14 +390,15 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
         if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
 
         if ($r == 0) {
-            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: применяем экстра-вариативность
+            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: применяем новый, смещенный вверх диапазон
             for ($i = 0; $i < $c; $i++) { 
-                // Создаем более широкий диапазон для центра: от 75% минимального до 150% максимального размера
-                $min_rand = $actual_min_size * 0.75;
-                $max_rand = $actual_max_size * 1.5;
+                // Минимальный размер теперь не меньше, чем у крайних (коэффициент 1.0)
+                $min_rand = $actual_min_size * 1.0;
+                // Максимальный размер делаем еще больше (коэффициент 1.8)
+                $max_rand = $actual_max_size * 1.8;
 
-                // Устанавливаем жесткий лимит, чтобы символ не стал гигантским
-                if ($max_rand > 45) $max_rand = 45;
+                // Увеличиваем абсолютный лимит до 55%, чтобы символ мог быть действительно большим
+                if ($max_rand > 55) $max_rand = 55;
                 if ($min_rand > $max_rand) $min_rand = $max_rand;
                 
                 $current_size = mt_rand($min_rand * 100, $max_rand * 100) / 100;
