@@ -366,23 +366,23 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             
             <?php
 /**
- * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.5 - Абсолютный минимум)
- * Добавлен "пол" минимального размера для центрального символа.
+ * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.6 - Гарантированная вариативность)
+ * Гарантирует минимальный диапазон для случайности размера.
  */
 function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center_y = 50) {
     $slots = [];
     $layer_index = 0;
 
     if ($min_mod > $max_mod) {
-        $min_mod = $max_mod; 
+        $min_mod = $max_mod;
     }
 
     foreach ($config_layers as $layer) {
         $s = $layer['size'];
         $c = $layer['count'];
         $r = $layer['radius'];
-        
-        $recipe_max_size = $s; 
+
+        $recipe_max_size = $s;
         $actual_max_size = $recipe_max_size * ($max_mod / 100.0);
         $actual_min_size = $recipe_max_size * ($min_mod / 100.0);
 
@@ -390,27 +390,36 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
         if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
 
         if ($r == 0) {
-            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: сбалансированный диапазон + защитный пол
-            for ($i = 0; $i < $c; $i++) { 
+            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: логика с гарантированным диапазоном
+            for ($i = 0; $i < $c; $i++) {
                 $min_rand = $actual_min_size * 1.0;
                 $max_rand = $actual_max_size * 1.5;
-                if ($max_rand > 50) $max_rand = 50;
 
-                // --- НОВАЯ ЗАЩИТА ---
-                // Устанавливаем абсолютный минимальный размер в 12%.
-                // Центральный символ не станет меньше, даже если слайдер на минимуме.
-                $absolute_min_floor = 12;
+                // --- НОВАЯ УЛУЧШЕННАЯ ЛОГИКА ---
+                $absolute_min_floor = 12; // Абсолютный минимум
+                $min_range_width = 8;     // Минимальная ширина диапазона для случайности
+
+                // 1. Применяем "пол", чтобы символ не был слишком маленьким
                 if ($min_rand < $absolute_min_floor) {
                     $min_rand = $absolute_min_floor;
                 }
-                // --- КОНЕЦ ЗАЩИТЫ ---
 
+                // 2. Гарантируем, что диапазон достаточно широкий для вариативности
+                if ($max_rand < $min_rand + $min_range_width) {
+                    $max_rand = $min_rand + $min_range_width;
+                }
+                // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
+
+                // Применяем абсолютный максимум, чтобы символ не был слишком большим
+                if ($max_rand > 50) $max_rand = 50;
+
+                // Финальная проверка, если лимит сделал диапазон некорректным
                 if ($min_rand > $max_rand) {
                     $min_rand = $max_rand;
                 }
-                
+
                 $current_size = mt_rand($min_rand * 100, $max_rand * 100) / 100;
-                
+
                 $slots[] = [
                     'size' => $current_size,
                     'top' => $center_y - ($current_size / 2),
@@ -421,17 +430,17 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
         } else {
             // ЭТО ОРБИТАЛЬНЫЙ СЛОЙ: используем стандартную вариативность
             $angle_step = (M_PI * 2) / $c;
-            $angle_offset = (mt_rand() / mt_getrandmax()) * (M_PI * 2); 
-            
+            $angle_offset = (mt_rand() / mt_getrandmax()) * (M_PI * 2);
+
             for ($i = 0; $i < $c; $i++) {
                 $angle = ($angle_step * $i) + $angle_offset;
                 $x = $center_x + $r * cos($angle);
                 $y = $center_y + $r * sin($angle);
-                
+
                 $current_size = mt_rand($actual_min_size * 100, $actual_max_size * 100) / 100;
 
                 $slots[] = [
-                    'size' => $current_size, 
+                    'size' => $current_size,
                     'top' => $y - ($current_size / 2),
                     'left' => $x - ($current_size / 2),
                     'z_index' => 5 - $layer_index
