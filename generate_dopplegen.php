@@ -366,8 +366,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             
             <?php
 /**
- * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.4 - Финальный тюнинг)
- * Сбалансированный размер центрального символа.
+ * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.5 - Абсолютный минимум)
+ * Добавлен "пол" минимального размера для центрального символа.
  */
 function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center_y = 50) {
     $slots = [];
@@ -390,16 +390,24 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
         if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
 
         if ($r == 0) {
-            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: сбалансированный диапазон
+            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: сбалансированный диапазон + защитный пол
             for ($i = 0; $i < $c; $i++) { 
-                // Минимальный размер не меньше, чем у крайних (коэффициент 1.0)
                 $min_rand = $actual_min_size * 1.0;
-                // Уменьшаем максимальный коэффициент до 1.5, чтобы избежать сильного наложения
                 $max_rand = $actual_max_size * 1.5;
-
-                // Уменьшаем абсолютный лимит до 50% - это безопасный предел
                 if ($max_rand > 50) $max_rand = 50;
-                if ($min_rand > $max_rand) $min_rand = $max_rand;
+
+                // --- НОВАЯ ЗАЩИТА ---
+                // Устанавливаем абсолютный минимальный размер в 12%.
+                // Центральный символ не станет меньше, даже если слайдер на минимуме.
+                $absolute_min_floor = 12;
+                if ($min_rand < $absolute_min_floor) {
+                    $min_rand = $absolute_min_floor;
+                }
+                // --- КОНЕЦ ЗАЩИТЫ ---
+
+                if ($min_rand > $max_rand) {
+                    $min_rand = $max_rand;
+                }
                 
                 $current_size = mt_rand($min_rand * 100, $max_rand * 100) / 100;
                 
