@@ -159,6 +159,25 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     <meta charset="UTF-8">
     <title>Gestion des Niveaux</title>
     <style>
+        .admin-nav {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+.admin-nav .nav-button {
+    background-color: #17a2b8; /* Бирюзовый для отличия */
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+.admin-nav .nav-button:hover {
+    background-color: #138496;
+}
         /* Styles de base (conservés) */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; line-height: 1.6; padding: 20px; margin: 0; }
         .container { max-width: 800px; margin: auto; background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
@@ -210,6 +229,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         // VUE 1: Menu principal
         if ($action === 'menu'):
         ?>
+            <div class="admin-nav">
+    <a href="gestion_gsdatabase.php" class="nav-button">Aller à la Gestion des Questions &rarr;</a>
+</div>
             <div class="action-menu">
                 <h2>Que souhaitez-vous faire ?</h2>
                 <a href="?action=create" class="button-link">Créer un nouveau niveau</a>
