@@ -100,6 +100,28 @@ if (isset($_GET['deleted'])) {
     <meta charset="UTF-8">
     <title>Gestion GSDatabase</title>
     <style>
+        /* ... (Ваши существующие стили) ... */
+
+/* Стили для навигации между страницами */
+.admin-nav {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+}
+.admin-nav .nav-button {
+    background-color: #17a2b8; /* Бирюзовый для отличия */
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+.admin-nav .nav-button:hover {
+    background-color: #138496;
+}
         /* Стили скопированы из вашего файла и немного дополнены */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 20px; }
         .container { background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 900px; margin: auto; }
@@ -147,6 +169,9 @@ if (isset($_GET['deleted'])) {
         // --- Главное меню ---
         if ($action === 'menu') :
         ?>
+            <div class="admin-nav">
+    <a href="add_level.php" class="nav-button">&larr; Aller à la Gestion des Niveaux</a>
+</div>
             <div class="action-menu">
                 <h2>Que souhaitez-vous faire ?</h2>
                 <a href="?action=create" class="button-link">Créer une nouvelle question</a>
