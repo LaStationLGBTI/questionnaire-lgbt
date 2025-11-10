@@ -1,13 +1,38 @@
 <?php
-// On inclut la configuration et on démarre la session
+// On inclut la configuration
 require_once 'conf.php';
+// On démarre la session (même si on ne l'utilise plus autant, c'est une bonne pratique de la garder si d'autres parties du site en dépendent)
 session_start();
 
 $message = '';
-$level_created = isset($_SESSION['level_created']) ? $_SESSION['level_created'] : null;
-$level_titre = isset($_SESSION['level_titre']) ? $_SESSION['level_titre'] : '';
 
-// Traitement de la création du niveau
+// --- NOUVEAU : Gestion des messages de redirection ---
+if (isset($_GET['created'])) {
+    $message = "<p class='success'>Niveau créé avec succès !</p>";
+}
+if (isset($_GET['updated'])) {
+    $message = "<p class='success'>Niveau mis à jour avec succès !</p>";
+}
+if (isset($_GET['deleted'])) {
+    $message = "<p class='success'>Niveau (et toutes ses questions associées) supprimé avec succès !</p>";
+}
+
+// --- NOUVEAU : Routage basé sur l'action, comme gestion_gsdatabase.php ---
+$action = $_GET['action'] ?? 'menu';
+$id = $_REQUEST['id'] ?? null; // 'id' sera notre 'level'
+
+// Connexion PDO globale
+try {
+    $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    // Si la connexion échoue, on arrête tout
+    die("<p class='error' style='padding: 20px; max-width: 800px; margin: auto;'>Erreur de connexion à la base de données : " . $e->getMessage() . "</p>");
+}
+
+// --- LOGIQUE DE TRAITEMENT POST (Création, Mise à jour, Suppression) ---
+
+// 1. Traitement de la création du niveau (LOGIQUE CONSERVÉE)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_level'])) {
     $level = filter_input(INPUT_POST, 'level', FILTER_VALIDATE_INT);
     $titre = trim($_POST['titre']);
@@ -15,136 +40,147 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_level'])) {
 
     if ($level && !empty($titre)) {
         try {
-            $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
+            // Vérifier l'existence
             $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM GSDatabaseT WHERE level = ?");
             $stmt_check->execute([$level]);
             if ($stmt_check->fetchColumn() > 0) {
                 $message = "<p class='error'>Erreur : Le niveau numéro $level existe déjà.</p>";
+                $action = 'create'; // Rester sur la page de création
             } else {
+                // Insérer
                 $stmt = $pdo->prepare("INSERT INTO GSDatabaseT (level, titre, text) VALUES (?, ?, ?)");
                 $stmt->execute([$level, $titre, $text]);
-                $_SESSION['level_created'] = $level;
-                $_SESSION['level_titre'] = $titre;
-                header('Location: ' . $_SERVER['PHP_SELF']);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '?action=menu&created=true');
                 exit();
             }
         } catch (PDOException $e) {
             $message = "<p class='error'>Erreur de base de données : " . $e->getMessage() . "</p>";
+            $action = 'create'; // Rester sur la page de création
         }
     } else {
         $message = "<p class='error'>Veuillez saisir un numéro de niveau et un titre valides.</p>";
+        $action = 'create'; // Rester sur la page de création
     }
 }
 
-// --- NOUVEAU BLOC DE LOGIQUE ---
-// Traitement de la sélection d'un niveau existant
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['select_level'])) {
-    $level_id = filter_input(INPUT_POST, 'existing_level', FILTER_VALIDATE_INT);
+// 2. NOUVEAU : Traitement de la mise à jour du niveau
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_level'])) {
+    $level_id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+    $titre = trim($_POST['titre']);
+    $text = trim($_POST['text']);
+
+    if ($level_id && !empty($titre)) {
+        try {
+            $stmt = $pdo->prepare("UPDATE GSDatabaseT SET titre = ?, text = ? WHERE level = ?");
+            $stmt->execute([$titre, $text, $level_id]);
+            header('Location: ' . $_SERVER['PHP_SELF'] . '?action=menu&updated=true');
+            exit();
+        } catch (PDOException $e) {
+            $message = "<p class='error'>Erreur lors de la mise à jour : " . $e->getMessage() . "</p>";
+            // $id est déjà défini, donc on restera sur la page d'édition
+        }
+    } else {
+        $message = "<p class='error'>Le titre ne peut pas être vide.</p>";
+    }
+}
+
+// 3. NOUVEAU : Traitement de la suppression du niveau
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_level'])) {
+    $level_id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
 
     if ($level_id) {
         try {
-            $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-            // Récupérer le titre du niveau sélectionné
-            $stmt = $pdo->prepare("SELECT titre FROM GSDatabaseT WHERE level = ?");
-            $stmt->execute([$level_id]);
-            $level_data = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($level_data) {
-                $_SESSION['level_created'] = $level_id;
-                $_SESSION['level_titre'] = $level_data['titre'];
-                header('Location: ' . $_SERVER['PHP_SELF']);
-                exit();
-            } else {
-                $message = "<p class='error'>Erreur : Le niveau sélectionné n'a pas été trouvé.</p>";
-            }
+            $pdo->beginTransaction();
+            
+            // Supprimer d'abord les questions associées de GSDatabase
+            $stmt_q = $pdo->prepare("DELETE FROM GSDatabase WHERE level = ?");
+            $stmt_q->execute([$level_id]);
+            
+            // Supprimer ensuite le niveau de GSDatabaseT
+            $stmt_t = $pdo->prepare("DELETE FROM GSDatabaseT WHERE level = ?");
+            $stmt_t->execute([$level_id]);
+            
+            $pdo->commit();
+            
+            header('Location: ' . $_SERVER['PHP_SELF'] . '?action=menu&deleted=true');
+            exit();
+            
         } catch (PDOException $e) {
-            $message = "<p class='error'>Erreur de base de données : " . $e->getMessage() . "</p>";
-        }
-    } else {
-        $message = "<p class='error'>Veuillez sélectionner un niveau valide.</p>";
-    }
-}
-
-
-// Traitement de l'ajout d'une question
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_question'])) {
-    if ($level_created) {
-        $level = $level_created;
-        $qtype = $_POST['qtype'];
-        $question = trim($_POST['question']);
-        $rep1 = trim($_POST['rep1']);
-        $rep2 = trim($_POST['rep2']);
-        $rep3 = trim($_POST['rep3']);
-        $rep4 = trim($_POST['rep4']);
-        $rep5 = trim($_POST['rep5']);
-        $answer = filter_input(INPUT_POST, 'answer', FILTER_VALIDATE_INT);
-        $expliq = trim($_POST['expliq']);
-
-        if (!empty($question) && !empty($rep1) && !empty($rep2) && $answer !== null) {
-             try {
-                $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                
-                $stmt_q = $pdo->prepare(
-                    "INSERT INTO GSDatabase (level, qtype, question, rep1, rep2, rep3, rep4, rep5, answer, expliq) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                );
-                $stmt_q->execute([$level, $qtype, $question, $rep1, $rep2, $rep3, $rep4, $rep5, $answer, $expliq]);
-
-                $message = "<p class='success'>La question a été ajoutée avec succès au niveau '$level_titre' !</p>";
-
-            } catch (PDOException $e) {
-                $message = "<p class='error'>Erreur lors de l'ajout de la question : " . $e->getMessage() . "</p>";
-            }
-        } else {
-            $message = "<p class='error'>Veuillez remplir tous les champs obligatoires pour la question (question, réponses 1 et 2, numéro de la bonne réponse).</p>";
+            $pdo->rollBack();
+            $message = "<p class='error'>Erreur lors de la suppression : " . $e->getMessage() . "</p>";
+            // $id est déjà défini, donc on restera sur la page d'édition
         }
     }
 }
 
-// Réinitialiser la session pour créer un nouveau niveau
-if (isset($_POST['reset_level'])) {
-    unset($_SESSION['level_created']);
-    unset($_SESSION['level_titre']);
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit();
-}
+
+// --- SUPPRESSION DE L'ANCIENNE LOGIQUE ---
+// (Bloc "select_level" supprimé)
+// (Bloc "add_question" supprimé)
+// (Bloc "reset_level" supprimé)
+// (Variables de session "level_created" et "level_titre" non utilisées)
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Ajouter un nouveau niveau et des questions</title>
+    <title>Gestion des Niveaux</title>
     <style>
+        /* Styles de base (conservés) */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; line-height: 1.6; padding: 20px; }
         .container { max-width: 800px; margin: auto; background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        h1, h2 { color: #333; }
+        h1, h2 { color: #333; text-align: center; }
         .form-group { margin-bottom: 1rem; }
         label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
         input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 0.8rem; border-radius: 5px; border: 1px solid #ddd; box-sizing: border-box; }
-        textarea { resize: vertical; }
-        button { background-color: #007bff; color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background-color 0.3s; }
-        button:hover { background-color: #0056b3; }
-        .reset-button { background-color: #6c757d; }
-        .reset-button:hover { background-color: #5a6268; }
+        input[type="number"][readonly] { background-color: #eee; cursor: not-allowed; }
+        textarea { resize: vertical; min-height: 150px; }
+        
+        /* Styles de boutons (inspirés de gestion_gsdatabase.php) */
+        button, .button-link { background-color: #007bff; color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background-color 0.3s; width: 100%; text-decoration: none; display: inline-block; text-align: center; box-sizing: border-box; }
+        button:hover, .button-link:hover { background-color: #0056b3; }
+        
+        /* Styles de messages (conservés) */
         .error { color: #dc3545; background: #f8d7da; border: 1px solid #f5c6cb; padding: 1rem; border-radius: 5px; margin-top: 1rem; }
         .success { color: #155724; background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 5px; margin-top: 1rem; }
-        .info { color: #0c5460; background: #d1ecf1; border: 1px solid #bee5eb; padding: 1rem; border-radius: 5px; margin-bottom: 1.5rem; }
-        .question-form { border-top: 2px solid #eee; margin-top: 2rem; padding-top: 2rem; }
-        .separator { text-align: center; font-size: 1.2rem; font-weight: bold; color: #6c757d; margin: 2rem 0; }
+        
+        /* NOUVEAUX Styles pour le menu et la navigation */
+        .action-menu { text-align: center; margin: 2rem 0; }
+        .action-menu .button-link { width: auto; margin: 0 10px; padding: 1rem 2rem; }
+        .back-link { display: inline-block; margin-bottom: 1.5rem; color: #007bff; text-decoration: none; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        
+        /* NOUVEAUX Styles pour les formulaires d'action */
+        .form-actions { display: flex; gap: 1rem; justify-content: space-between; margin-top: 2rem; }
+        .form-actions button { width: auto; flex-grow: 1; }
+        .form-actions button[name="delete_level"] { background-color: #dc3545; }
+        .form-actions button[name="delete_level"]:hover { background-color: #c82333; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Panneau d'ajout de niveaux</h1>
-        <?php if ($message) echo $message; ?>
+        <h1>Panneau de Gestion des Niveaux</h1>
+        <?php if ($message) echo $message; // Affichage global des messages ?>
 
-        <?php if (!$level_created): ?>
-            <h2>Étape 1 : Créer un nouveau niveau</h2>
+        <?php
+        // --- NOUVELLE SECTION D'AFFICHAGE ---
+        
+        // VUE 1: Menu principal
+        if ($action === 'menu'):
+        ?>
+            <div class="action-menu">
+                <h2>Que souhaitez-vous faire ?</h2>
+                <a href="?action=create" class="button-link">Créer un nouveau niveau</a>
+                <a href="?action=edit" class="button-link">Modifier ou Supprimer un niveau</a>
+            </div>
+
+        <?php
+        // VUE 2: Formulaire de création
+        elseif ($action === 'create'):
+        ?>
+            <a href="?action=menu" class="back-link">&larr; Retour au menu</a>
+            <h2>Créer un nouveau niveau</h2>
             <form action="" method="post">
                 <div class="form-group">
                     <label for="level">Numéro du niveau (ex: 101, 102) :</label>
@@ -161,24 +197,27 @@ if (isset($_POST['reset_level'])) {
                 <button type="submit" name="create_level">Créer le niveau</button>
             </form>
 
-            <div class="separator">--- OU ---</div>
-            <h2>Étape 1 (Alternative) : Choisir un niveau existant</h2>
+        <?php
+        // VUE 3: Sélecteur pour l'édition/suppression
+        elseif ($action === 'edit' && !$id):
+        ?>
+            <a href="?action=menu" class="back-link">&larr; Retour au menu</a>
+            <h2>Étape 1 : Choisir un niveau à Modifier/Supprimer</h2>
             <?php
                 // Récupérer les niveaux existants pour le menu déroulant
                 $existing_levels = [];
                 try {
-                    $pdo_levels = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-                    $pdo_levels->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                    $stmt_levels = $pdo_levels->query("SELECT level, titre FROM GSDatabaseT ORDER BY level ASC");
+                    $stmt_levels = $pdo->query("SELECT level, titre FROM GSDatabaseT ORDER BY level ASC");
                     $existing_levels = $stmt_levels->fetchAll(PDO::FETCH_ASSOC);
                 } catch (PDOException $e) {
                     echo "<p class='error'>Impossible de charger la liste des niveaux existants.</p>";
                 }
             ?>
-            <form action="" method="post">
+            <form action="" method="GET">
+                <input type="hidden" name="action" value="edit">
                 <div class="form-group">
-                    <label for="existing_level">Sélectionnez un niveau :</label>
-                    <select id="existing_level" name="existing_level" required>
+                    <label for="id">Sélectionnez un niveau :</label>
+                    <select id="id" name="id" required>
                         <option value="">-- Choisissez --</option>
                         <?php foreach ($existing_levels as $lvl): ?>
                             <option value="<?= htmlspecialchars($lvl['level']) ?>">
@@ -187,66 +226,56 @@ if (isset($_POST['reset_level'])) {
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <button type="submit" name="select_level">Passer à l'étape 2</button>
+                <button type="submit">Charger ce niveau</button>
             </form>
-            <?php else: ?>
-            <div class="info">
-                Vous ajoutez des questions au niveau : <strong><?php echo htmlspecialchars($level_titre) . " (ID: " . htmlspecialchars($level_created) . ")"; ?></strong>
-                <form action="" method="post" style="display:inline; margin-left: 20px;">
-                    <button type="submit" name="reset_level" class="reset-button">Choisir un autre niveau</button>
-                </form>
-            </div>
+
+        <?php
+        // VUE 4: Formulaire d'édition/suppression
+        elseif ($action === 'edit' && $id):
+        
+            // Récupérer les données du niveau à éditer
+            $stmt = $pdo->prepare("SELECT * FROM GSDatabaseT WHERE level = ?");
+            $stmt->execute([$id]);
+            $level_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$level_data):
+                // Si l'ID n'existe pas
+                echo "<p class='error'>Le niveau avec l'ID $id n'a pas été trouvé.</p>";
+                echo '<a href="?action=edit" class="back-link">&larr; Essayer un autre ID</a>';
+            else:
+                // Afficher le formulaire pré-rempli
+        ?>
+            <a href="?action=edit" class="back-link">&larr; Retour au choix du niveau</a>
+            <h2>Modifier/Supprimer le niveau : <?= htmlspecialchars($level_data['titre']) ?></h2>
             
-            <div class="question-form">
-                <h2>Étape 2 : Ajouter une question</h2>
-                <form action="" method="post">
-                    <div class="form-group">
-                        <label for="qtype">Type de question :</label>
-                        <select id="qtype" name="qtype">
-                            <option value="qcm">QCM (Une seule bonne réponse)</option>
-                            <option value="echelle">Échelle (Évaluation)</option>
-                            <option value="lien">Lien (Association)</option>
-                            <option value="mct">MCT (Choix multiples)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="question">Texte de la question :</label>
-                        <textarea id="question" name="question" rows="3" required></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="expliq">Explication de la réponse :</label>
-                        <textarea id="expliq" name="expliq" rows="4"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="rep1">Réponse 1 (obligatoire) :</label>
-                        <input type="text" id="rep1" name="rep1" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="rep2">Réponse 2 (obligatoire) :</label>
-                        <input type="text" id="rep2" name="rep2" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="rep3">Réponse 3 :</label>
-                        <input type="text" id="rep3" name="rep3" placeholder="Optionnel">
-                    </div>
-                    <div class="form-group">
-                        <label for="rep4">Réponse 4 :</label>
-                        <input type="text" id="rep4" name="rep4" placeholder="Optionnel">
-                    </div>
-                     <div class="form-group">
-                        <label for="rep5">Réponse 5 :</label>
-                        <input type="text" id="rep5" name="rep5" placeholder="Optionnel">
-                    </div>
-                    <div class="form-group">
-                        <label for="answer">Numéro de la bonne réponse (pour QCM) :</label>
-                        <input type="number" id="answer" name="answer" required value="0" min="0">
-                    </div>
-                    <button type="submit" name="add_question">Ajouter la question</button>
-                </form>
-            </div>
-        <?php endif; ?>
+            <form action="" method="post">
+                <input type="hidden" name="id" value="<?= htmlspecialchars($level_data['level']) ?>">
+                
+                <div class="form-group">
+                    <label for="level_display">Numéro du niveau :</label>
+                    <input type="number" id="level_display" value="<?= htmlspecialchars($level_data['level']) ?>" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="titre">Titre du niveau :</label>
+                    <input type="text" id="titre" name="titre" value="<?= htmlspecialchars($level_data['titre']) ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="text">Description/Texte pour le niveau (supporte le HTML) :</label>
+                    <textarea id="text" name="text" rows="8"><?= htmlspecialchars($level_data['text']) ?></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" name="update_level">Mettre à jour</button>
+                    <button type="submit" name="delete_level" 
+                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce niveau ?\n\nATTENTION : Toutes les questions associées à ce niveau (dans GSDatabase) seront également supprimées de façon irréversible.');">
+                        Supprimer le niveau
+                    </button>
+                </div>
+            </form>
+        <?php
+            endif; // fin du if ($level_data)
+        endif; // fin du routage $action
+        ?>
     </div>
 </body>
 </html>
