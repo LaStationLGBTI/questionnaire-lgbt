@@ -32,7 +32,7 @@
         }
         .chart-number {
             position: absolute;
-            bottom: 10px; 
+            bottom: 10px;
             right: 10px;
             font-size: 16px;
             font-weight: bold;
@@ -110,7 +110,7 @@
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                    
+
                     <div id="totalCount" class="count-box">
                         <span id="totalCountText">Total des réponses (Niveau 2) : 0</span>
                     </div>
@@ -122,24 +122,24 @@
 
     <script>
         const chartInstances = {};
-        
+
         function loadStats() {
             const container = document.getElementById('chartsContainer');
             container.innerHTML = '';
-            let chartCounter = 0; // Счетчик для нумерации
+            let chartCounter = 0; // Compteur pour numérotation
             Object.keys(chartInstances).forEach(key => {
                 chartInstances[key].destroy();
                 delete chartInstances[key];
             });
 
-            fetch(`stats_getdata.php`) // Убран параметр lang
+            fetch(`stats_getdata.php`) // Le paramètre lang a été supprimé
                 .then(response => response.json())
                 .then(data => {
                     const totalResponses = data.totalResponses || 0;
                     document.getElementById('totalCountText').textContent = `Total des réponses (Niveau 2) : ${totalResponses}`;
 
                     data.formattedData.forEach(item => {
-                        chartCounter++; // Увеличиваем счетчик для каждого нового графика
+                        chartCounter++; // Augmenter le compteur pour chaque nouveau graphique
                         if (item.type === 'qcm' || item.type === 'echelle') {
                             createPieChart(item.question, item.responses, item.id, chartCounter);
                         } else if (item.type === 'mct') {
@@ -162,11 +162,11 @@
                         } else if (item.subresponse && item.subquestion) {
                             const subResponses = item.subresponse.split(",").map(Number);
                             const subQuestions = item.subquestion.split(",").map(Number);
-                            
+
                             subQuestions.forEach((subQuestionIndex, i) => {
                                 const responseIndex = subResponses[i] - 1;
                                 const questionIndex = subQuestionIndex - 1;
-                                
+
                                 if (chart.data.datasets[responseIndex] && chart.data.datasets[responseIndex].data[questionIndex] !== undefined) {
                                     chart.data.datasets[responseIndex].data[questionIndex]++;
                                 }
@@ -210,7 +210,7 @@
             div.className = "chart-box";
             let numberLabel = document.createElement("div");
             numberLabel.className = "chart-number";
-            numberLabel.textContent = chartNumber; // Номер графика
+            numberLabel.textContent = chartNumber; // Numéro du graphique
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
             questionLabel.innerHTML = `<b>Question: ${question}</b>`;
@@ -233,7 +233,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { 
+                    plugins: {
                         legend: { display: false },
                         tooltip: { enabled: true }
                     }
@@ -269,10 +269,10 @@
             div.className = "chart-box";
             let numberLabel = document.createElement("div");
             numberLabel.className = "chart-number";
-            numberLabel.textContent = chartNumber; // Номер графика
+            numberLabel.textContent = chartNumber; // Numéro du graphique
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
-            questionLabel.innerHTML = `<b>Вопрос: ${question}</b>`;
+            questionLabel.innerHTML = `<b>Question : ${question}</b>`;
             questionLabel.style.textAlign = "center";
             questionLabel.style.marginBottom = "10px";
             div.appendChild(questionLabel);
@@ -321,7 +321,7 @@
             div.appendChild(legendContainer);
         }
 
-        loadStats(); // Загружаем статистику при открытии страницы
+        loadStats(); // Chargement des statistiques à l'ouverture de la page
     </script>
     <script>
         setTimeout(() => {

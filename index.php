@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<?php 
+<?php
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 ini_set('display_errors', 1); ini_set('display_startup_errors', 1); error_reporting(E_ALL);
@@ -150,7 +150,7 @@ $lang = $_SESSION['language'];
             height: 100%;
             background-image: url('images/background.png');
             background-size: cover;
-            background-repeat: no-repeat; 
+            background-repeat: no-repeat;
         }
 
         .u-container-layout.u-container-layout-1 {
@@ -175,11 +175,11 @@ $lang = $_SESSION['language'];
             margin: 0;
             margin-top: 0;
         }
-		.results-table .question-column { width: 30%; font-weight: bold; }    
-    	.results-table .expliq-column { 
-        width: 35%; 
-        font-style: italic; 
-        color: #555; 
+		.results-table .question-column { width: 30%; font-weight: bold; }
+    	.results-table .expliq-column {
+        width: 35%;
+        font-style: italic;
+        color: #555;
         background-color: #fdfdfd;
     	}
         .u-active-palette-2-light-1.u-align-center.u-border-none.u-btn.u-btn-round {
@@ -296,7 +296,7 @@ $lang = $_SESSION['language'];
             const imageName = `an_${randomNum}`;
             const imagePath = `images/${imageName}.png`;
             const imgElement = document.getElementById('randomImage');
-            
+
             if (imgElement) {
                 imgElement.src = imagePath;
                 imgElement.alt = `Random image ${imageName}`;
@@ -305,7 +305,7 @@ $lang = $_SESSION['language'];
 
         document.addEventListener('DOMContentLoaded', function() {
             changeRandomImage();
-            
+
             const image = document.getElementById('randomImage');
             if (image) {
                 image.addEventListener('click', changeRandomImage);
@@ -381,7 +381,7 @@ function startQuestion() {
                 const innerAnswers = item.querySelector('p#rep');
                 innerAnswers.innerHTML = response[index + 1];
             });
-	 document.getElementById("QuestionN").innerHTML = (lang === 'de' ? "Frage " : "Question ") + response[6];		
+	 document.getElementById("QuestionN").innerHTML = (lang === 'de' ? "Frage " : "Question ") + response[6];
             document.getElementById('button_next').onclick = function () {
                 updateQuestion(-1);
             };
@@ -607,7 +607,7 @@ for (let i = 0; i < data1.length; i++) {
                         goodconnection = `${"<span style='color: green;'>" + element2.innerHTML} -> ${"</span><span style='color: green;'>" + element.innerHTML + "</span><br>"}`;
                         connections.push(goodconnection);
                     });
-		document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections.join('')}`;        
+		document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections.join('')}`;
 		}
             } else if (response[7] == "mct") {
                 ismultiple = true;
@@ -712,8 +712,8 @@ for (let i = 0; i < data1.length; i++) {
 
     <?php
 if (!isset($_SESSION['level'])) {
-    
-    
+
+
     session_unset();
     $levels = [];
     $error_message = '';
@@ -724,20 +724,20 @@ if (!isset($_SESSION['level'])) {
         $stmt = $pdo->query("SELECT DISTINCT level FROM GSDatabase ORDER BY level ASC");
         $levels = $stmt->fetchAll(PDO::FETCH_COLUMN);
 		$stmt_titles = $pdo->query("SELECT level, titre FROM GSDatabaseT");
-        $all_titles = $stmt_titles->fetchAll(PDO::FETCH_KEY_PAIR); 
+        $all_titles = $stmt_titles->fetchAll(PDO::FETCH_KEY_PAIR);
     } catch (PDOException $e) {
-        $error_message = "Ошибка подключения к БД: " . $e->getMessage();
+        $error_message = "Erreur de connexion à la base de données : " . $e->getMessage();
     }
 ?>
     <section class="u-clearfix u-valign-middle u-section-1" id="sec-level-selection">
         <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
-                    
+
                     <h2 class="u-align-center u-text u-text-default u-text-1">
                         <b><?php echo $texts[$lang]['choose_questionnaire']; ?></b>
                     </h2>
-                    
+
                     <?php if ($error_message): ?>
                         <p class="error u-text"><?= htmlspecialchars($error_message) ?></p>
                     <?php elseif (empty($levels)): ?>
@@ -745,15 +745,15 @@ if (!isset($_SESSION['level'])) {
                     <?php else: ?>
                         <div style="margin-top: 2em; padding-bottom: 2em;">
                             <?php foreach ($levels as $level): ?>
-                                <b><a href="index.php?level=<?= htmlspecialchars($level) ?>" 
-                                   
+                                <b><a href="index.php?level=<?= htmlspecialchars($level) ?>"
+
                                    style="color:black; display: block; width: 100%; max-width: 400px; margin: 15px auto;">
-                                   
+
                                    <?php  ?>
-                                   <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']); 
-                                   
+                                   <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']);
+
                                    if (isset($all_titles[$level])) {
-                                       
+
                                        echo ': ' . htmlspecialchars($all_titles[$level]);
                                    }
                                    ?>
@@ -769,34 +769,34 @@ if (!isset($_SESSION['level'])) {
         </div>
     </section>
 <?php
-    } else if (!isset($_POST["start"]) && !isset($_SESSION["start"])) { 
+    } else if (!isset($_POST["start"]) && !isset($_SESSION["start"])) {
 
 	    $level_titre = '';
-    $level_text = ''; // Переменная по умолчанию
-    
+    $level_text = ''; // Variable par défaut
+
     try {
-        // Подключаемся к БД
+        // Connexion à la base de données
         $pdo_desc = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo_desc->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Готовим запрос для получения текста по текущему $_SESSION['level']
+        // Préparons une requête pour obtenir le texte actuel $_SESSION['level']
         $stmt_desc = $pdo_desc->prepare("SELECT titre, text FROM GSDatabaseT WHERE level = ?");
         $stmt_desc->execute([$_SESSION['level']]);
         $level_data = $stmt_desc->fetch(PDO::FETCH_ASSOC);
 
-        // Если данные для этого уровня найдены, используем их
+        // Si les données pour ce niveau sont trouvées, nous les utilisons
         if ($level_data) {
             $level_titre = $level_data['titre'];
             $level_text = $level_data['text'];
         } else {
-            // Если в таблице нет описания для этого уровня, используем текст по умолчанию
+            // Si le tableau ne contient aucune description pour ce niveau, utilisez le texte par défaut
             $level_text = $texts[$lang]['project_desc'];
         }
     } catch (PDOException $e) {
-        // В случае ошибки подключения к БД, выводим сообщение
+        // En cas d'erreur de connexion à la base de données, afficher le message suivant
         $level_text = "Erreur de chargement de la description.";
     }
-	
+
 	?>
 <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e2">
     <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
@@ -806,18 +806,18 @@ if (!isset($_SESSION['level'])) {
                     <b><?php echo $texts[$lang]['project_title']; ?></b>
                 </p>
 
-                <?php // --- ИЗМЕНЕННАЯ СТРОКА ВЫВОДА --- ?>
+                <?php // --- LIGNE DE SORTIE MODIFIÉE --- ?>
                 <div style="margin:1em 0; font-size:16px; text-align: justify; padding: 0 1em;">
                     <?php
-                        // Выводим заголовок из базы данных, если он есть
+                        // Nous extrayons le titre de la base de données, s'il existe
                         if (!empty($level_titre)) {
                             echo '<i><b><h3 style="text-align: center;">' . htmlspecialchars($level_titre) . '</h3></i></b>';
                         }
-                        // Выводим основной текст (он уже содержит HTML, поэтому без htmlspecialchars)
+                        // Nous affichons le texte principal (il contient déjà du HTML, donc sans htmlspecialchars)
                         echo $level_text;
                     ?>
                 </div>
-                <?php // --- КОНЕЦ ИЗМЕНЕНИЙ --- ?>
+                <?php // --- FIN DES MODIFICATIONS --- ?>
 
                 <p style="margin:1em; padding:1em;border:solid; font-size:14px; border-color:#1400ff;">
                     <b><?php echo $texts[$lang]['warning_title']; ?></b> <br><br>
@@ -873,7 +873,7 @@ if (!isset($_SESSION["start"])) {
     $stmt->execute([$_SESSION['level']]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
     if ($_SESSION['level'] != 1 && count($results) > 20) {
-    shuffle($results);    
+    shuffle($results);
     $results = array_slice($results, 0, 20);
 	}
     $_SESSION["QuestionToUse"] = "Questions";
@@ -1038,7 +1038,7 @@ $rep5s = explode('__', $_SESSION["Rep5"]);
 $correct_answers = explode('__', $_SESSION["answer"]);
 $qtypes = explode('__', $_SESSION["qtype"]);
 
-// Парсим ответы пользователя в удобный массив [id_вопроса => ответ]
+// Nous analysons les réponses de l'utilisateur dans un tableau pratique [id_question => réponse]
 $user_answers = [];
 if(isset($_SESSION['reponses'])){
     $user_reponses_raw = explode('__Q@', $_SESSION['reponses']);
@@ -1050,7 +1050,7 @@ if(isset($_SESSION['reponses'])){
         }
     }
 }
-// -- КОНЕЦ БЛОКА ПОДГОТОВКИ ДАННЫХ --
+// -- FIN DU BLOC DE PRÉPARATION DES DONNÉES --
 ?>
 
 <style>
@@ -1066,7 +1066,7 @@ if(isset($_SESSION['reponses'])){
     }
     .results-table tr:nth-of-type(even) { background-color: #f8f8f8; }
     .results-table .question-column { width: 35%; font-weight: bold; }
-    
+
     .legend { text-align: left; width: 90%; margin: 1em auto; padding: 10px; background-color: #f0f0f0; border-radius: 8px; font-size: 0.9em; }
     .legend-item { display: inline-flex; align-items: center; margin-right: 20px; }
     .legend-color-box { width: 20px; height: 20px; border: 1px solid #ccc; margin-right: 8px; }
@@ -1075,9 +1075,9 @@ if(isset($_SESSION['reponses'])){
     .correct-answer-color { background-color: #90ee90; }
     .user-correct-answer-color { background: linear-gradient(135deg, #90ee90 50%, #a0c4ff 50%); }
 
-    .user-answer { background-color: #a0c4ff; /* Синий */}
-    .correct-answer { background-color: #90ee90; /* Зеленый */}
-    /* Смешанный цвет, если у ячейки ОБА класса */
+    .user-answer { background-color: #a0c4ff; /* Bleu */}
+    .correct-answer { background-color: #90ee90; /* Vert */}
+    /* Couleur mixte, si la cellule appartient aux DEUX classes */
     .user-answer.correct-answer {
         background: linear-gradient(135deg, #90ee90 50%, #a0c4ff 50%);
     }
@@ -1089,7 +1089,7 @@ if(isset($_SESSION['reponses'])){
         <div class="u-container-layout u-container-layout-1">
             <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
                 <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
-                
+
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color-box user-answer-color"></div>
@@ -1108,7 +1108,7 @@ if(isset($_SESSION['reponses'])){
 <table class="results-table">
     <thead>
         <tr>
-            <th class="question-column">Question</th>            
+            <th class="question-column">Question</th>
             <th colspan="5">Réponses</th>
 			<th class="expliq-column">Explication</th>
         </tr>
@@ -1117,7 +1117,7 @@ if(isset($_SESSION['reponses'])){
         <?php
         $total_questions_in_summary = 0;
         $correct_answers_count = 0;
-        
+
         // --- NEW: Load expliqs from session ---
         $expliqs = explode('__', $_SESSION["expliqs"]);
 
@@ -1131,34 +1131,34 @@ if(isset($_SESSION['reponses'])){
             $current_id = $ids_in_use[$i];
             $user_choice = $user_answers[$current_id] ?? null;
             $correct_answer = $correct_answers[$i];
-            
+
             if ($user_choice !== null && $user_choice == $correct_answer) {
                 $correct_answers_count++;
             }
-            
+
             echo '<tr>';
             echo '<td class="question-column">' . htmlspecialchars($questions[$i]) . '</td>';
 
-            
+
 
 
             $possible_answers = [$rep1s[$i], $rep2s[$i], $rep3s[$i], $rep4s[$i], $rep5s[$i]];
-            
+
             $answers_count = 0;
             foreach ($possible_answers as $j => $answer_text) {
                 if ($answer_text !== 'null' && $answer_text !== '') {
                     $answers_count++;
                     $answer_num = $j + 1;
                     $classes = [];
-                    
+
                     if ($answer_num == $user_choice) { $classes[] = 'user-answer'; }
                     if ($answer_num == $correct_answer) { $classes[] = 'correct-answer'; }
-                    
+
                     echo '<td class="' . implode(' ', $classes) . '">' . htmlspecialchars($answer_text) . '</td>';
                 }
             }
-			
-                        
+
+
             for ($k = $answers_count; $k < 5; $k++) {
                 echo '<td></td>';
             }
@@ -1171,7 +1171,7 @@ if(isset($_SESSION['reponses'])){
 </table>
 
                 <p class="score-display">
-                    <?php 
+                    <?php
                     if ($lang === 'de') {
                         echo "Sie haben {$correct_answers_count} von {$total_questions_in_summary} Fragen richtig beantwortet.";
                     } else {
@@ -1206,7 +1206,7 @@ if(isset($_SESSION['reponses'])){
                 .then(data => {
                     document.getElementById('footer-placeholder').innerHTML = data;
                 });
-        }, 100); 
+        }, 100);
     </script>
 	<script>
 
@@ -1226,7 +1226,7 @@ if(isset($_SESSION['reponses'])){
 						var answersarray = findAllBlocks();
 						if (response[0] == "fin") {
 							timeout = true;
-							// Сначала убираем все предыдущие классы для чистоты
+							// Tout d'abord, supprimons toutes les classes précédentes pour plus de clarté
 							answersarray.forEach(function (item, index) {
 								const innerAnswers = item.querySelector('div#question_container');
 								if (innerAnswers != null) {
@@ -1235,7 +1235,7 @@ if(isset($_SESSION['reponses'])){
 									innerAnswers.classList.remove('fade-to-white');
 								}
 							});
-							// Затем показываем правильный/неправильный ответ
+							// Ensuite, nous montrons la bonne/mauvaise réponse
 							answersarray.forEach(function (item, index) {
 								const innerAnswers = item.querySelectorAll('div#question_container');
 								if (innerAnswers.length > 0) {
@@ -1253,11 +1253,11 @@ if(isset($_SESSION['reponses'])){
 								window.location.href = window.location.href;
 							}, 3000);
 						}
-						
+
 						else {
 							timeout = true;
 							if (response[9] === "qcm") {
-								cd = 3000; 
+								cd = 3000;
 							}
 							answersarray.forEach(function (item, index) {
 								const innerAnswers = item.querySelector('div#question_container');
@@ -1437,7 +1437,7 @@ if(isset($_SESSION['reponses'])){
 									document.querySelectorAll('.show-info-btn').forEach(button => {
 										button.addEventListener('click', function () {
 											const rowNum = button.getAttribute('data-row');
-											const decodedText = button.getAttribute('data-cell2-decoded'); 
+											const decodedText = button.getAttribute('data-cell2-decoded');
 											selectedR = rowNum;
 											selectedRText = decodedText;
 											if (document.getElementsByClassName("popup")[0] == null) {
@@ -1473,7 +1473,7 @@ if(isset($_SESSION['reponses'])){
 														if (selectedQ && selectedR) {
 															var connection = "";
 															var goodconnection = "";
-															if (R[selectedQ - 1] == (selectedR)) 
+															if (R[selectedQ - 1] == (selectedR))
 															{
 																connection = `${"<span style='color: green;'>" + selectedQText} -> ${"</span><span style='color: green;'>" + selectedRText + "</span><br>"}`;
 															}
@@ -1526,7 +1526,7 @@ if(isset($_SESSION['reponses'])){
 
 									});
 									const updatedString = localStorage.getItem('lastationlienvar').slice(1);
-									const parts = updatedString.split('&&'); 
+									const parts = updatedString.split('&&');
 									const QQ = [];
 									const RR = [];
 									parts.forEach(part => {
@@ -1670,9 +1670,9 @@ if(isset($_SESSION['reponses'])){
 						}
 					}
 					else if (xhr.readyState == 4) {
-						// Если запрос завершился с ошибкой, снова разрешаем нажатия
+						// Si la requête s'est terminée par une erreur, nous autorisons à nouveau les clics
 						timeout = false;
-						alert('Произошла ошибка. Пожалуйста, попробуйте еще раз.');
+						alert('Une erreur s'est produite. Veuillez réessayer.');
 					}
 				};
 				if (ismultiple == true) {

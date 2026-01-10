@@ -32,7 +32,7 @@
         }
         .chart-number {
             position: absolute;
-            bottom: 10px; 
+            bottom: 10px;
             right: 10px;
             font-size: 16px;
             font-weight: bold;
@@ -125,44 +125,44 @@
             color: #333;
         }
 
-        /* --- НОВЫЙ БЛОК: СТИЛИ ДЛЯ ПЕЧАТИ --- */
+        /* --- NOUVEAU BLOC : STYLES POUR L'IMPRESSION --- */
         @media print {
-            /* Скрыть ненужные для печати элементы */
+            /* Masquer les éléments inutiles pour l'impression */
             .language-buttons,
             #footer-placeholder,
             .count-box {
                 display: none !important;
             }
 
-            /* Предотвратить разрыв блока с графиком между страницами */
+            /* Empêcher la rupture du bloc avec le graphique entre les pages */
             .chart-box {
                 page-break-inside: avoid;
-                box-shadow: none !important; /* Убрать тени для печати */
-                border: 1px solid #ccc !important; /* Сделать рамку тоньше для печати */
-                width: 100% !important; /* Растянуть на всю ширину страницы */
+                box-shadow: none !important; /* Supprimer les ombres pour l'impression */
+                border: 1px solid #ccc !important; /* Rendre le cadre plus fin pour l'impression */
+                width: 100% !important; /* Étirer sur toute la largeur de la page  */
             }
 
-            /* Убедиться, что цвета графиков и легенды печатаются */
+            /* S'assurer que les couleurs des graphiques et des légendes s'impriment correctement */
             body, .chart-box, .legend-color {
                 print-color-adjust: exact;
-                -webkit-print-color-adjust: exact; /* Для совместимости с Chrome/Safari */
+                -webkit-print-color-adjust: exact; /* Pour la compatibilité avec Chrome/Safari */
             }
 
-            /* Установить белый фон для печати */
+            /* Définir un fond blanc pour l'impression */
             body, .u-group-1 .u-container-layout-1 {
                 background-color: #fff !important;
             }
-            
+
             section, .u-container-layout {
                 min-height: auto !important;
             }
-            
+
             .chart-number {
                 color: #000 !important;
                 background-color: #fff !important;
             }
         }
-        /* --- КОНЕЦ БЛОКА СТИЛЕЙ ДЛЯ ПЕЧАТИ --- */
+        /* --- FIN DU BLOC DE STYLES POUR L'IMPRESSION --- */
 
     </style>
 </head>
@@ -237,11 +237,11 @@
                         } else if (item.subresponse && item.subquestion) {
                             const subResponses = item.subresponse.split(",").map(Number);
                             const subQuestions = item.subquestion.split(",").map(Number);
-                            
+
                             subQuestions.forEach((subQuestionIndex, i) => {
                                 const responseIndex = subResponses[i] - 1;
                                 const questionIndex = subQuestionIndex - 1;
-                                
+
                                 if (chart.data.datasets[responseIndex] && chart.data.datasets[responseIndex].data[questionIndex] !== undefined) {
                                     chart.data.datasets[responseIndex].data[questionIndex]++;
                                 }
@@ -285,8 +285,8 @@
             div.className = "chart-box";
             let numberLabel = document.createElement("div");
             numberLabel.className = "chart-number";
-            numberLabel.textContent = chartNumber || "N/A"; // Убедимся, что chartNumber отображается
-            console.log(`Adding chart number: ${chartNumber} for chart_${chartIndex}`); // НОВОЕ: Отладочный вывод
+            numberLabel.textContent = chartNumber || "N/A"; // Vérifions que chartNumber s'affiche bien
+            console.log(`Adding chart number: ${chartNumber} for chart_${chartIndex}`); // NOUVEAU : Sortie de débogage
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
             questionLabel.innerHTML = `<b>Question: ${question}</b>`;
@@ -309,7 +309,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { 
+                    plugins: {
                         legend: { display: false },
                         tooltip: { enabled: true }
                     }
@@ -345,8 +345,8 @@
             div.className = "chart-box";
             let numberLabel = document.createElement("div");
             numberLabel.className = "chart-number";
-            numberLabel.textContent = chartNumber || "N/A"; // Убедимся, что chartNumber отображается
-            console.log(`Adding chart number: ${chartNumber} for chart_${chartIndex}`); // НОВОЕ: Отладочный вывод
+            numberLabel.textContent = chartNumber || "N/A"; // Vérifions que chartNumber s'affiche bien
+            console.log(`Adding chart number: ${chartNumber} for chart_${chartIndex}`); // NOUVEAU : Sortie de débogage
             div.appendChild(numberLabel);
             let questionLabel = document.createElement("div");
             questionLabel.innerHTML = `<b>Question: ${question}</b>`;

@@ -1,16 +1,16 @@
 <?php
-// Подключаем конфигурацию и запускаем сессию
+// Nous connectons la configuration et lançons la session
 require_once 'conf.php';
 session_start();
 
-// --- Секция 1: Логика входа и выхода (аналогично вашему файлу) ---
+// --- Section 1 : Section 1 : Logique d'entrée et de sortie (similaire à d'autres fichiers) --
 
-// Инициализируем счетчик попыток входа
+// Initialisons le compteur de connexions
 if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['login_attempts'] = 0;
 }
 
-// Обработка выхода из системы
+// Traitement de la déconnexion
 if (isset($_POST['logout'])) {
     session_unset();
     session_destroy();
@@ -18,7 +18,7 @@ if (isset($_POST['logout'])) {
     exit();
 }
 
-// Обработка входа
+// Traitement de l'entrée
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     if ($_SESSION['login_attempts'] < 3) {
         $login = $_POST['identifiant'];
@@ -42,15 +42,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 }
 
-// --- Секция 2: Обработка данных (создание, обновление, удаление) ---
-$message = ''; // Для сообщений пользователю (успех, ошибка)
+// --- Section 2 : Traitement des données (création, mise à jour, suppression) ---
+$message = ''; // Pour les messages à l'utilisateur (succès, erreur)
 
 if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     try {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Обработка создания нового вопроса
+        // Traitement de la création d'une nouvelle question
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_question'])) {
             $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
             $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, expliq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -63,7 +63,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             $message = "<div class='message success'>Question ajoutée avec succès !</div>";
         }
 
-        // Обработка обновления вопроса
+        // Traitement de la mise à jour d'une question
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_question'])) {
             $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
             $sql = "UPDATE GSDatabase SET level=?, question=?, rep1=?, rep2=?, rep3=?, rep4=?, rep5=?, answer=?, qtype=?, expliq=? WHERE id=?";
@@ -76,7 +76,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             $message = "<div class='message success'>Question mise à jour avec succès !</div>";
         }
 
-        // Обработка удаления вопроса
+        // Traitement de la suppression d'une question
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_question'])) {
             $stmt = $pdo->prepare("DELETE FROM GSDatabase WHERE id = ?");
             $stmt->execute([$_POST['id']]);
@@ -89,7 +89,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     }
 }
 
-// Сообщение об успешном удалении
+// Message indiquant que la suppression a été effectuée avec succès
 if (isset($_GET['deleted'])) {
     $message = "<div class='message success'>Question supprimée avec succès !</div>";
 }
@@ -100,9 +100,9 @@ if (isset($_GET['deleted'])) {
     <meta charset="UTF-8">
     <title>Gestion GSDatabase</title>
     <style>
-        /* ... (Ваши существующие стили) ... */
+        /* ... (Styles existants) ... */
 
-/* Стили для навигации между страницами */
+/* Styles pour naviguer entre les pages */
 .admin-nav {
     text-align: center;
     margin-bottom: 1.5rem;
@@ -110,7 +110,7 @@ if (isset($_GET['deleted'])) {
     border-bottom: 1px solid #eee;
 }
 .admin-nav .nav-button {
-    background-color: #17a2b8; /* Бирюзовый для отличия */
+    background-color: #17a2b8; /* Turquoise pour se démarquer */
     color: white;
     padding: 0.6rem 1.2rem;
     border-radius: 5px;
@@ -122,7 +122,7 @@ if (isset($_GET['deleted'])) {
 .admin-nav .nav-button:hover {
     background-color: #138496;
 }
-        /* Стили скопированы из вашего файла и немного дополнены */
+        /* Les styles ont été copiés depuis le fichier et légèrement complétés */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 20px; }
         .container { background: #fff; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 900px; margin: auto; }
         .login-container { max-width: 500px; margin-top: 10vh; }
@@ -153,20 +153,20 @@ if (isset($_GET['deleted'])) {
 <body>
 
 <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
-    
+
     <div class="container">
         <form action="" method="post" class="logout-form">
             <button type="submit" name="logout">Déconnexion</button>
         </form>
-        
+
         <h1>Gestion de la GSDatabase</h1>
-        <?php echo $message; // Отображение сообщений ?>
+        <?php echo $message; // Affichage des messages ?>
 
         <?php
         $action = $_GET['action'] ?? 'menu';
         $id = $_REQUEST['id'] ?? null;
-        
-        // --- Главное меню ---
+
+        // --- Menu principal ---
         if ($action === 'menu') :
         ?>
             <div class="admin-nav">
@@ -178,9 +178,9 @@ if (isset($_GET['deleted'])) {
                 <a href="?action=edit" class="button-link">Modifier ou Supprimer une question</a>
             </div>
 
-        <?php 
-        // --- Форма для ввода ID для редактирования ---
-        elseif ($action === 'edit' && !$id) : 
+        <?php
+        // --- Formulaire de saisie de l'identifiant à modifier ---
+        elseif ($action === 'edit' && !$id) :
         ?>
             <a href="gestion_gsdatabase.php" class="back-link">&larr; Retour au menu</a>
             <h2>Modifier une question</h2>
@@ -193,10 +193,10 @@ if (isset($_GET['deleted'])) {
                 <button type="submit">Rechercher et Modifier</button>
             </form>
 
-        <?php 
-        // --- Форма для создания или редактирования вопроса ---
+        <?php
+        // --- Formulaire pour créer ou modifier une question ---
         elseif ($action === 'create' || ($action === 'edit' && $id)) :
-            
+
             $question_data = null;
             $is_edit_mode = false;
             if ($action === 'edit' && $id) {
@@ -207,7 +207,7 @@ if (isset($_GET['deleted'])) {
                 if (!$question_data) {
                     echo "<div class='error'>Question avec l'ID $id non trouvée.</div>";
                     echo '<a href="?action=edit" class="back-link">Essayer un autre ID</a>';
-                    exit; // Останавливаем выполнение, если ID не найден
+                    exit; // Arrêter l'exécution si l'ID n'est pas trouvé
                 }
             }
         ?>
@@ -307,7 +307,7 @@ if (isset($_GET['deleted'])) {
 <?php endif; ?>
 
 <script>
-// --- Секция 3: JavaScript для динамической формы ---
+// --- Section 3 : JavaScript pour un formulaire dynamique ---
 function handleQTypeChange() {
     const qtype = document.querySelector('input[name="qtype"]:checked').value;
     const rep5Group = document.getElementById('rep5-group');
@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const qtypeRadios = document.querySelectorAll('input[name="qtype"]');
     if (qtypeRadios.length > 0) {
         qtypeRadios.forEach(radio => radio.addEventListener('change', handleQTypeChange));
-        // Вызываем функцию при загрузке, чтобы установить правильное состояние формы
+        // Nous appelons la fonction lors du chargement afin de définir l'état correct du formulaire
         handleQTypeChange();
     }
 });

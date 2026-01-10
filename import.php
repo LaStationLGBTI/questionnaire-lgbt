@@ -40,7 +40,7 @@ $import_message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
     if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in']) {
         if (isset($_FILES['questionnaire_file']) && $_FILES['questionnaire_file']['error'] === UPLOAD_ERR_OK) {
-            
+
             $file_tmp_path = $_FILES['questionnaire_file']['tmp_name'];
             if (strtolower(pathinfo($_FILES['questionnaire_file']['name'], PATHINFO_EXTENSION)) !== 'csv') {
                 $import_message = "<p class='error'>Erreur : Veuillez sélectionner un fichier au format CSV.</p>";
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                         rewind($handle);
                     }
 
-                    fgetcsv($handle, 2000, ";"); // Пропускаем заголовок
+                    fgetcsv($handle, 2000, ";"); // Nous ignorons le titre
 
                     $all_rows = [];
                     $level_to_check = null;
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                         }
                         $all_rows[] = $data;
                         if ($level_to_check === null) {
-                            $level_to_check = trim($data[0]); // Уровень в ПЕРВОЙ колонке (индекс 0)
+                            $level_to_check = trim($data[0]); // Niveau dans la PREMIÈRE colonne (indice 0)
                         }
                     }
                     fclose($handle);
@@ -80,17 +80,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                     if ($stmt->fetchColumn() > 0) {
                         throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà.");
                     }
-                    
-                    // ================== ИСПРАВЛЕНИЕ ЗДЕСЬ ==================
+
+                    // ================== CORRECTION ICI ==================
 
                     $pdo->beginTransaction();
-                    // 1. Убрали image и sound из запроса
-                    $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype) 
+                    // 1. Suppression de l'image et du son de la requête
+                    $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
-                    
+
                     foreach ($all_rows as $row) {
-                        // 2. Убедились, что количество передаваемых значений (9) соответствует запросу
+                        // 2. Nous avons vérifié que le nombre de valeurs transmises (9) correspond à la requête
                         $stmt->execute([
                             trim($row[0]) ?? null,      // level
                             trim($row[1]) ?? null,      // question
@@ -103,9 +103,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                             trim($row[8]) ?? null       // qtype
                         ]);
                     }
-                    
+
                     // =======================================================
-                    
+
                     $pdo->commit();
                     $import_message = "<p class='success'>Importation réussie. <strong>" . count($all_rows) . "</strong> questions ajoutées pour le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>.</p>";
 

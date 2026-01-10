@@ -1,5 +1,5 @@
 <?php
-require_once 'conf.php'; 
+require_once 'conf.php';
 header('Content-Type: application/json');
 
 try {
@@ -8,8 +8,8 @@ try {
     $stmt = $pdo->query("SELECT * FROM stationq1");
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $lang = isset($_GET['lang']) ? $_GET['lang'] : 'all';
-    
-    // Подсчет общего количества ответов
+
+    // Calcul du nombre total de réponses
     $query = "SELECT COUNT(*) as total FROM stationr2";
     if ($lang !== 'all') {
         $query .= " WHERE lang = :lang";

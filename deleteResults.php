@@ -1,9 +1,9 @@
 <?php
-// Подключаем конфигурацию и запускаем сессию
+// Nous connectons la configuration et lançons la session
 require_once 'conf.php';
 session_start();
 
-// Используем ту же систему входа, что и на других страницах администратора
+// Nous utilisons le même système de connexion que sur les autres pages de l'administrateur
 if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['login_attempts'] = 0;
 }
@@ -36,17 +36,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 }
 
-// Логика удаления данных
+// Logique de suppression des données
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
     if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         try {
             $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            // Выполняем команду TRUNCATE
+
+            // Exécution du la commande TRUNCATE
             $pdo->exec("TRUNCATE TABLE GSDatabaseR");
-            
+
             $message = "<p class='success'>Succès ! Tous les enregistrements de la table <strong>GSDatabaseR</strong> ont été supprimés.</p>";
         } catch (PDOException $e) {
             $message = "<p class='error'>Erreur lors de la suppression des données : " . $e->getMessage() . "</p>";
@@ -76,19 +76,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
 <body>
     <div class="container">
         <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
-            
+
             <form action="" method="post" class="logout-form">
                 <button type="submit" name="logout">Déconnexion</button>
             </form>
 
             <h1>Nettoyage de la table des résultats</h1>
-            
+
             <?php if ($message) echo $message; ?>
 
             <div class="warning">
                 <strong>ATTENTION !</strong> Cette action supprimera de manière irréversible <strong>TOUS</strong> les enregistrements de la table <code>GSDatabaseR</code>. L'ID des enregistrements sera réinitialisé à 1.
             </div>
-            
+
             <form action="" method="post" onsubmit="return confirm('Êtes-vous absolument certain de vouloir supprimer tous les résultats ? Cette action est irréversible.');">
                 <button type="submit" name="confirm_delete" class="delete-button">Oui, je suis sûr, supprimer tous les résultats</button>
             </form>

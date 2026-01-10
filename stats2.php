@@ -124,7 +124,7 @@
 
     <script>
         const chartInstances = {};
-function loadStats(lang) {            
+function loadStats(lang) {
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.remove('active');
         if (btn.dataset.lang === lang) {
@@ -143,7 +143,7 @@ function loadStats(lang) {
     fetch(`stats_getdata.php?lang=${lang}`)
         .then(response => response.json())
         .then(data => {
-            // Определение текста в зависимости от языка
+            // Définition du texte en fonction de la langue
             const totalText = {
                 'fr': 'Réponses totales',
                 'de': 'Gesamtanzahl der Antworten',
@@ -155,11 +155,11 @@ function loadStats(lang) {
                 'all': 'All'
             };
 
-            // Обновление счетчика общего количества ответов
+            // Mise à jour du compteur du nombre total de réponses
             const totalResponses = data.totalResponses || 0;
             document.getElementById('totalCountText').textContent = `${totalText[lang]}: ${totalResponses} (${languageLabel[lang]})`;
 
-            // Создание графиков
+            // Création de graphiques
             data.formattedData.forEach((item, index) => {
                 if (item.type === 'qcm' || item.type === 'echelle') {
                     createPieChart(item.question, item.responses, item.id);

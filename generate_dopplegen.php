@@ -47,9 +47,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     $selected_category_get = '';
     $uploadDir = 'dopplegenImages/';
 
-    // --- ПОЛУЧАЕМ ЗНАЧЕНИЯ СЛАЙДЕРОВ (или значения по умолчанию) ---
+    // --- OBTENIR LES VALEURS DES SLIDERS (ou les valeurs par défaut) ---
     $min_variance_mod = isset($_GET['min_var']) ? (int)$_GET['min_var'] : 60;
-    $max_variance_mod = isset($_GET['max_var']) ? (int)$_GET['max_var'] : 100; // По умолчанию 100 (безопасно)
+    $max_variance_mod = isset($_GET['max_var']) ? (int)$_GET['max_var'] : 100; // Par défaut 100 (sécurisé)
 
 
     try {
@@ -63,24 +63,24 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         // 2. Vérifier si une génération est demandée (via le bouton)
         if (isset($_GET['generate'])) {
             $selected_category_get = $_GET['category'];
-            
+
             // Préparer la requête SQL pour récupérer les symboles
             $sql = "SELECT id, name, image_name FROM dopplegen";
             $params = [];
-            
+
             if (!empty($selected_category_get)) {
                 $sql .= " WHERE category = ?";
                 $params[] = $selected_category_get;
             }
-            $sql .= " ORDER BY RAND()"; // Mélanger les symboles для разной игры
-            
+            $sql .= " ORDER BY RAND()"; // Mélanger les symboles pour un jeu différent
+
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $all_symbols_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $total_symbols_available = count($all_symbols_db);
 
             // 3. Déterminer l'ordre (n) possible
-            $n = 0; 
+            $n = 0;
             if ($total_symbols_available >= 57) $n = 7;
             elseif ($total_symbols_available >= 31) $n = 5;
             elseif ($total_symbols_available >= 21) $n = 4;
@@ -94,7 +94,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 $symbols_needed = $n * $n + $n + 1;
                 $symbols_per_card = $n + 1;
                 $symbols_to_use = array_slice($all_symbols_db, 0, $symbols_needed);
-                
+
                 $generation_message = "Jeu généré (Ordre <strong>$n</strong>). Total cartes : <strong>$symbols_needed</strong>. Symboles par carte : <strong>$symbols_per_card</strong>. (Utilisant $symbols_needed symboles sur $total_symbols_available trouvés)";
 
                 // --- ALGORITHME DU PLAN PROJECTIF (GÉNÉRIQUE) ---
@@ -144,19 +144,19 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         input[type="text"], input[type="password"], select {
             width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 1rem;
         }
-        /* --- СТИЛИ ДЛЯ СЛАЙДЕРОВ --- */
+        /* --- STYLES POUR LES SLIDERS --- */
         input[type="range"] { width: 100%; margin-top: 5px; }
         .slider-label { font-size: 0.9rem; color: #333; }
         .slider-value { font-weight: bold; color: #007bff; background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; display: inline-block; min-width: 25px; text-align: center; }
         .slider-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        
+
         button {
             background-color: #007bff; color: white; padding: 10px 18px; border: none; border-radius: 5px;
             font-size: 1rem; cursor: pointer; transition: background-color 0.3s;
         }
         .logout-button { background-color: #6c757d; position: absolute; top: 20px; right: 20px; }
         .print-button { background-color: #28a745; position: fixed; bottom: 20px; right: 20px; z-index: 100; }
-        
+
         .generator-form {
             background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
@@ -166,7 +166,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
-            padding-bottom: 80px; 
+            padding-bottom: 80px;
         }
         .dobble-card {
             background: #fff;
@@ -174,9 +174,9 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             border-radius: 50%;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             aspect-ratio: 1 / 1;
-            position: relative; 
-            overflow: hidden; 
-            padding: 0; 
+            position: relative;
+            overflow: hidden;
+            padding: 0;
             box-sizing: border-box;
             display: flex;
             justify-content: center;
@@ -186,33 +186,33 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             position: absolute; top: 10px; left: 20px; font-size: 0.8rem; color: #aaa; z-index: 10;
         }
 
-        /* Общие стили для символов */
+        /* Styles généraux pour les symboles */
         .dobble-card .symbol {
-            position: absolute; 
-            object-fit: contain; 
+            position: absolute;
+            object-fit: contain;
             transition: transform 0.3s ease;
-            max-width: none; 
+            max-width: none;
             max-height: none;
             z-index: 5;
         }
         .dobble-card .symbol:hover {
-            transform: scale(1.1) !important; 
+            transform: scale(1.1) !important;
             z-index: 10;
         }
-        
-        /* Стили печати */
+
+        /* Styles d'impression */
         @media print {
             body { background: #fff; padding: 0; margin: 0; }
             .no-print, .logout-button, .print-button, h1, .info, .error, .generator-form {
-                display: none !important; 
+                display: none !important;
             }
             .cards-container {
                 display: grid;
-                grid-template-columns: 1fr 1fr; 
-                grid-auto-rows: 100mm; 
-                gap: 10mm;              
-                padding: 0;           
-                margin: 0 auto;       
+                grid-template-columns: 1fr 1fr;
+                grid-auto-rows: 100mm;
+                gap: 10mm;
+                padding: 0;
+                margin: 0 auto;
                 box-sizing: border-box;
             }
             .dobble-card {
@@ -220,46 +220,46 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 border: 2px solid #000;
                 border-radius: 50%;
                 page-break-inside: avoid;
-                width: 100mm;  
-                height: 100mm; 
-                padding: 7px; 
+                width: 100mm;
+                height: 100mm;
+                padding: 7px;
                 margin: 0;
                 box-sizing: border-box;
             }
             .print-cards-section {
                 page-break-after: always;
-                
+
             }
             .card-header { display: none; }
             .dobble-card .symbol { transition: none; }
             /* --- Styles pour l'impression de la Légende --- */
             .symbol-legend-container {
-                page-break-before: always; 
+                page-break-before: always;
                 margin-top: 0;
                 padding: 0;
                 box-shadow: none;
                 border: none;
             }
-            
-            /* --- !!! НОВЫЕ СТИЛИ ЛЕГЕНДЫ ДЛЯ ПЕЧАТИ (6 КОЛОНОК) !!! --- */
+
+            /* --- !!! NOUVEAUX STYLES DE LÉGENDES POUR L'IMPRESSION (6 COLONNES) !!! --- */
             .legend-items-container {
-                column-count: 6; /* 6 колонок при печати */
+                column-count: 6; /* 6 colonnes pour l'impression */
                 column-gap: 15px;
             }
             .legend-item {
                 gap: 5px;
                 padding: 2px 0;
-                border: none; /* Убираем границы при печати */
+                border: none; /* Supprimer les bordures lors de l'impression */
             }
             .legend-item .legend-name {
-                font-size: 8pt; /* Мелкий шрифт для экономии места */
+                font-size: 8pt; /* Petits caractères pour gagner de la place */
             }
-            .legend-img { /* Существующий стиль */
-                width: 40px; 
+            .legend-img { /* Style existant */
+                width: 40px;
                 height: 40px;
             }
         }
-        
+
         /* --- Styles pour la Légende des Symboles --- */
         .symbol-legend-container {
             margin-top: 40px;
@@ -268,17 +268,17 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        .legend-img { /* Общий стиль для img легенды */
+        .legend-img { /* Style commun pour les légendes img */
             width: 50px;
             height: 50px;
             object-fit: contain;
             background: #fdfdfd;
             border-radius: 4px;
-            flex-shrink: 0; /* Предотвращает сжатие иконки */
+            flex-shrink: 0; /* Empêche la compression des icônes */
         }
-        
-        /* --- !!! НОВЫЕ СТИЛИ ЛЕГЕНДЫ (ЗАМЕНА ТАБЛИЦЫ) !!! --- */
-        /* 3 колонки для отображения на экране */
+
+        /* --- !!! NOUVEAUX STYLES DE LÉGENDES (REMPLACEMENT DU TABLEAU) !!! --- */
+        /* 3 colonnes pour l'affichage à l'écran */
         .legend-items-container {
             column-count: 3;
             column-gap: 20px;
@@ -287,13 +287,13 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             margin-top: 15px;
         }
         .legend-item {
-            display: inline-flex; /* Используем flex для красивого выравнивания иконки и текста */
+            display: inline-flex; /* Utilisons flex pour aligner correctement les icônes et le texte */
             align-items: center;
             gap: 10px;
             padding: 5px;
             width: 100%;
             box-sizing: border-box;
-            break-inside: avoid; /* Предотвращает разрыв элемента между колонками */
+            break-inside: avoid; /* Empêche la rupture de l'élément entre les colonnes */
             border-bottom: 1px solid #f0f0f0;
         }
         .legend-item:last-child {
@@ -301,7 +301,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         }
         .legend-item .legend-name {
             font-size: 0.9rem;
-            word-break: break-word; /* Перенос длинных названий */
+            word-break: break-word; /* Transfert des noms longs */
         }
 
     </style>
@@ -310,11 +310,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 <body>
 
     <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
-    
+
         <form method="POST" action="">
             <button type="submit" name="logout" class="logout-button no-print">Déconnexion</button>
         </form>
-        
+
         <?php if (!empty($all_cards_indices)): // N'afficher le bouton d'impression que si des cartes sont générées ?>
             <button onclick="window.print()" class="print-button no-print">🖨️ Imprimer / Exporter en PDF</button>
         <?php endif; ?>
@@ -340,7 +340,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 <div class="slider-container">
                     <div class="form-group">
                         <label for="min_var">Taille Minimale: <span id="minValLabel" class="slider-value"><?= $min_variance_mod ?></span>%</label>
-                        <input type="range" id="min_var" name="min_var" min="10" max="100" value="<?= $min_variance_mod ?>" 
+                        <input type="range" id="min_var" name="min_var" min="10" max="100" value="<?= $min_variance_mod ?>"
                                oninput="document.getElementById('minValLabel').innerText = this.value">
                     </div>
                     <div class="form-group">
@@ -353,21 +353,21 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             </form>
         </div>
 
-        
+
         <?php if (!empty($generation_error)): ?>
             <p class="error"><?= $generation_error ?></p>
-        
+
         <?php elseif (!empty($generation_message)): ?>
              <p class="info"><?= $generation_message ?></p>
         <?php endif; ?>
 
 
         <?php if (!empty($all_cards_indices)): ?>
-            
+
             <?php
 /**
- * ФУНКЦИЯ-ПОМОЩНИК (Версия 3.6 - Гарантированная вариативность)
- * Гарантирует минимальный диапазон для случайности размера.
+ * FONCTION AIDE (Version 3.6 - Variabilité garantie)
+ * Garantit une plage minimale pour le caractère aléatoire de la taille.
  */
 function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center_y = 50) {
     $slots = [];
@@ -390,30 +390,30 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
         if ($actual_max_size < $actual_min_size) $actual_max_size = $actual_min_size;
 
         if ($r == 0) {
-            // ЭТО ЦЕНТРАЛЬНЫЙ СЛОЙ: логика с гарантированным диапазоном
+            // C'EST LA COUCHE CENTRALE : logique à plage garantie
             for ($i = 0; $i < $c; $i++) {
                 $min_rand = $actual_min_size * 1.0;
                 $max_rand = $actual_max_size * 1.5;
 
-                // --- НОВАЯ УЛУЧШЕННАЯ ЛОГИКА ---
-                $absolute_min_floor = 12; // Абсолютный минимум
-                $min_range_width = 8;     // Минимальная ширина диапазона для случайности
+                // --- UNE NOUVELLE LOGIQUE AMÉLIORÉE ---
+                $absolute_min_floor = 12; // Minimum absolu
+                $min_range_width = 8;     // Largeur minimale de la bande pour le hasard
 
-                // 1. Применяем "пол", чтобы символ не был слишком маленьким
+                // 1. Nous utilisons « floor » pour que le symbole ne soit pas trop petit
                 if ($min_rand < $absolute_min_floor) {
                     $min_rand = $absolute_min_floor;
                 }
 
-                // 2. Гарантируем, что диапазон достаточно широкий для вариативности
+                // 2. Nous garantissons que la gamme est suffisamment large pour permettre une grande variabilité.
                 if ($max_rand < $min_rand + $min_range_width) {
                     $max_rand = $min_rand + $min_range_width;
                 }
-                // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
+                // --- FIN DE LA NOUVELLE LOGIQUE ---
 
-                // Применяем абсолютный максимум, чтобы символ не был слишком большим
+                // Nous appliquons le maximum absolu pour que le symbole ne soit pas trop grand
                 if ($max_rand > 50) $max_rand = 50;
 
-                // Финальная проверка, если лимит сделал диапазон некорректным
+                // Vérification finale si la limite a rendu la plage incorrecte
                 if ($min_rand > $max_rand) {
                     $min_rand = $max_rand;
                 }
@@ -428,7 +428,7 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
                 ];
             }
         } else {
-            // ЭТО ОРБИТАЛЬНЫЙ СЛОЙ: используем стандартную вариативность
+            // C'EST LA COUCHE ORBITALE : utilisons la variabilité standard
             $angle_step = (M_PI * 2) / $c;
             $angle_offset = (mt_rand() / mt_getrandmax()) * (M_PI * 2);
 
@@ -453,78 +453,78 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
 }
 
             /**
-             * ОСНОВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ МАКЕТА (Версия 3.0)
-             * Принимает $min_mod и $max_mod и передает их в build_slots.
+             * FONCTION PRINCIPALE DE GÉNÉRATION DE MAQUETTE (Version 3.0)
+             * Accepte $min_mod et $max_mod et les transmet à build_slots.
              */
             function getSymbolLayoutSlots($k, $min_mod, $max_mod) {
-    $all_recipes = []; 
+    $all_recipes = [];
 
-    // --- K = 8 (Порядок 7, 8 слотов) ---
-    // Рецепт без центра удален, чтобы гарантировать центральный элемент
+    // --- K = 8 (Ordre 7, 8 emplacements) ---
+    // La recette sans centre a été supprimée afin de garantir l'élément central
     $all_recipes[8] = [
         [ ['size' => 27, 'count' => 1, 'radius' => 0], ['size' => 21, 'count' => 7, 'radius' => 34.4] ]
     ];
-    
-    // --- K = 6 (Порядок 5, 6 слотов) ---
-    // Рецепт без центра удален
+
+    // --- K = 6 (Ordre 5, 6 emplacements) ---
+    // Recette sans centre supprimée
     $all_recipes[6] = [
         [ ['size' => 18, 'count' => 1, 'radius' => 0], ['size' => 25, 'count' => 5, 'radius' => 31] ]
     ];
 
-    // --- K = 5 (Порядок 4, 5 слотов) ---
-    // Рецепт без центра удален
+    // --- K = 5 (Ordre 4, 5 emplacements) ---
+    // Recette sans centre supprimée
     $all_recipes[5] = [
         [ ['size' => 12, 'count' => 1, 'radius' => 0], ['size' => 28, 'count' => 4, 'radius' => 29] ]
     ];
-    
-    // --- K = 4 (Порядок 3, 4 слота) ---
-    // Старые рецепты заменены на один, который всегда имеет центр
+
+    // --- K = 4 (Ordre 3, 4 emplacements) ---
+    // Les anciennes recettes ont été remplacées par une seule, qui a toujours un centre
     $all_recipes[4] = [
         [ ['size' => 25, 'count' => 1, 'radius' => 0], ['size' => 25, 'count' => 3, 'radius' => 32] ]
     ];
-    
-    // --- K = 3 (Порядок 2, 3 слота) ---
-    // Рецепт без центра удален
+
+    // --- K = 3 (Ordre 2, 3 emplacements) ---
+    // Recette sans centre supprimée
     $all_recipes[3] = [
         [ ['size' => 23, 'count' => 1, 'radius' => 0], ['size' => 23, 'count' => 2, 'radius' => 33] ]
     ];
 
-    // 1. Получить список доступных рецептов для нашего $k
-    $recipes_for_k = isset($all_recipes[$k]) ? $all_recipes[$k] : $all_recipes[3]; // Фоллбэк на k=3
-    
-    // 2. Случайно выбрать ОДИН рецепт из списка (теперь все они с центром)
+    // 1. Obtenir la liste des recettes disponibles pour notre $k
+    $recipes_for_k = isset($all_recipes[$k]) ? $all_recipes[$k] : $all_recipes[3]; // Défaut sur k=3
+
+    // 2. Choisir au hasard UNE recette dans la liste (elles sont désormais toutes centrées)
     $chosen_recipe_layers = $recipes_for_k[array_rand($recipes_for_k)];
-    
-    // 3. Построить и вернуть массив слотов, ПЕРЕДАВ МОДИФИКАТОРЫ СЛАЙДЕРОВ
+
+    // 3. Construire et renvoyer le tableau des emplacements, EN TRANSMETTANT LES MODIFICATEURS DES SLIDERS
     return build_slots($chosen_recipe_layers, $min_mod, $max_mod);
 }
             ?>
             <div class="print-cards-section">
             <div class="cards-container">
                 <?php foreach ($all_cards_indices as $card_index => $symbol_indices_array): ?>
-                    
+
                     <?php
                     $k = count($symbol_indices_array);
-                    // Получаем массив слотов, ПЕРЕДАВАЯ значения слайдеров в генератор
+                    // Nous obtenons le tableau emplacements en TRANSMETTANT les valeurs des curseurs au générateur
                     $layout_slots = getSymbolLayoutSlots($k, $min_variance_mod, $max_variance_mod);
-                    
-                    // Перемешиваем массив слотов.
+
+                    // Nous mélangeons le tableau des emplacements.
                     shuffle($layout_slots);
                     ?>
 
-                    <div class="dobble-card"> 
+                    <div class="dobble-card">
                         <div class="card-header no-print">Carte <?= $card_index + 1 ?></div>
-                        
-                        <?php 
-                        foreach ($symbol_indices_array as $key => $symbol_db_index): 
+
+                        <?php
+                        foreach ($symbol_indices_array as $key => $symbol_db_index):
                             if (!isset($layout_slots[$key])) {
-                                continue; 
+                                continue;
                             }
                             $symbol_data = $symbols_to_use[$symbol_db_index];
                             $slot = $layout_slots[$key];
-                            
-                            $rotation = rand(-180, 180);      
-                            
+
+                            $rotation = rand(-180, 180);
+
                             $style = "position: absolute; " .
                                      "width: {$slot['size']}%; " .
                                      "height: {$slot['size']}%; " .
@@ -533,27 +533,27 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
                                      "transform: rotate({$rotation}deg); " .
                                      "z-index: {$slot['z_index']};";
                             ?>
-                            
-                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
-                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
-                                 title="<?= htmlspecialchars($symbol_data['name']) ?>"
-                                 class="symbol" 
-                                 style="<?= $style ?>">
-                        <?php endforeach; // Конец цикла по символам ?>
-                    </div>
-                <?php endforeach; // Конец цикла по картам ?>
 
-            </div> 
-                        </div> 
+                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>"
+                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>"
+                                 title="<?= htmlspecialchars($symbol_data['name']) ?>"
+                                 class="symbol"
+                                 style="<?= $style ?>">
+                        <?php endforeach; // Fin du cycle par symboles ?>
+                    </div>
+                <?php endforeach; // Fin du cycle des cartes ?>
+
+            </div>
+                        </div>
             <div class="symbol-legend-container">
                 <h2>Symboles utilisés (Légende)</h2>
                 <p>Liste de tous les symboles uniques (<?= count($symbols_to_use) ?>) utilisés dans ce jeu.</p>
-                
+
                 <div class="legend-items-container">
                     <?php foreach ($symbols_to_use as $symbol_data): ?>
                         <div class="legend-item">
-                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>" 
-                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>" 
+                            <img src="<?= htmlspecialchars($uploadDir . $symbol_data['image_name']) ?>"
+                                 alt="<?= htmlspecialchars($symbol_data['name']) ?>"
                                  class="legend-img">
                             <span class="legend-name"><?= htmlspecialchars($symbol_data['name']) ?></span>
                         </div>
@@ -562,7 +562,7 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
 
             </div>
             <?php endif; ?>
-        
+
 
     <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
         <div class="login-container">

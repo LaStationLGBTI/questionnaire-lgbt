@@ -1,14 +1,14 @@
 <?php
-// Подключаем конфигурацию и запускаем сессию
+// Nous connectons la configuration et lançons la session
 require_once 'conf.php';
 session_start();
 
-// Инициализируем счетчик попыток входа
+// Initialisation du compteur de tentatives de connexion
 if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['login_attempts'] = 0;
 }
 
-// Обработка выхода из системы
+// Traitement de la déconnexion
 if (isset($_POST['logout'])) {
     session_unset();
     session_destroy();
@@ -16,7 +16,7 @@ if (isset($_POST['logout'])) {
     exit();
 }
 
-// Обработка входа
+// Traitement de l'entrée
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     if ($_SESSION['login_attempts'] < 3) {
         $login = $_POST['identifiant'];
@@ -71,22 +71,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 <body>
 
     <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
-        
+
         <div class="container">
             <form action="" method="post" class="logout-form">
                 <button type="submit" name="logout">Déconnexion</button>
             </form>
-            
+
             <h1>Visualiseur de la Base de Données</h1>
 
             <?php
-            // ================== ИЗМЕНЕНИЯ НАЧИНАЮТСЯ ЗДЕСЬ ==================
+            // ================== LES CHANGEMENTS COMMENCENT ICI ==================
             try {
                 $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // --- ИЗМЕНЕНИЕ 1: Добавлена логика для третьей таблицы ---
-                $current_view_param = $_GET['view'] ?? 'results'; // 'results' будет по умолчанию
+                // --- MODIFICATION 1 : Ajout d'une logique pour le troisième tableau ---
+                $current_view_param = $_GET['view'] ?? 'results'; // 'results' par défaut
 
                 if ($current_view_param === 'questions') {
                     $view = 'GSDatabase';
@@ -95,41 +95,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 } else {
                     $view = 'GSDatabaseR';
                 }
-                
-                // --- ИЗМЕНЕНИЕ 2: Добавлена кнопка для новой вкладки ---
+
+                // --- MODIFICATION 2 : Ajout d'un bouton pour un nouvel onglet ---
                 echo '<div class="tabs">';
                 echo '<a href="?view=results" class="' . ($view === 'GSDatabaseR' ? 'active' : '') . '">Voir les Résultats (GSDatabaseR)</a>';
                 echo '<a href="?view=questions" class="' . ($view === 'GSDatabase' ? 'active' : '') . '">Voir les Questions (GSDatabase)</a>';
-                echo '<a href="?view=texts" class="' . ($view === 'GSDatabaseT' ? 'active' : '') . '">Voir les Textes (GSDatabaseT)</a>'; // Новая строка
+                echo '<a href="?view=texts" class="' . ($view === 'GSDatabaseT' ? 'active' : '') . '">Voir les Textes (GSDatabaseT)</a>'; // Nouvelle chaîne
                 echo '</div>';
 
                 echo "<h2>Affichage de la table : `$view`</h2>";
 
-                // Получаем названия колонок
+                // Obtenir les noms des colonnes
                 $stmt_cols = $pdo->query("DESCRIBE `$view`");
                 $columns = $stmt_cols->fetchAll(PDO::FETCH_COLUMN);
 
-                // Получаем все данные из таблицы
+                // Nous obtenons toutes les données du tableau
                 $stmt_data = $pdo->query("SELECT * FROM `$view` ORDER BY id DESC");
                 $results = $stmt_data->fetchAll(PDO::FETCH_ASSOC);
 
                 if (count($results) > 0) {
                     echo "<table>";
-                    // Динамически создаем заголовок таблицы
+                    // Création dynamique d'un en-tête de tableau
                     echo "<thead><tr>";
                     foreach ($columns as $col) {
                         echo "<th>" . htmlspecialchars($col) . "</th>";
                     }
                     echo "</tr></thead>";
-                    
-                    // Динамически выводим строки
+
+                    // Affichage dynamique des chaînes
 // NOUVEAU CODE CORRIGÉ
 echo "<tbody>";
 foreach ($results as $row) {
     echo "<tr>";
     foreach ($columns as $col) {
         // On a simplement enlevé htmlspecialchars()
-        echo "<td>" . $row[$col] . "</td>"; 
+        echo "<td>" . $row[$col] . "</td>";
     }
     echo "</tr>";
 }
@@ -141,7 +141,7 @@ echo "</tbody></table>";
             } catch (PDOException $e) {
                 echo "<p class='error'>Erreur de connexion à la base de données : " . $e->getMessage() . "</p>";
             }
-            // =================== ИЗМЕНЕНИЯ ЗАКАНЧИВАЮТСЯ ЗДЕСЬ ===================
+            // =================== LES CHANGEMENTS S'ARRÊTENT ICI ===================
             ?>
         </div>
 

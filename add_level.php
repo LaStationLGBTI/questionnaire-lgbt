@@ -3,16 +3,16 @@
 require_once 'conf.php';
 session_start();
 
-// --- СЕКЦИЯ 1: Логика входа и выхода (скопировано из gestion_gsdatabase.php) ---
+// --- SECTION 1 : Logique d'entrée et de sortie (copié depuis gestion_gsdatabase.php) ---
 
 $login_error = null;
 
-// Инициализируем счетчик попыток входа
+// Initialisation du compteur de tentatives de connexion
 if (!isset($_SESSION['login_attempts'])) {
     $_SESSION['login_attempts'] = 0;
 }
 
-// Обработка выхода из системы
+// Traitement de la déconnexion
 if (isset($_POST['logout'])) {
     session_unset();
     session_destroy();
@@ -20,7 +20,7 @@ if (isset($_POST['logout'])) {
     exit();
 }
 
-// Обработка входа
+// Traitement de l'entrée
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     if ($_SESSION['login_attempts'] < 3) {
         $login = $_POST['identifiant'];
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             if ($user && $pass === $user['passconn']) {
                 $_SESSION['is_logged_in'] = true;
                 $_SESSION['login_attempts'] = 0;
-                header('Location: ' . $_SERVER['PHP_SELF']); // Перезагружаем, чтобы убрать POST
+                header('Location: ' . $_SERVER['PHP_SELF']); // Recharger pour supprimer le POST
                 exit();
             } else {
                 $_SESSION['login_attempts']++;
@@ -47,15 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 }
 
 
-// --- СЕКЦИЯ 2: Логика управления уровнями (Только если пользователь вошел) ---
+// --- SECTION 2 : Logique de gestion des niveaux (uniquement si l'utilisateur est connecté) ---
 
 $message = '';
-$action = 'menu'; // Значение по умолчанию
+$action = 'menu'; // Valeur par défaut
 $id = null;
 $pdo = null;
 
 if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
-    
+
     // --- NOUVEAU : Gestion des messages de redirection ---
     if (isset($_GET['created'])) {
         $message = "<p class='success'>Niveau créé avec succès !</p>";
@@ -150,7 +150,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             }
         }
     }
-} // --- Конец блока "if (is_logged_in)" ---
+} // --- Fin du bloc "if (is_logged_in)" ---
 
 ?>
 <!DOCTYPE html>
@@ -166,7 +166,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     border-bottom: 1px solid #eee;
 }
 .admin-nav .nav-button {
-    background-color: #17a2b8; /* Бирюзовый для отличия */
+    background-color: #17a2b8; /* Turquoise pour se démarquer */
     color: white;
     padding: 0.6rem 1.2rem;
     border-radius: 5px;
@@ -187,15 +187,15 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         input[type="text"], input[type="password"], input[type="number"], textarea, select { width: 100%; padding: 0.8rem; border-radius: 5px; border: 1px solid #ddd; box-sizing: border-box; }
         input[type="number"][readonly] { background-color: #eee; cursor: not-allowed; }
         textarea { resize: vertical; min-height: 150px; }
-        
+
         /* Styles de boutons (conservés) */
         button, .button-link { background-color: #007bff; color: white; padding: 0.8rem 1.5rem; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; transition: background-color 0.3s; width: 100%; text-decoration: none; display: inline-block; text-align: center; box-sizing: border-box; }
         button:hover, .button-link:hover { background-color: #0056b3; }
-        
+
         /* Styles de messages (conservés) */
         .error { color: #dc3545; background: #f8d7da; border: 1px solid #f5c6cb; padding: 1rem; border-radius: 5px; margin-top: 1rem; text-align: center; }
         .success { color: #155724; background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 5px; margin-top: 1rem; }
-        
+
         /* Styles de gestion (conservés) */
         .action-menu { text-align: center; margin: 2rem 0; }
         .action-menu .button-link { width: auto; margin: 0 10px; padding: 1rem 2rem; }
@@ -205,8 +205,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         .form-actions button { width: auto; flex-grow: 1; }
         .form-actions button[name="delete_level"] { background-color: #dc3545; }
         .form-actions button[name="delete_level"]:hover { background-color: #c82333; }
-        
-        /* --- NOUVEAUX STYLES (из gestion_gsdatabase.php) --- */
+
+        /* --- NOUVEAUX STYLES (de gestion_gsdatabase.php) --- */
         .login-container { max-width: 500px; margin-top: 10vh; }
         .logout-form { position: absolute; top: 20px; right: 20px; }
         .logout-form button { background-color: #6c757d; width: auto; }
@@ -216,12 +216,12 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 <body>
 
 <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
-    
+
     <div class="container">
         <form action="" method="post" class="logout-form">
             <button type="submit" name="logout">Déconnexion</button>
         </form>
-        
+
         <h1>Panneau de Gestion des Niveaux</h1>
         <?php if ($message) echo $message; // Affichage global des messages ?>
 
@@ -261,7 +261,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             </form>
 
         <?php
-        // VUE 3: Sélecteur для l'édition/suppression
+        // VUE 3: Sélecteur pour l'édition/suppression
         elseif ($action === 'edit' && !$id):
         ?>
             <a href="?action=menu" class="back-link">&larr; Retour au menu</a>
@@ -308,7 +308,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         ?>
             <a href="?action=edit" class="back-link">&larr; Retour au choix du niveau</a>
             <h2>Modifier/Supprimer le niveau : <?= htmlspecialchars($level_data['titre']) ?></h2>
-            
+
             <form action="" method="post">
                 <input type="hidden" name="id" value="<?= htmlspecialchars($level_data['level']) ?>">
                 <div class="form-group">
@@ -325,7 +325,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 </div>
                 <div class="form-actions">
                     <button type="submit" name="update_level">Mettre à jour</button>
-                    <button type="submit" name="delete_level" 
+                    <button type="submit" name="delete_level"
                             onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce niveau ?\n\nATTENTION : Toutes les questions associées à ce niveau (dans GSDatabase) seront également supprimées de façon irréversible.');">
                         Supprimer le niveau
                     </button>
@@ -338,7 +338,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     </div>
 
 <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
-    
+
     <div class="container login-container">
         <h1>Accès Bloqué</h1>
         <p class="error">Votre accès est bloqué après 3 tentatives infructueuses.</p>

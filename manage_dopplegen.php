@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
 // ---- Logique de la page (UNIQUEMENT SI CONNECTÉ) ----
 if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
-    
+
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -51,7 +51,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         $name = trim($_POST['name']);
         $imageFile = $_FILES['image'];
 
-        $_SESSION['last_category'] = $category; // Запоминаем категорию
+        $_SESSION['last_category'] = $category; // Mémoriser la catégorie
 
         if (!empty($category) && !empty($name) && $imageFile['error'] === UPLOAD_ERR_OK) {
             $fileExtension = pathinfo($imageFile['name'], PATHINFO_EXTENSION);
@@ -98,35 +98,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['duplicate_category'])
     $new_category_name = trim($_POST['new_category_name']);
 
     if (!empty($source_category) && !empty($new_category_name) && $source_category !== $new_category_name) {
-        // 1. Получаем все записи из исходной категории
+        // 1. Nous récupérons toutes les entrées de la catégorie source.
         $stmt_select = $pdo->prepare("SELECT name, image_name FROM dopplegen WHERE category = ?");
         $stmt_select->execute([$source_category]);
         $entries_to_copy = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
 
-        $pdo->beginTransaction(); // Начинаем транзакцию для безопасности
+        $pdo->beginTransaction(); // Nous commençons la transaction pour des raisons de sécurité
         try {
             $stmt_insert = $pdo->prepare("INSERT INTO dopplegen (category, name, image_name) VALUES (?, ?, ?)");
-            
+
             foreach ($entries_to_copy as $entry) {
                 $originalImagePath = $uploadDir . $entry['image_name'];
-                
-                // 2. Создаем новое уникальное имя для файла изображения
+
+                // 2. Créer un nouveau nom unique pour le fichier image
                 $fileExtension = pathinfo($entry['image_name'], PATHINFO_EXTENSION);
                 $newSafeFilename = uniqid('img_', true) . '.' . strtolower($fileExtension);
                 $newImagePath = $uploadDir . $newSafeFilename;
 
-                // 3. Копируем файл и вставляем новую запись в БД
+                // 3. Copier le fichier et insérer une nouvelle entrée dans la base de données
                 if (file_exists($originalImagePath) && copy($originalImagePath, $newImagePath)) {
                     $stmt_insert->execute([$new_category_name, $entry['name'], $newSafeFilename]);
                 } else {
-                    // Если копия файла не удалась, отменяем все
+                    // Si la copie du fichier a échoué, tout annuler
                     throw new Exception("Impossible de copier l'image : " . htmlspecialchars($entry['image_name']));
                 }
             }
-            $pdo->commit(); // Подтверждаем изменения
+            $pdo->commit(); // Confirmation des modifications
             $message = "<p class='msg success'>Catégorie \"".htmlspecialchars($source_category)."\" dupliquée avec succès vers \"".htmlspecialchars($new_category_name)."\" !</p>";
         } catch (Exception $e) {
-            $pdo->rollBack(); // Откатываем изменения в случае ошибки
+            $pdo->rollBack(); // Annuler les modifications en cas d'erreur
             $message = "<p class='msg error'>Erreur lors de la duplication : " . $e->getMessage() . "</p>";
         }
     } else {
@@ -139,17 +139,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
     $new_category_name = trim($_POST['new_category_name']);
 
     if (!empty($old_category_name) && !empty($new_category_name) && $old_category_name !== $new_category_name) {
-        // Проверяем, не существует ли уже категория с таким новым именем
+        // Nous vérifions qu'il n'existe pas déjà une catégorie portant ce nouveau nom
         $stmt_check = $pdo->prepare("SELECT COUNT(*) FROM dopplegen WHERE category = ?");
         $stmt_check->execute([$new_category_name]);
         if ($stmt_check->fetchColumn() > 0) {
             $message = "<p class='msg error'>Une catégorie nommée \"".htmlspecialchars($new_category_name)."\" existe déjà. Veuillez choisir un autre nom.</p>";
         } else {
-            // Если имя свободно, переименовываем
+            // Si le nom est disponible, nous le renommons
             $stmt_update = $pdo->prepare("UPDATE dopplegen SET category = ? WHERE category = ?");
             $stmt_update->execute([$new_category_name, $old_category_name]);
-            
-            // Перенаправляем на страницу с уже переименованной категорией
+
+            // Redirection vers la page avec la catégorie déjà renommée
             header('Location: manage_dopplegen.php?category_select=' . urlencode($new_category_name));
             exit();
         }
@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
 
     $selected_category = '';
     $entries = [];
-    $category_count_message = ''; // Новая переменная для сообщения о количестве
+    $category_count_message = ''; // Nouvelle variable pour le message sur la quantité
 
     if (isset($_GET['category_select']) && !empty($_GET['category_select'])) {
         $selected_category = $_GET['category_select'];
@@ -171,9 +171,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
         $stmt_entries->execute([$selected_category]);
         $entries = $stmt_entries->fetchAll(PDO::FETCH_ASSOC);
 
-        // --- НОВЫЙ БЛОК: Логика подсчета для Dopplegen ---
+        // --- NOUVEAU BLOC : Logique de calcul pour Dopplegen ---
         $count = count($entries);
-        $tiers = [7, 13, 21, 31, 57]; // Уровни игры
+        $tiers = [7, 13, 21, 31, 57]; // Niveaux du jeu
         $needed = 0;
         $next_tier = 0;
 
@@ -181,20 +181,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
             if ($count < $tier) {
                 $needed = $tier - $count;
                 $next_tier = $tier;
-                break; // Нашли следующую цель
+                break; // Nous avons trouvé la prochaine cible
             }
         }
 
         if ($count == 0) {
             $category_count_message = "<p class='error'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: 0</strong>. <br>Il faut <strong>7</strong> symboles pour le premier niveau de jeu.</p>";
         } elseif ($needed > 0) {
-            // Не хватает до следующего уровня
+            // Il manque jusqu'au niveau suivant
             $category_count_message = "<p class='info'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: $count</strong>. <br>Il manque <strong>$needed</strong> symboles pour atteindre le prochain palier (<strong>$next_tier</strong> symboles).</p>";
         } elseif ($count >= 57) {
-            // Достигнут максимальный уровень
+            // Le niveau maximal a été atteint
             $category_count_message = "<p class='success'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: $count</strong>. <br>Vous avez assez de symboles (57+) pour le jeu maximal !</p>";
         } else {
-            // Количество точно совпадает с одним из уровней (7, 13, 21 or 31)
+            // Le nombre correspond exactement à l'un des niveaux (7, 13, 21 ou 31)
             $category_count_message = "<p class='success'>Catégorie \"".htmlspecialchars($selected_category)."\". <strong>Total: $count</strong>. <br>C'est un compte parfait pour un jeu !</p>";
         }
         // --- Fin de logique ---
@@ -233,13 +233,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
         .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .login-container { max-width: 400px; margin: 50px auto; padding: 2rem; background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        
-/* --- Стили для сетки результатов --- */
+
+/* --- Styles pour la grille de résultats --- */
 .results-grid {
     display: grid;
-    /* Создает адаптивные колонки: каждая минимум 150px шириной */
+    /* Crée des colonnes adaptatives : chacune d'au moins 150 px de largeur */
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px; /* Расстояние между карточками */
+    gap: 15px; /* Distance entre les cartes */
     margin-top: 20px;
 }
 .result-card {
@@ -253,24 +253,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
     justify-content: space-between;
 }
 .result-card img {
-    max-width: 90px; /* Делаем картинку компактнее */
+    max-width: 90px; /* Rendre l'image plus compacte */
     max-height: 90px;
     width: auto;
     height: auto;
     border-radius: 4px;
-    margin: 0 auto 10px auto; /* Центрируем изображение */
+    margin: 0 auto 10px auto; /* Centrer l'image */
 }
 .result-card p {
     margin: 0 0 10px 0;
     font-size: 0.9em;
-    word-wrap: break-word; /* Для переноса слишком длинных названий */
+    word-wrap: break-word; /* Pour transférer des noms trop longs */
     flex-grow: 1;
 }
 .result-card form {
     margin: 0;
 }
 .result-card .delete-button {
-    width: 100%; /* Кнопка на всю ширину карточки */
+    width: 100%; /* Bouton sur toute la largeur de la carte */
     padding: 6px 10px;
     font-size: 0.9em;
 }
@@ -279,11 +279,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
 <body>
 
     <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
-    
+
         <form method="POST" action="">
             <button type="submit" name="logout" class="logout-button">Déconnexion</button>
         </form>
-        
+
         <h1>Panneau de gestion "Dopplegen"</h1>
         <?php if ($message) echo $message; // Affiche les messages de succès ou d'erreur ?>
 
@@ -299,13 +299,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
             Si vous sélectionnez une catégorie avec 40 symboles, le générateur créera le jeu d'ordre 5 (utilisant 31 de vos 40 symboles).
         </div>
         <div class="main-container">
-            
+
             <div class="panel panel-left">
                 <h2>Ajouter une nouvelle entrée</h2>
                 <form action="manage_dopplegen.php" method="POST" enctype="multipart/form-data">
                     <div class="form-group">
                         <label for="category">Catégorie :</label>
-                        <input type="text" id="category" name="category" required 
+                        <input type="text" id="category" name="category" required
                                value="<?= htmlspecialchars(isset($_SESSION['last_category']) ? $_SESSION['last_category'] : '') ?>">
                     </div>
                     <div class="form-group">
@@ -322,7 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
 
             <div class="panel panel-right">
                 <h2>Gérer les entrées existantes</h2>
-                
+
                 <form action="manage_dopplegen.php" method="GET">
                     <div class="form-group">
                         <label for="category_select">Filtrer par catégorie :</label>
@@ -370,7 +370,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
 <?php endif; ?>
                 <?php if (!empty($category_count_message)) echo $category_count_message; ?>
                 <?php if (!empty($selected_category) && empty($entries)): ?>
-                    <?php if (empty($category_count_message)): // Показать это, только если сообщение о счете еще не отображено (т.е. категория выбрана, но пуста) ?>
+                    <?php if (empty($category_count_message)): // Afficher uniquement si le message concernant le compte n'est pas encore affiché (c'est-à-dire que la catégorie est sélectionnée, mais vide) ?>
                         <p style="margin-top: 20px;">Aucune entrée trouvée pour cette catégorie.</p>
                     <?php endif; ?>
 <?php elseif (!empty($entries)): ?>
