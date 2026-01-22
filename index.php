@@ -35,7 +35,7 @@ $lang = $_SESSION['language'];
 
 $texts = [
     'fr' => [
-		'choose_questionnaire' => 'test Choisissez un questionnaire',
+		'choose_questionnaire' => 'Choisissez un questionnaire',
         'questionnaire_level' => 'L\'enquête : Module `{level}`',
         'no_questionnaires_available' => 'Aucun questionnaire disponible.',
         'project_title' => 'Sensibilisation aux violences sexuelles et sexistes et autres discriminations (Formation en ligne et en auto-évaluation)',
@@ -1689,6 +1689,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
