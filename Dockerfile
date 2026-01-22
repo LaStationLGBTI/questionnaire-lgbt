@@ -9,5 +9,5 @@ USER root
 RUN apk add --no-cache php-pdo_mysql
 USER nobody
 
-COPY --chown=nobody --chmod=0400 . /var/www/html/
-COPY --chown=nobody --chmod=0400 conf.php.example /var/www/html/conf.php
+COPY --chown=nobody --exclude=.git --exclude=Dockerfile . /var/www/html/
+COPY --chown=nobody conf.php.example /var/www/html/conf.php
