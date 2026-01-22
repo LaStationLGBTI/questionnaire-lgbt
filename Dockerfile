@@ -9,5 +9,6 @@ USER root
 RUN apk add --no-cache php-pdo_mysql
 USER nobody
 
-COPY --chown=nobody --exclude=.git --exclude=Dockerfile . /var/www/html/
+COPY --chown=nobody . /var/www/html/
 COPY --chown=nobody conf.php.example /var/www/html/conf.php
+RUN rm -rf .git Dockerfile .dockerignore
