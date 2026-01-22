@@ -1201,7 +1201,7 @@ if(isset($_SESSION['reponses'])){
             const newDiv = document.createElement('div');
             newDiv.id = "footer-placeholder";
             section.insertAdjacentElement('afterend', newDiv);
-            fetch('pages/footer.php')
+            fetch('/pages/footer.php')
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('footer-placeholder').innerHTML = data;
@@ -1689,6 +1689,7 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
 
 
 
