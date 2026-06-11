@@ -149,15 +149,22 @@ $lang = $_SESSION['language'];
             margin: 0;
             height: 100%;
             background-image: url('images/background.png');
-            background-size: cover;
+			background-size: 100% 100%;
             background-repeat: no-repeat;
         }
 
         .u-container-layout.u-container-layout-1 {
             margin: 0;
             height: 100%;
+			box-sizing: border-box;
+			padding-left: 10%;
+			padding-right: 10%;
         }
-
+		.u-container-layout-1 .u-sheet {
+                  max-width: 100% !important;
+                  margin-left: auto;
+                  margin-right: auto;
+            }
         .u-container-layout.u-similar-container.u-container-layout-8 {
             padding: 0;
         }
