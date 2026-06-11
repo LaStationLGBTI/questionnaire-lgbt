@@ -6,7 +6,7 @@ ENV DB_PASSWORD="PASSWORD"
 ENV DB_NAME="questionnaire-lgbti"
 
 USER root
-RUN apk add --no-cache php-pdo_mysql
+RUN apk add --no-cache php85-pdo_mysql
 USER nobody
 
 COPY --chown=nobody . /var/www/html/
