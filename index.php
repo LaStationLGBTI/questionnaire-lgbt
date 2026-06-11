@@ -173,7 +173,10 @@ $lang = $_SESSION['language'];
             background-color: #ffd8da;
             border-radius: 50% 20% / 10% 40% !important;
         }
-
+		.u-text-default.u-text-1 {
+                  margin-left: auto;
+                  margin-right: auto;
+              }
         .u-align-center.u-container-align-center.u-container-align-center-md.u-container-align-center-xl.u-container-align-center-xs.u-container-style {
             width: 22vw;
         }
