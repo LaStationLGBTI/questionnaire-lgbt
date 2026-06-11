@@ -1682,7 +1682,7 @@ if(isset($_SESSION['reponses'])){
 					else if (xhr.readyState == 4) {
 						// Si la requête s'est terminée par une erreur, nous autorisons à nouveau les clics
 						timeout = false;
-						alert('Une erreur s'est produite. Veuillez réessayer.');
+						alert("Une erreur s'est produite. Veuillez réessayer.");
 					}
 				};
 				if (ismultiple == true) {
