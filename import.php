@@ -84,6 +84,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                     // ================== CORRECTION ICI ==================
 
                     $pdo->beginTransaction();
+
+                    // 0. Création éventuelle du niveau (titre + description) dans GSDatabaseT
+                    $titre = isset($_POST['titre']) ? trim($_POST['titre']) : '';
+                    $text  = isset($_POST['text'])  ? trim($_POST['text'])  : '';
+                    if ($titre !== '') {
+                        $stmt_t = $pdo->prepare("SELECT COUNT(*) FROM GSDatabaseT WHERE level = ?");
+                        $stmt_t->execute([$level_to_check]);
+                        if ($stmt_t->fetchColumn() > 0) {
+                            throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà dans GSDatabaseT (titre/description). Supprimez-le d'abord ou laissez le titre vide.");
+                        }
+                        $stmt_t = $pdo->prepare("INSERT INTO GSDatabaseT (level, titre, text) VALUES (?, ?, ?)");
+                        $stmt_t->execute([$level_to_check, $titre, $text]);
+                    }
+
                     // 1. Suppression de l'image et du son de la requête
                     $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, expliq)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -108,7 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                     // =======================================================
 
                     $pdo->commit();
-                    $import_message = "<p class='success'>Importation réussie. <strong>" . count($all_rows) . "</strong> questions ajoutées pour le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>.</p>";
+                    $level_msg = ($titre !== '') ? " Le titre et la description du niveau ont également été créés dans GSDatabaseT." : "";
+                    $import_message = "<p class='success'>Importation réussie. <strong>" . count($all_rows) . "</strong> questions ajoutées pour le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>." . $level_msg . "</p>";
 
                 } catch (Exception $e) {
                     if(isset($pdo) && $pdo->inTransaction()){ $pdo->rollBack(); }
@@ -150,7 +165,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
             </form>
             <h1>Importer un Questionnaire</h1>
             <?php if ($import_message) echo $import_message; ?>
-            <form action="import.php" method="post" enctype="multipart-form-data" style="margin-top: 2rem;">
+            <form action="import.php" method="post" enctype="multipart/form-data" style="margin-top: 2rem;">
+                <div class="form-group">
+                    <label for="titre">Titre du module (optionnel — crée le niveau dans GSDatabaseT) :</label>
+                    <input type="text" id="titre" name="titre" placeholder="Ex : Violences sexuelles, sexistes, consentement et emprise">
+                </div>
+                <div class="form-group">
+                    <label for="text">Description / Avertissement du module (HTML accepté, optionnel) :</label>
+                    <textarea id="text" name="text" rows="8" style="width:100%; padding:0.8rem; border:1px solid #ddd; border-radius:5px; box-sizing:border-box; resize:vertical; font-family:inherit; font-size:1rem;"></textarea>
+                </div>
                 <div class="form-group">
                     <label for="questionnaire_file">Sélectionnez un fichier de questionnaire (.csv) :</label>
                     <input type="file" id="questionnaire_file" name="questionnaire_file" accept=".csv" required>
