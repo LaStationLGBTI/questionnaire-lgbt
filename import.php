@@ -85,12 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
 
                     $pdo->beginTransaction();
                     // 1. Suppression de l'image et du son de la requête
-                    $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, expliq)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
 
                     foreach ($all_rows as $row) {
-                        // 2. Nous avons vérifié que le nombre de valeurs transmises (9) correspond à la requête
+                        // 2. Nous avons vérifié que le nombre de valeurs transmises (10) correspond à la requête
                         $stmt->execute([
                             trim($row[0]) ?? null,      // level
                             trim($row[1]) ?? null,      // question
@@ -100,7 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                             trim($row[5]) ?? 'null',    // rep4
                             trim($row[6]) ?? 'null',    // rep5
                             trim($row[7]) ?? null,      // answer
-                            trim($row[8]) ?? null       // qtype
+                            trim($row[8]) ?? null,      // qtype
+                            isset($row[9]) ? trim($row[9]) : null // expliq (colonne J, optionnelle)
                         ]);
                     }
 
