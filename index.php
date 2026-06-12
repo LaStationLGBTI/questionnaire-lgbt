@@ -13,6 +13,17 @@ if (isset($_POST['reset_session'])) {
     session_unset();
     session_destroy();
 }
+// Retour au choix du module : on efface uniquement la sélection et l'état du
+// questionnaire, en conservant la langue (pas de session_destroy / unset global).
+if (isset($_GET['back'])) {
+    foreach (['level', 'start', 'LastQuestion', 'TotalQuestions', 'QuestionToUse',
+              'Rep1', 'Rep2', 'Rep3', 'Rep4', 'Rep5', 'IdInUse', 'answer', 'qtype',
+              'expliqs', 'reponses', 'id_user', 'finish', 'acc', 'genre', 'orient', 'emailr'] as $k) {
+        unset($_SESSION[$k]);
+    }
+    header('Location: index.php');
+    exit();
+}
 if (isset($_GET['level']) && !isset($_SESSION['level'])) {
     $new_level = $_GET['level'];
     $lang_to_preserve = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
@@ -916,6 +927,10 @@ if (!isset($_SESSION['level'])) {
 
                 <form method="POST" action="">
                     <div class="u-align-right u-form-group u-form-submit">
+                        <a href="index.php?back=1"
+                           style="display:inline-block; margin-top:1vh; margin-right:12px; padding:0.55em 1.3em; border-radius:50px; border:2px solid #c81d77; color:#c81d77; text-decoration:none; font-weight:700; font-size:14px;">
+                            &larr; <?php echo $lang === 'de' ? 'Zurück zur Modulauswahl' : 'Retour au choix du module'; ?>
+                        </a>
                         <button style="margin-top:1vh;" value="1" name="start" type="submit"
                             class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
                             <?php echo $texts[$lang]['continue']; ?>
@@ -1761,47 +1776,4 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
