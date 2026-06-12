@@ -753,23 +753,85 @@ if (!isset($_SESSION['level'])) {
                     <?php elseif (empty($levels)): ?>
                         <p class="u-text"><?= $texts[$lang]['no_questionnaires_available'] ?></p>
                     <?php else: ?>
-                        <div style="margin-top: 2em; padding-bottom: 2em;">
-                            <?php foreach ($levels as $level): ?>
-                                <b><a href="index.php?level=<?= htmlspecialchars($level) ?>"
+                        <style>
+                            .module-grid {
+                                display: grid;
+                                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                                gap: 22px;
+                                max-width: 940px;
+                                margin: 2em auto;
+                                padding: 0 1em 2em;
+                            }
+                            .module-card {
+                                position: relative;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: flex-start;
+                                background: #fff;
+                                border-radius: 18px;
+                                padding: 28px 22px 20px;
+                                text-decoration: none;
+                                color: #2b2b2b;
+                                border: 1px solid #f0e3e6;
+                                box-shadow: 0 4px 14px rgba(0,0,0,.08);
+                                overflow: hidden;
+                                transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+                            }
+                            .module-card:hover, .module-card:focus-visible {
+                                transform: translateY(-6px);
+                                box-shadow: 0 12px 26px rgba(0,0,0,.16);
+                                border-color: var(--accent);
+                                outline: none;
+                            }
+                            .module-card__stripe {
+                                position: absolute; top: 0; left: 0; right: 0; height: 8px;
+                                background: linear-gradient(90deg,#e40303,#ff8c00,#ffed00,#008026,#004dff,#750787);
+                            }
+                            .module-card__badge {
+                                display: inline-flex; align-items: center; justify-content: center;
+                                width: 54px; height: 54px; border-radius: 50%;
+                                background: var(--accent); color: #fff;
+                                font-size: 26px; font-weight: 800; line-height: 1;
+                                box-shadow: 0 2px 6px rgba(0,0,0,.18);
+                                margin-bottom: 14px;
+                            }
+                            .module-card__label {
+                                font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
+                                font-weight: 700; color: var(--accent);
+                            }
+                            .module-card__title {
+                                font-size: 17px; font-weight: 700; line-height: 1.3;
+                                margin-top: 4px; color: #2b2b2b;
+                            }
+                            .module-card__cta {
+                                margin-top: auto; padding-top: 18px;
+                                font-size: 14px; font-weight: 700; color: var(--accent);
+                                display: inline-flex; align-items: center; gap: 6px;
+                            }
+                            .module-card__cta .arrow { transition: transform .18s ease; }
+                            .module-card:hover .module-card__cta .arrow { transform: translateX(5px); }
+                        </style>
 
-                                   style="color:black; display: block; width: 100%; max-width: 400px; margin: 15px auto;">
-
-                                   <?php  ?>
-                                   <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']);
-
-                                   if (isset($all_titles[$level])) {
-
-                                       echo ': ' . htmlspecialchars($all_titles[$level]);
-                                   }
-                                   ?>
-                                   <?php ?>
-
-                                </a></b>
+                        <?php
+                            // Palette d'accents (couleurs pride, lisibles avec texte blanc), une par module
+                            $accents = ['#e40303', '#d2660b', '#0a8a3f', '#1846d8', '#7a1fa2', '#c81d77', '#0c8d8d', '#b1121f'];
+                        ?>
+                        <div class="module-grid">
+                            <?php foreach ($levels as $i => $level):
+                                $accent = $accents[$i % count($accents)];
+                                $title  = isset($all_titles[$level]) ? $all_titles[$level] : '';
+                            ?>
+                                <a class="module-card" style="--accent: <?= $accent ?>;"
+                                   href="index.php?level=<?= htmlspecialchars($level) ?>"
+                                   aria-label="Module <?= htmlspecialchars($level) ?><?= $title ? ' : ' . htmlspecialchars($title) : '' ?>">
+                                    <span class="module-card__stripe"></span>
+                                    <span class="module-card__badge"><?= htmlspecialchars($level) ?></span>
+                                    <span class="module-card__label">Module <?= htmlspecialchars($level) ?></span>
+                                    <?php if ($title): ?>
+                                        <span class="module-card__title"><?= htmlspecialchars($title) ?></span>
+                                    <?php endif; ?>
+                                    <span class="module-card__cta"><?= $texts[$lang]['continue'] ?> <span class="arrow">&rarr;</span></span>
+                                </a>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
