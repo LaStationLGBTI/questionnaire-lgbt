@@ -413,7 +413,10 @@ function startQuestion() {
                 if (document.getElementsByClassName("popup")[0] != null)
                     document.getElementsByClassName("popup")[0].remove();
                 for (let i = 1; i <= 5; i++) {
-                    if (response[i] != "null") {
+                    // Une réponse est "absente" si elle vaut "null", est vide ou ne contient que des espaces.
+                    let val = (response[i] == null ? "" : String(response[i])).trim();
+                    let isEmpty = (val === "" || val.toLowerCase() === "null");
+                    if (!isEmpty) {
                         let repo = document.querySelector("#reponse_" + i);
                         if (repo == null) {
                             if (response[7] == "echelle") {
@@ -430,9 +433,8 @@ function startQuestion() {
                             p_elem.innerText = response[i];
                             button.addEventListener("click", function () { updateQuestion(i); });
                         }
-                    }
-                    if (response[i] == "null") {
-                        let reponse_elem = document.getElementById("reponse_5");
+                    } else {
+                        let reponse_elem = document.getElementById("reponse_" + i);
                         if (reponse_elem != null) {
                             reponse_elem.remove();
                         }
@@ -1776,4 +1778,3 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
-
