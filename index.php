@@ -13,17 +13,6 @@ if (isset($_POST['reset_session'])) {
     session_unset();
     session_destroy();
 }
-// Retour au choix du module : on efface uniquement la sélection et l'état du
-// questionnaire, en conservant la langue (pas de session_destroy / unset global).
-if (isset($_GET['back'])) {
-    foreach (['level', 'start', 'LastQuestion', 'TotalQuestions', 'QuestionToUse',
-              'Rep1', 'Rep2', 'Rep3', 'Rep4', 'Rep5', 'IdInUse', 'answer', 'qtype',
-              'expliqs', 'reponses', 'id_user', 'finish', 'acc', 'genre', 'orient', 'emailr'] as $k) {
-        unset($_SESSION[$k]);
-    }
-    header('Location: index.php');
-    exit();
-}
 if (isset($_GET['level']) && !isset($_SESSION['level'])) {
     $new_level = $_GET['level'];
     $lang_to_preserve = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
@@ -64,7 +53,7 @@ $texts = [
         'anonymity' => 'Anonymat garanti : Toutes vos réponses sont recueillies de manière anonyme. Aucune information personnelle ne sera associée à vos réponses.',
         'voluntary' => 'Participation libre : La participation à ce sondage est entièrement facultative. Vous pouvez choisir de ne pas répondre à certaines questions si vous ne le souhaitez pas.',
         'results' => 'Résultats disponibles : Si vous souhaitez recevoir un résumé des résultats une fois l’enquête terminée, vous pouvez laisser votre adresse e-mail à la fin du sondage. Cette étape est totalement optionnelle et ne compromet pas l’anonymat de vos réponses.',
-        'thanks' => 'Merci pour votre participation à ce projet qui contribue à sensibiliser et à promouvoir le respect et l’inclusion au sein de notre communauté scolaire.',
+        'thanks' => 'Merci pour votre participation à ce projet qui contribue à sensibiliser et à promouvoir le respect et l’inclusion au sein de notre communauté queer.',
         'continue' => 'Continuer',
         'footer' => 'Conception de la page : R. (Hex) ; maître de stage : Gérald Schlemminger, (c) 2025 La STATION',
         'final_warning' => 'Avertissement concernant la question finale',
@@ -160,22 +149,36 @@ $lang = $_SESSION['language'];
             margin: 0;
             height: 100%;
             background-image: url('images/background.png');
-			background-size: 100% 100%;
+            /* 100% 100% : les bandes colorées occupent toujours ~9% de chaque côté,
+               quelle que soit la taille de l'écran (cover les recadrait) */
+            background-size: 100% 100%;
             background-repeat: no-repeat;
         }
 
         .u-container-layout.u-container-layout-1 {
             margin: 0;
             height: 100%;
-			box-sizing: border-box;
-			padding-left: 10%;
-			padding-right: 10%;
+            /* garde le contenu dans la zone grise centrale du fond */
+            box-sizing: border-box;
+            padding-left: 10%;
+            padding-right: 10%;
         }
-		.u-container-layout-1 .u-sheet {
-                  max-width: 100% !important;
-                  margin-left: auto;
-                  margin-right: auto;
-            }
+
+        /* Nicepage fixe la largeur du .u-sheet en px par palier ;
+           entre deux paliers le texte débordait sur les bandes colorées */
+        .u-container-layout-1 .u-sheet {
+            max-width: 100% !important;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* u-text-default rend le bloc "fit-content" et l'aligne à gauche ;
+           on le recentre (titres : choix du questionnaire, titre du projet, merci) */
+        .u-text-default.u-text-1 {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
         .u-container-layout.u-similar-container.u-container-layout-8 {
             padding: 0;
         }
@@ -184,10 +187,7 @@ $lang = $_SESSION['language'];
             background-color: #ffd8da;
             border-radius: 50% 20% / 10% 40% !important;
         }
-		.u-text-default.u-text-1 {
-                  margin-left: auto;
-                  margin-right: auto;
-              }
+
         .u-align-center.u-container-align-center.u-container-align-center-md.u-container-align-center-xl.u-container-align-center-xs.u-container-style {
             width: 22vw;
         }
@@ -413,9 +413,8 @@ function startQuestion() {
                 if (document.getElementsByClassName("popup")[0] != null)
                     document.getElementsByClassName("popup")[0].remove();
                 for (let i = 1; i <= 5; i++) {
-                    // Une réponse est "absente" si elle vaut "null", est vide ou ne contient que des espaces.
-                    let val = (response[i] == null ? "" : String(response[i])).trim();
-                    let isEmpty = (val === "" || val.toLowerCase() === "null");
+                    // une réponse "null" OU vide (chaîne vide/espaces) = pas de bouton
+                    let isEmpty = response[i] == null || response[i] == "null" || response[i].trim() === "";
                     if (!isEmpty) {
                         let repo = document.querySelector("#reponse_" + i);
                         if (repo == null) {
@@ -766,85 +765,23 @@ if (!isset($_SESSION['level'])) {
                     <?php elseif (empty($levels)): ?>
                         <p class="u-text"><?= $texts[$lang]['no_questionnaires_available'] ?></p>
                     <?php else: ?>
-                        <style>
-                            .module-grid {
-                                display: grid;
-                                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-                                gap: 22px;
-                                max-width: 940px;
-                                margin: 2em auto;
-                                padding: 0 1em 2em;
-                            }
-                            .module-card {
-                                position: relative;
-                                display: flex;
-                                flex-direction: column;
-                                align-items: flex-start;
-                                background: #fff;
-                                border-radius: 18px;
-                                padding: 28px 22px 20px;
-                                text-decoration: none;
-                                color: #2b2b2b;
-                                border: 1px solid #f0e3e6;
-                                box-shadow: 0 4px 14px rgba(0,0,0,.08);
-                                overflow: hidden;
-                                transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-                            }
-                            .module-card:hover, .module-card:focus-visible {
-                                transform: translateY(-6px);
-                                box-shadow: 0 12px 26px rgba(0,0,0,.16);
-                                border-color: var(--accent);
-                                outline: none;
-                            }
-                            .module-card__stripe {
-                                position: absolute; top: 0; left: 0; right: 0; height: 8px;
-                                background: linear-gradient(90deg,#e40303,#ff8c00,#ffed00,#008026,#004dff,#750787);
-                            }
-                            .module-card__badge {
-                                display: inline-flex; align-items: center; justify-content: center;
-                                width: 54px; height: 54px; border-radius: 50%;
-                                background: var(--accent); color: #fff;
-                                font-size: 26px; font-weight: 800; line-height: 1;
-                                box-shadow: 0 2px 6px rgba(0,0,0,.18);
-                                margin-bottom: 14px;
-                            }
-                            .module-card__label {
-                                font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
-                                font-weight: 700; color: var(--accent);
-                            }
-                            .module-card__title {
-                                font-size: 17px; font-weight: 700; line-height: 1.3;
-                                margin-top: 4px; color: #2b2b2b;
-                            }
-                            .module-card__cta {
-                                margin-top: auto; padding-top: 18px;
-                                font-size: 14px; font-weight: 700; color: var(--accent);
-                                display: inline-flex; align-items: center; gap: 6px;
-                            }
-                            .module-card__cta .arrow { transition: transform .18s ease; }
-                            .module-card:hover .module-card__cta .arrow { transform: translateX(5px); }
-                        </style>
+                        <div style="margin-top: 2em; padding-bottom: 2em;">
+                            <?php foreach ($levels as $level): ?>
+                                <b><a href="index.php?level=<?= htmlspecialchars($level) ?>"
 
-                        <?php
-                            // Palette d'accents (couleurs pride, lisibles avec texte blanc), une par module
-                            $accents = ['#e40303', '#d2660b', '#0a8a3f', '#1846d8', '#7a1fa2', '#c81d77', '#0c8d8d', '#b1121f'];
-                        ?>
-                        <div class="module-grid">
-                            <?php foreach ($levels as $i => $level):
-                                $accent = $accents[$i % count($accents)];
-                                $title  = isset($all_titles[$level]) ? $all_titles[$level] : '';
-                            ?>
-                                <a class="module-card" style="--accent: <?= $accent ?>;"
-                                   href="index.php?level=<?= htmlspecialchars($level) ?>"
-                                   aria-label="Module <?= htmlspecialchars($level) ?><?= $title ? ' : ' . htmlspecialchars($title) : '' ?>">
-                                    <span class="module-card__stripe"></span>
-                                    <span class="module-card__badge"><?= htmlspecialchars($level) ?></span>
-                                    <span class="module-card__label">Module <?= htmlspecialchars($level) ?></span>
-                                    <?php if ($title): ?>
-                                        <span class="module-card__title"><?= htmlspecialchars($title) ?></span>
-                                    <?php endif; ?>
-                                    <span class="module-card__cta"><?= $texts[$lang]['continue'] ?> <span class="arrow">&rarr;</span></span>
-                                </a>
+                                   style="color:black; display: block; width: 100%; max-width: 400px; margin: 15px auto;">
+
+                                   <?php  ?>
+                                   <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']);
+
+                                   if (isset($all_titles[$level])) {
+
+                                       echo ': ' . htmlspecialchars($all_titles[$level]);
+                                   }
+                                   ?>
+                                   <?php ?>
+
+                                </a></b>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
@@ -929,10 +866,6 @@ if (!isset($_SESSION['level'])) {
 
                 <form method="POST" action="">
                     <div class="u-align-right u-form-group u-form-submit">
-                        <a href="index.php?back=1"
-                           style="display:inline-block; margin-top:1vh; margin-right:12px; padding:0.55em 1.3em; border-radius:50px; border:2px solid #c81d77; color:#c81d77; text-decoration:none; font-weight:700; font-size:14px;">
-                            &larr; <?php echo $lang === 'de' ? 'Zurück zur Modulauswahl' : 'Retour au choix du module'; ?>
-                        </a>
                         <button style="margin-top:1vh;" value="1" name="start" type="submit"
                             class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
                             <?php echo $texts[$lang]['continue']; ?>
@@ -1008,6 +941,24 @@ if (!isset($_SESSION["start"])) {
         } else {
             echo $lang === 'de' ? "Fehler bei der Auswahl der Frage, bitte kontaktieren Sie 'La STATION'" : "Erreur lors de la sélection de la question, veuillez contacter 'La STATION'";
         }
+
+        // --- Rappel : on récupère le texte du module et on garde la partie à partir de "Informations" ---
+        $rappel_text = '';
+        try {
+            $pdo_rappel = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+            $pdo_rappel->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $stmt_rappel = $pdo_rappel->prepare("SELECT text FROM GSDatabaseT WHERE level = ?");
+            $stmt_rappel->execute([$_SESSION['level']]);
+            $row_rappel = $stmt_rappel->fetch(PDO::FETCH_ASSOC);
+            if ($row_rappel && !empty($row_rappel['text'])) {
+                $pos = stripos($row_rappel['text'], 'Informations');
+                if ($pos !== false) {
+                    $rappel_text = substr($row_rappel['text'], $pos);
+                }
+            }
+        } catch (PDOException $e) {
+            $rappel_text = '';
+        }
         ?>
 <section style="height:auto;" class="u-align-center u-clearfix u-container-align-center u-palette-2-light-3 u-section-2" id="qcm">
     <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
@@ -1016,8 +967,15 @@ if (!isset($_SESSION["start"])) {
                 Question <?php echo $_SESSION["LastQuestion"]; ?>
             </h5>
             <button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4" style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next" onclick="updateQuestion(-1)">
-                <?php echo $texts[$lang]['continue']; ?>
+                <?php echo $lang === 'de' ? 'Ohne Antwort fortfahren' : 'Continuer sans répondre'; ?>
             </button>
+            <?php if (!empty($rappel_text)): ?>
+            <button type="button" id="rappel-btn" onclick="document.getElementById('rappel-popup').style.display='flex'"
+                class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4"
+                style="color:black; margin-top:0; margin-left:10px; background-color:#ffd76a;">
+                📌 <?php echo $lang === 'de' ? 'Erinnerung' : 'Rappel'; ?>
+            </button>
+            <?php endif; ?>
             <b>
                 <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9;">
                     <?php echo $currentQuestion; ?>
@@ -1029,6 +987,20 @@ if (!isset($_SESSION["start"])) {
     <div class="u-align-right u-form-group u-form-submit">
         <img id="randomImage" src="" width="200em" alt="">
     </div>
+    <?php if (!empty($rappel_text)): ?>
+    <div id="rappel-popup" onclick="if(event.target===this)this.style.display='none'"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10001;">
+        <div style="background:#f2ebff; padding:24px; border-radius:8px; max-width:90%; width:560px; max-height:80vh; overflow:auto; border:solid 0.4em #bf8d8d; text-align:left; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            <?php echo $rappel_text; ?>
+            <div style="text-align:center;">
+                <button type="button" onclick="document.getElementById('rappel-popup').style.display='none'"
+                    style="margin-top:16px; background:#8a7bf4; color:#fff; border:none; padding:8px 18px; border-radius:20px; cursor:pointer; font-size:14px;">
+                    <?php echo $lang === 'de' ? 'Schließen' : 'Fermer'; ?>
+                </button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 </section>
 
         <?php
@@ -1302,6 +1274,60 @@ if(isset($_SESSION['reponses'])){
 		let timeout = false;
 		let xhr = new XMLHttpRequest();
 		let cd = 0;
+
+		// Affiche un popup avec la bonne réponse et l'explication, par-dessus le questionnaire.
+		// Le fond continue de changer ; l'utilisateur ferme le popup quand il veut.
+		function showAnswerPopup(correctText, explanation, isCorrect, onClose) {
+			let old = document.getElementById('answer-info-popup');
+			if (old) old.remove();
+
+			const overlay = document.createElement('div');
+			overlay.id = 'answer-info-popup';
+			overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:10000;';
+
+			const box = document.createElement('div');
+			box.style.cssText = 'background:#f2ebff;padding:24px;border-radius:8px;max-width:90%;width:420px;border:solid 0.4em #bf8d8d;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+
+			const status = isCorrect
+				? (lang === 'de' ? '✓ Richtig!' : '✓ Correct !')
+				: (lang === 'de' ? '✗ Leider falsch' : '✗ Dommage');
+			const goodLabel = lang === 'de' ? 'Richtige Antwort' : 'Bonne réponse';
+			const closeLabel = lang === 'de' ? 'Schließen' : 'Fermer';
+
+			const h = document.createElement('h3');
+			h.style.cssText = 'margin-top:0;color:' + (isCorrect ? 'green' : '#c0392b') + ';';
+			h.textContent = status;
+			box.appendChild(h);
+
+			if (correctText && correctText.trim() !== '') {
+				const p1 = document.createElement('p');
+				p1.style.margin = '8px 0';
+				const b = document.createElement('b');
+				b.textContent = goodLabel + ' : ';
+				p1.appendChild(b);
+				p1.appendChild(document.createTextNode(correctText));
+				box.appendChild(p1);
+			}
+			if (explanation && explanation.trim() !== '' && explanation !== 'null') {
+				const p2 = document.createElement('p');
+				p2.style.cssText = 'margin:8px 0;font-style:italic;color:#444;';
+				p2.textContent = explanation;
+				box.appendChild(p2);
+			}
+
+			const btn = document.createElement('button');
+			btn.textContent = closeLabel;
+			btn.style.cssText = 'margin-top:12px;background:#8a7bf4;color:#fff;border:none;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:14px;';
+			btn.addEventListener('click', function () {
+				overlay.remove();
+				if (typeof onClose === 'function') onClose();
+			});
+			box.appendChild(btn);
+
+			overlay.appendChild(box);
+			document.body.appendChild(overlay);
+		}
+
 		function updateQuestion(buttonIndex) {
 			changeRandomImage();
 			if (timeout == false) {
@@ -1337,16 +1363,32 @@ if(isset($_SESSION['reponses'])){
 									});
 								}
 							});
-							setTimeout(function () {
-								timeout = false;
-								window.location.href = window.location.href;
-							}, 3000);
+							// Popup seulement pour qcm / echelle (pas lien / mct, qui ont leur propre tableau)
+							if (response[2] == "qcm" || response[2] == "echelle") {
+								let ci = parseInt(response[1], 10);
+								let correctText = "";
+								if (answersarray[ci - 1]) {
+									let rep = answersarray[ci - 1].querySelector('p#rep');
+									if (rep) correctText = rep.innerText;
+								}
+								let explanation = response.slice(3).join("__");
+								let userCorrect = parseInt(buttonIndex, 10) === ci;
+								showAnswerPopup(correctText, explanation, userCorrect, function () {
+									window.location.href = window.location.href;
+								});
+							} else {
+								// types sans popup : ancien comportement (rechargement automatique)
+								setTimeout(function () {
+									timeout = false;
+									window.location.href = window.location.href;
+								}, 3000);
+							}
 						}
 
 						else {
 							timeout = true;
 							if (response[9] === "qcm") {
-								cd = 3000;
+								cd = 2000;
 							}
 							answersarray.forEach(function (item, index) {
 								const innerAnswers = item.querySelector('div#question_container');
@@ -1384,6 +1426,19 @@ if(isset($_SESSION['reponses'])){
 								}
 							});
 
+							// Popup avec la bonne réponse + explication (qcm / echelle) ; le fond change tout seul
+							if (response[9] == "qcm" || response[9] == "echelle") {
+								let ci = parseInt(response[7], 10);
+								let correctText = "";
+								if (answersarray[ci - 1]) {
+									let rep = answersarray[ci - 1].querySelector('p#rep');
+									if (rep) correctText = rep.innerText;
+								}
+								let explanation = response.slice(11).join("__");
+								let userCorrect = parseInt(buttonIndex, 10) === ci;
+								showAnswerPopup(correctText, explanation, userCorrect);
+							}
+
 							setTimeout(function () {
 								timeout = false;
 								document.getElementById("Question").innerHTML = response[0];
@@ -1413,11 +1468,17 @@ if(isset($_SESSION['reponses'])){
 									localStorage.clear();
 									if (document.getElementsByClassName("popup")[0] != null)
 										document.getElementsByClassName("popup")[0].remove();
-									cd = 3000;
+									cd = 2000;
 
 									deleteAllBlocks();
 									for (let i = 1; i <= 5; i++) {
-										if (response[i] != "null") {
+										// décoder d'abord pour détecter aussi les réponses vides (espaces, &nbsp;, etc.)
+										const parser = new DOMParser();
+										let decodedString = (response[i] == null || response[i] == "null")
+											? ""
+											: parser.parseFromString(response[i], "text/html").documentElement.textContent;
+										let isEmpty = decodedString.trim() === "";
+										if (!isEmpty) {
 
 											let repo = document.querySelector("#reponse_" + i);
 											if (repo == null) {
@@ -1435,14 +1496,12 @@ if(isset($_SESSION['reponses'])){
 												reponse_elem.id = "reponse_" + i;
 												let button = reponse_elem.querySelector("#button_choix");
 												let p_elem = reponse_elem.querySelector("#rep");
-												const parser = new DOMParser();
-												const decodedString = parser.parseFromString(response[i], "text/html").documentElement.textContent;
 												p_elem.innerText = decodedString;
 												button.addEventListener("click", function () { updateQuestion(i); });
 											}
 										}
-										if (response[i] == "null") {
-											let reponse_elem = document.getElementById("reponse_5");
+										else {
+											let reponse_elem = document.getElementById("reponse_" + i);
 											if (reponse_elem != null) {
 												reponse_elem.remove();
 											}
