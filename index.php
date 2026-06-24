@@ -18,7 +18,8 @@ if (isset($_POST['reset_session'])) {
 if (isset($_GET['back'])) {
     foreach (['level', 'start', 'LastQuestion', 'TotalQuestions', 'QuestionToUse',
               'Rep1', 'Rep2', 'Rep3', 'Rep4', 'Rep5', 'IdInUse', 'answer', 'qtype',
-              'expliqs', 'reponses', 'id_user', 'finish', 'acc', 'genre', 'orient', 'emailr'] as $k) {
+              'expliqs', 'reponses', 'id_user', 'finish', 'acc', 'genre', 'orient', 'emailr',
+              'mail_sent'] as $k) {
         unset($_SESSION[$k]);
     }
     header('Location: index.php');
@@ -143,12 +144,14 @@ $lang = $_SESSION['language'];
 
         .fade-to-red {
             transition: background-color 2s ease;
-            background-color: red !important;
+            background-color: #f3b0b0 !important; /* rouge pastel, doux pour les yeux */
+            color: #4a1f1f !important;
         }
 
         .fade-to-green {
             transition: background-color 2s ease;
-            background-color: green !important;
+            background-color: #aedcb0 !important; /* vert pastel, lisible */
+            color: #1f3d22 !important;
         }
 
         .fade-to-white {
@@ -197,7 +200,7 @@ $lang = $_SESSION['language'];
         }
 
         .u-container-style.u-expanded-width.u-group.u-palette-2-light-2.u-radius.u-shape-round {
-            background-color: #ffd8da;
+            background-color: #f3ebf2;
             border-radius: 50% 20% / 10% 40% !important;
         }
 
@@ -263,12 +266,12 @@ $lang = $_SESSION['language'];
         }
 
         .popup-content {
-            background: #f2ebff;
+            background: #f4eefb;
             padding: 20px;
             border-radius: 5px;
             width: 300px;
             border: solid 0.5em;
-            border-color: #bf8d8d;
+            border-color: #c7aecb;
             max-width: 90%;
         }
 
@@ -292,7 +295,7 @@ $lang = $_SESSION['language'];
             border-radius: 30px;
             border: solid;
             cursor: pointer;
-            background-color: #ffb8b8;
+            background-color: #f0dde4;
             list-style-type: none;
             padding: 5px;
         }
@@ -943,7 +946,7 @@ if (!isset($_SESSION['level'])) {
                 <form method="POST" action="">
                     <div class="u-align-right u-form-group u-form-submit">
                         <a href="index.php?back=1"
-                           style="display:inline-block; margin-top:1vh; margin-right:12px; padding:0.55em 1.3em; border-radius:50px; border:2px solid #c81d77; color:#c81d77; text-decoration:none; font-weight:700; font-size:14px;">
+                           style="display:inline-block; margin-top:1vh; margin-right:12px; padding:0.55em 1.3em; border-radius:50px; border:2px solid #9c5a86; color:#9c5a86; text-decoration:none; font-weight:700; font-size:14px;">
                             &larr; <?php echo $lang === 'de' ? 'Zurück zur Modulauswahl' : 'Retour au choix du module'; ?>
                         </a>
                         <button style="margin-top:1vh;" value="1" name="start" type="submit"
@@ -1050,14 +1053,19 @@ if (!isset($_SESSION["start"])) {
                 <?php echo $lang === 'de' ? 'Ohne Antwort fortfahren' : 'Continuer sans répondre'; ?>
             </button>
             <?php if (!empty($rappel_text)): ?>
-            <button type="button" id="rappel-btn" onclick="document.getElementById('rappel-popup').style.display='flex'"
+            <button type="button" id="rappel-btn" onclick="document.getElementById('rappel-popup').style.display='block'"
                 class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4"
-                style="color:black; margin-top:0; margin-left:10px; background-color:#ffd76a;">
+                style="color:black; margin-top:0; margin-left:10px; background-color:#e8c06b;">
                 📌 <?php echo $lang === 'de' ? 'Erinnerung' : 'Rappel'; ?>
             </button>
             <?php endif; ?>
+            <a href="index.php?back=1" id="quit-to-modules"
+               onclick="return confirm('<?php echo $lang === 'de' ? 'Fragebogen verlassen und zur Modulauswahl zurückkehren? Ihr Fortschritt geht verloren.' : 'Quitter le questionnaire et revenir au choix du module ? Votre progression sera perdue.'; ?>')"
+               style="display:inline-block; margin-top:0; margin-left:10px; padding:0.5em 1em; border-radius:50px; border:2px solid #b5564a; color:#b5564a; text-decoration:none; font-weight:700; font-size:14px;">
+                &larr; <?php echo $lang === 'de' ? 'Verlassen (Modul wechseln)' : 'Quitter (changer de module)'; ?>
+            </a>
             <b>
-                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background-color:#ffb5b9;">
+                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background:linear-gradient(135deg,#e9d9f2 0%,#dcd4f3 50%,#cfe3f2 100%); border-left:6px solid #8a7bf4;">
                     <?php echo $currentQuestion; ?>
                 </p>
             </b>
@@ -1068,9 +1076,16 @@ if (!isset($_SESSION["start"])) {
         <img id="randomImage" src="" width="200em" alt="">
     </div>
     <?php if (!empty($rappel_text)): ?>
-    <div id="rappel-popup" onclick="if(event.target===this)this.style.display='none'"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:10001;">
-        <div style="background:#f2ebff; padding:24px; border-radius:8px; max-width:90%; width:560px; max-height:80vh; overflow:auto; border:solid 0.4em #bf8d8d; text-align:left; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+    <!-- Popup "Rappel" : fenêtre flottante déplaçable (sans assombrir le fond), comme le popup de réponse -->
+    <div id="rappel-popup"
+        style="display:none; position:fixed; top:90px; left:50%; transform:translateX(-50%); background:#f4eefb; border-radius:10px; width:560px; max-width:92%; border:solid 0.3em #c7aecb; box-shadow:0 6px 24px rgba(0,0,0,0.25); z-index:10001;">
+        <div id="rappel-popup-header"
+            style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:move; background:#ffe9a8; border-radius:7px 7px 0 0; user-select:none;">
+            <span style="font-weight:700;">📌 <?php echo $lang === 'de' ? 'Erinnerung' : 'Rappel'; ?></span>
+            <span onclick="document.getElementById('rappel-popup').style.display='none'"
+                style="cursor:pointer; font-size:18px; line-height:1; padding:0 4px; color:#555;">&#10005;</span>
+        </div>
+        <div style="padding:16px; text-align:left; max-height:70vh; overflow:auto;">
             <?php echo $rappel_text; ?>
             <div style="text-align:center;">
                 <button type="button" onclick="document.getElementById('rappel-popup').style.display='none'"
@@ -1080,6 +1095,32 @@ if (!isset($_SESSION["start"])) {
             </div>
         </div>
     </div>
+    <script>
+    (function () {
+        var box = document.getElementById('rappel-popup');
+        var handle = document.getElementById('rappel-popup-header');
+        if (!box || !handle) return;
+        var dragging = false, offX = 0, offY = 0;
+        function start(x, y) {
+            var r = box.getBoundingClientRect();
+            box.style.left = r.left + 'px';
+            box.style.top = r.top + 'px';
+            box.style.transform = 'none';
+            offX = x - r.left; offY = y - r.top; dragging = true;
+        }
+        function move(x, y) {
+            if (!dragging) return;
+            box.style.left = (x - offX) + 'px';
+            box.style.top = (y - offY) + 'px';
+        }
+        handle.addEventListener('mousedown', function (e) { start(e.clientX, e.clientY); e.preventDefault(); });
+        document.addEventListener('mousemove', function (e) { move(e.clientX, e.clientY); });
+        document.addEventListener('mouseup', function () { dragging = false; });
+        handle.addEventListener('touchstart', function (e) { var t = e.touches[0]; start(t.clientX, t.clientY); });
+        document.addEventListener('touchmove', function (e) { if (dragging) { var t = e.touches[0]; move(t.clientX, t.clientY); e.preventDefault(); } }, { passive: false });
+        document.addEventListener('touchend', function () { dragging = false; });
+    })();
+    </script>
     <?php endif; ?>
 </section>
 
@@ -1404,12 +1445,12 @@ if(isset($_SESSION['reponses'])){
 
 			const box = document.createElement('div');
 			box.id = 'answer-info-popup';
-			box.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#f2ebff;border-radius:10px;width:420px;max-width:92%;border:solid 0.3em #bf8d8d;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:10000;';
+			box.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#f4eefb;border-radius:10px;width:420px;max-width:92%;border:solid 0.3em #c7aecb;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:10000;';
 
 			const header = document.createElement('div');
 			header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:move;background:' + (isCorrect ? '#d6f5d6' : '#f7d6d6') + ';border-radius:7px 7px 0 0;user-select:none;';
 			const title = document.createElement('span');
-			title.style.cssText = 'font-weight:700;color:' + (isCorrect ? 'green' : '#c0392b') + ';';
+			title.style.cssText = 'font-weight:700;color:' + (isCorrect ? '#2e7d32' : '#b5564a') + ';';
 			title.textContent = status;
 			const closeX = document.createElement('span');
 			closeX.textContent = '✕';
@@ -1487,7 +1528,7 @@ if(isset($_SESSION['reponses'])){
 			btn.id = 'continue-next-btn';
 			btn.type = 'button';
 			btn.textContent = (lang === 'de' ? 'Weiter →' : 'Continuer →');
-			btn.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10001;background:#28a745;color:#fff;border:none;padding:12px 28px;border-radius:24px;cursor:pointer;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,0.3);';
+			btn.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10001;background:#5cb37a;color:#fff;border:none;padding:12px 28px;border-radius:24px;cursor:pointer;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,0.3);';
 			btn.addEventListener('click', function () {
 				btn.remove();
 				let p = document.getElementById('answer-info-popup'); if (p) p.remove();
