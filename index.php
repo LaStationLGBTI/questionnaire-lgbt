@@ -13,6 +13,17 @@ if (isset($_POST['reset_session'])) {
     session_unset();
     session_destroy();
 }
+// Retour au choix du module : on efface uniquement la sélection et l'état du
+// questionnaire, en conservant la langue (pas de session_destroy / unset global).
+if (isset($_GET['back'])) {
+    foreach (['level', 'start', 'LastQuestion', 'TotalQuestions', 'QuestionToUse',
+              'Rep1', 'Rep2', 'Rep3', 'Rep4', 'Rep5', 'IdInUse', 'answer', 'qtype',
+              'expliqs', 'reponses', 'id_user', 'finish', 'acc', 'genre', 'orient', 'emailr'] as $k) {
+        unset($_SESSION[$k]);
+    }
+    header('Location: index.php');
+    exit();
+}
 if (isset($_GET['level']) && !isset($_SESSION['level'])) {
     $new_level = $_GET['level'];
     $lang_to_preserve = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
@@ -55,7 +66,7 @@ $texts = [
         'results' => 'Résultats disponibles : Si vous souhaitez recevoir un résumé des résultats une fois l’enquête terminée, vous pouvez laisser votre adresse e-mail à la fin du sondage. Cette étape est totalement optionnelle et ne compromet pas l’anonymat de vos réponses.',
         'thanks' => 'Merci pour votre participation à ce projet qui contribue à sensibiliser et à promouvoir le respect et l’inclusion au sein de notre communauté queer.',
         'continue' => 'Continuer',
-        'footer' => 'Conception de la page : R. (Hex) ; maître de stage : Gérald Schlemminger, (c) 2025 La STATION',
+        'footer' => 'Conception de la page : R. (Hex) ; maître de stage : Gérald Schlemminger, Christian Bergemann, (c) 2025 La STATION',
         'final_warning' => 'Avertissement concernant la question finale',
         'final_warning_desc' => 'Les dernières questions du sondage sont plus personnelles et portent sur ton identité de genre et ton orientation sexuelle. Nous comprenons que ces thématiques peuvent être perçues comme sensibles ou intrusives. Il n’y a aucune obligation de réponse : tu es libre de ne pas répondre à ces questions si tu ne te sens pas à l’aise. Cela n’affectera en rien ta participation au sondage.',
         'gender_question' => 'Te reconnais-tu dans l’un des genres suivants ?',
@@ -149,10 +160,12 @@ $lang = $_SESSION['language'];
             margin: 0;
             height: 100%;
             background-image: url('images/background.png');
-            /* 100% 100% : les bandes colorées occupent toujours ~9% de chaque côté,
-               quelle que soit la taille de l'écran (cover les recadrait) */
-            background-size: 100% 100%;
-            background-repeat: no-repeat;
+            /* 100% en largeur -> les bandes colorées gardent leur ~9% de chaque côté ;
+               'auto' en hauteur -> pas d'étirement vertical (les rayures gardent leurs proportions) ;
+               repeat-y -> le motif se répète proprement sur les pages longues. */
+            background-size: 100% auto;
+            background-repeat: repeat-y;
+            background-position: top center;
         }
 
         .u-container-layout.u-container-layout-1 {
@@ -765,23 +778,84 @@ if (!isset($_SESSION['level'])) {
                     <?php elseif (empty($levels)): ?>
                         <p class="u-text"><?= $texts[$lang]['no_questionnaires_available'] ?></p>
                     <?php else: ?>
-                        <div style="margin-top: 2em; padding-bottom: 2em;">
-                            <?php foreach ($levels as $level): ?>
-                                <b><a href="index.php?level=<?= htmlspecialchars($level) ?>"
-
-                                   style="color:black; display: block; width: 100%; max-width: 400px; margin: 15px auto;">
-
-                                   <?php  ?>
-                                   <?= str_replace('{level}', htmlspecialchars($level), $texts[$lang]['questionnaire_level']);
-
-                                   if (isset($all_titles[$level])) {
-
-                                       echo ': ' . htmlspecialchars($all_titles[$level]);
-                                   }
-                                   ?>
-                                   <?php ?>
-
-                                </a></b>
+                        <style>
+                            .module-grid {
+                                display: grid;
+                                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                                gap: 22px;
+                                max-width: 940px;
+                                margin: 2em auto;
+                                padding: 0 1em 2em;
+                            }
+                            .module-card {
+                                position: relative;
+                                display: flex;
+                                flex-direction: column;
+                                align-items: flex-start;
+                                background: #fff;
+                                border-radius: 18px;
+                                padding: 28px 22px 20px;
+                                text-decoration: none;
+                                color: #2b2b2b;
+                                border: 1px solid #f0e3e6;
+                                box-shadow: 0 4px 14px rgba(0,0,0,.08);
+                                overflow: hidden;
+                                transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+                            }
+                            .module-card:hover, .module-card:focus-visible {
+                                transform: translateY(-6px);
+                                box-shadow: 0 12px 26px rgba(0,0,0,.16);
+                                border-color: var(--accent);
+                                outline: none;
+                            }
+                            .module-card__stripe {
+                                position: absolute; top: 0; left: 0; right: 0; height: 8px;
+                                background: linear-gradient(90deg,#e40303,#ff8c00,#ffed00,#008026,#004dff,#750787);
+                            }
+                            .module-card__badge {
+                                display: inline-flex; align-items: center; justify-content: center;
+                                width: 54px; height: 54px; border-radius: 50%;
+                                background: var(--accent); color: #fff;
+                                font-size: 26px; font-weight: 800; line-height: 1;
+                                box-shadow: 0 2px 6px rgba(0,0,0,.18);
+                                margin-bottom: 14px;
+                            }
+                            .module-card__label {
+                                font-size: 12px; text-transform: uppercase; letter-spacing: .09em;
+                                font-weight: 700; color: var(--accent);
+                            }
+                            .module-card__title {
+                                font-size: 17px; font-weight: 700; line-height: 1.3;
+                                margin-top: 4px; color: #2b2b2b;
+                            }
+                            .module-card__cta {
+                                margin-top: auto; padding-top: 18px;
+                                font-size: 14px; font-weight: 700; color: var(--accent);
+                                display: inline-flex; align-items: center; gap: 6px;
+                            }
+                            .module-card__cta .arrow { transition: transform .18s ease; }
+                            .module-card:hover .module-card__cta .arrow { transform: translateX(5px); }
+                        </style>
+                        <div class="module-grid">
+                            <?php
+                            // Palette d'accents façon drapeau (réutilisée en boucle si plus de modules)
+                            $accents = ['#e40303','#d2660b','#0a8a3f','#1846d8','#7a1fa2','#c81d77','#0c8d8d','#b1121f'];
+                            $module_word = $lang === 'de' ? 'Modul' : 'Module';
+                            $i_card = 0;
+                            foreach ($levels as $level):
+                                $accent = $accents[$i_card % count($accents)];
+                                $i_card++;
+                                $title = isset($all_titles[$level]) ? $all_titles[$level] : '';
+                            ?>
+                            <a class="module-card" style="--accent: <?= htmlspecialchars($accent) ?>;" href="index.php?level=<?= htmlspecialchars($level) ?>" aria-label="<?= htmlspecialchars($module_word . ' ' . $level . ($title !== '' ? ' : ' . $title : '')) ?>">
+                                <span class="module-card__stripe"></span>
+                                <span class="module-card__badge"><?= htmlspecialchars($level) ?></span>
+                                <span class="module-card__label"><?= htmlspecialchars($module_word . ' ' . $level) ?></span>
+                                <?php if ($title !== ''): ?>
+                                <span class="module-card__title"><?= htmlspecialchars($title) ?></span>
+                                <?php endif; ?>
+                                <span class="module-card__cta"><?= htmlspecialchars($texts[$lang]['continue']) ?> <span class="arrow">→</span></span>
+                            </a>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
@@ -857,15 +931,21 @@ if (!isset($_SESSION['level'])) {
                         <input type="hidden" name="language" value="fr">
                         <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                     </form>
+                    <!-- Bouton de sélection de l'allemand masqué (retirer les commentaires pour le réafficher)
                     <form method="POST" style="display: inline;">
                         <input type="hidden" name="language" value="de">
                         <input type="image" src="images/germany.svg" alt="Deutsch" class="language-flag <?php echo $lang === 'de' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                     </form>
                     <span style="align-self: center;">Deutsch</span>
+                    -->
                 </div>
 
                 <form method="POST" action="">
                     <div class="u-align-right u-form-group u-form-submit">
+                        <a href="index.php?back=1"
+                           style="display:inline-block; margin-top:1vh; margin-right:12px; padding:0.55em 1.3em; border-radius:50px; border:2px solid #c81d77; color:#c81d77; text-decoration:none; font-weight:700; font-size:14px;">
+                            &larr; <?php echo $lang === 'de' ? 'Zurück zur Modulauswahl' : 'Retour au choix du module'; ?>
+                        </a>
                         <button style="margin-top:1vh;" value="1" name="start" type="submit"
                             class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
                             <?php echo $texts[$lang]['continue']; ?>
@@ -1151,6 +1231,7 @@ if(isset($_SESSION['reponses'])){
             <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
                 <p class="u-text u-text-default u-text-1" style="margin: auto;"><?php echo $texts[$lang]['thank_you']; ?></p>
 
+                <?php ob_start(); // on capture légende + tableau + score pour les réutiliser dans l'e-mail ?>
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color-box user-answer-color"></div>
@@ -1240,6 +1321,39 @@ if(isset($_SESSION['reponses'])){
                     }
                     ?>
                 </p>
+                <?php
+                // --- Résultats capturés : on les affiche sur la page ET on les envoie par e-mail ---
+                $results_capture = ob_get_clean();
+                echo $results_capture;
+
+                // Envoi unique, seulement si une adresse valide a été saisie
+                if (empty($_SESSION["mail_sent"]) && !empty($_SESSION["emailr"]) && filter_var($_SESSION["emailr"], FILTER_VALIDATE_EMAIL)) {
+                    $email_styles = '<style>'
+                        . 'table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px;}'
+                        . 'th,td{padding:8px 10px;border:1px solid #ddd;text-align:left;}'
+                        . 'th{background:#4f6d7a;color:#fff;}'
+                        . '.user-answer{background:#a0c4ff;}'
+                        . '.correct-answer{background:#90ee90;}'
+                        . '.user-answer.correct-answer{background:#bfe6a0;}'
+                        . '.score-display{font-size:1.1em;font-weight:bold;margin-top:1em;}'
+                        . '.legend-item{display:inline-block;margin-right:16px;}'
+                        . '.legend-color-box{display:inline-block;width:14px;height:14px;border:1px solid #ccc;vertical-align:middle;margin-right:5px;}'
+                        . '.user-answer-color{background:#a0c4ff;}.correct-answer-color{background:#90ee90;}.user-correct-answer-color{background:#bfe6a0;}'
+                        . '</style>';
+                    $greeting = $lang === 'de'
+                        ? '<p>Vielen Dank für Ihre Teilnahme. Hier sind Ihre Ergebnisse:</p>'
+                        : '<p>Merci pour votre participation. Voici vos résultats :</p>';
+                    $email_body = '<html><head><meta charset="UTF-8">' . $email_styles . '</head><body>'
+                        . $greeting . $results_capture . '</body></html>';
+                    $email_subject = $lang === 'de'
+                        ? 'Ihre Ergebnisse - La Station LGBTQIA+'
+                        : 'Vos résultats - La Station LGBTQIA+';
+                    require_once __DIR__ . '/mailer.php';
+                    if (send_results_email($_SESSION["emailr"], $email_subject, $email_body)) {
+                        $_SESSION["mail_sent"] = 1;
+                    }
+                }
+                ?>
 
                 <form method="POST" action="index.php" style="margin-top: 1em;">
                     <button type="submit" name="reset_session" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
@@ -1275,57 +1389,113 @@ if(isset($_SESSION['reponses'])){
 		let xhr = new XMLHttpRequest();
 		let cd = 0;
 
-		// Affiche un popup avec la bonne réponse et l'explication, par-dessus le questionnaire.
-		// Le fond continue de changer ; l'utilisateur ferme le popup quand il veut.
-		function showAnswerPopup(correctText, explanation, isCorrect, onClose) {
-			let old = document.getElementById('answer-info-popup');
-			if (old) old.remove();
-
-			const overlay = document.createElement('div');
-			overlay.id = 'answer-info-popup';
-			overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:10000;';
-
-			const box = document.createElement('div');
-			box.style.cssText = 'background:#f2ebff;padding:24px;border-radius:8px;max-width:90%;width:420px;border:solid 0.4em #bf8d8d;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+		// Popup flottant (sans assombrir le fond), déplaçable, refermable et ré-ouvrable.
+		function showAnswerPopup(correctText, explanation, isCorrect) {
+			let oldBox = document.getElementById('answer-info-popup');
+			if (oldBox) oldBox.remove();
+			let oldReopen = document.getElementById('answer-reopen-btn');
+			if (oldReopen) oldReopen.remove();
 
 			const status = isCorrect
-				? (lang === 'de' ? '✓ Richtig!' : '✓ Correct !')
+				? (lang === 'de' ? '✓ Richtig!' : '✓ Correct !')
 				: (lang === 'de' ? '✗ Leider falsch' : '✗ Dommage');
 			const goodLabel = lang === 'de' ? 'Richtige Antwort' : 'Bonne réponse';
-			const closeLabel = lang === 'de' ? 'Schließen' : 'Fermer';
+			const reopenLabel = lang === 'de' ? 'Antwort anzeigen' : 'Voir la réponse';
 
-			const h = document.createElement('h3');
-			h.style.cssText = 'margin-top:0;color:' + (isCorrect ? 'green' : '#c0392b') + ';';
-			h.textContent = status;
-			box.appendChild(h);
+			const box = document.createElement('div');
+			box.id = 'answer-info-popup';
+			box.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#f2ebff;border-radius:10px;width:420px;max-width:92%;border:solid 0.3em #bf8d8d;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:10000;';
 
+			const header = document.createElement('div');
+			header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:move;background:' + (isCorrect ? '#d6f5d6' : '#f7d6d6') + ';border-radius:7px 7px 0 0;user-select:none;';
+			const title = document.createElement('span');
+			title.style.cssText = 'font-weight:700;color:' + (isCorrect ? 'green' : '#c0392b') + ';';
+			title.textContent = status;
+			const closeX = document.createElement('span');
+			closeX.textContent = '✕';
+			closeX.style.cssText = 'cursor:pointer;font-size:18px;line-height:1;padding:0 4px;color:#555;';
+			header.appendChild(title);
+			header.appendChild(closeX);
+			box.appendChild(header);
+
+			const body = document.createElement('div');
+			body.style.cssText = 'padding:16px;text-align:center;';
 			if (correctText && correctText.trim() !== '') {
 				const p1 = document.createElement('p');
 				p1.style.margin = '8px 0';
 				const b = document.createElement('b');
-				b.textContent = goodLabel + ' : ';
+				b.textContent = goodLabel + ' : ';
 				p1.appendChild(b);
 				p1.appendChild(document.createTextNode(correctText));
-				box.appendChild(p1);
+				body.appendChild(p1);
 			}
 			if (explanation && explanation.trim() !== '' && explanation !== 'null') {
 				const p2 = document.createElement('p');
 				p2.style.cssText = 'margin:8px 0;font-style:italic;color:#444;';
 				p2.textContent = explanation;
-				box.appendChild(p2);
+				body.appendChild(p2);
 			}
+			box.appendChild(body);
+			document.body.appendChild(box);
 
-			const btn = document.createElement('button');
-			btn.textContent = closeLabel;
-			btn.style.cssText = 'margin-top:12px;background:#8a7bf4;color:#fff;border:none;padding:8px 18px;border-radius:20px;cursor:pointer;font-size:14px;';
-			btn.addEventListener('click', function () {
-				overlay.remove();
-				if (typeof onClose === 'function') onClose();
+			const reopen = document.createElement('button');
+			reopen.id = 'answer-reopen-btn';
+			reopen.type = 'button';
+			reopen.textContent = reopenLabel;
+			reopen.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#8a7bf4;color:#fff;border:none;padding:10px 16px;border-radius:20px;cursor:pointer;font-size:14px;box-shadow:0 3px 10px rgba(0,0,0,0.25);display:none;';
+			document.body.appendChild(reopen);
+
+			closeX.addEventListener('click', function () {
+				box.style.display = 'none';
+				reopen.style.display = 'block';
 			});
-			box.appendChild(btn);
+			reopen.addEventListener('click', function () {
+				box.style.display = 'block';
+				reopen.style.display = 'none';
+			});
 
-			overlay.appendChild(box);
-			document.body.appendChild(overlay);
+			let dragging = false, offX = 0, offY = 0;
+			function startDrag(clientX, clientY) {
+				const rect = box.getBoundingClientRect();
+				box.style.left = rect.left + 'px';
+				box.style.top = rect.top + 'px';
+				box.style.transform = 'none';
+				offX = clientX - rect.left;
+				offY = clientY - rect.top;
+				dragging = true;
+			}
+			function moveDrag(clientX, clientY) {
+				if (!dragging) return;
+				box.style.left = (clientX - offX) + 'px';
+				box.style.top = (clientY - offY) + 'px';
+			}
+			header.addEventListener('mousedown', function (e) { startDrag(e.clientX, e.clientY); e.preventDefault(); });
+			document.addEventListener('mousemove', function (e) { moveDrag(e.clientX, e.clientY); });
+			document.addEventListener('mouseup', function () { dragging = false; });
+			header.addEventListener('touchstart', function (e) { const t = e.touches[0]; startDrag(t.clientX, t.clientY); });
+			document.addEventListener('touchmove', function (e) { if (dragging) { const t = e.touches[0]; moveDrag(t.clientX, t.clientY); e.preventDefault(); } }, { passive: false });
+			document.addEventListener('touchend', function () { dragging = false; });
+		}
+
+		// Bouton "Continuer" : on n'avance plus automatiquement, l'utilisateur clique pour la suite.
+		function showContinueButton(onContinue) {
+			let old = document.getElementById('continue-next-btn');
+			if (old) old.remove();
+			let skip = document.getElementById('button_next');
+			if (skip) skip.style.display = 'none';
+			const btn = document.createElement('button');
+			btn.id = 'continue-next-btn';
+			btn.type = 'button';
+			btn.textContent = (lang === 'de' ? 'Weiter →' : 'Continuer →');
+			btn.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10001;background:#28a745;color:#fff;border:none;padding:12px 28px;border-radius:24px;cursor:pointer;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,0.3);';
+			btn.addEventListener('click', function () {
+				btn.remove();
+				let p = document.getElementById('answer-info-popup'); if (p) p.remove();
+				let r = document.getElementById('answer-reopen-btn'); if (r) r.remove();
+				if (skip) skip.style.display = '';
+				if (typeof onContinue === 'function') onContinue();
+			});
+			document.body.appendChild(btn);
 		}
 
 		function updateQuestion(buttonIndex) {
@@ -1363,7 +1533,7 @@ if(isset($_SESSION['reponses'])){
 									});
 								}
 							});
-							// Popup seulement pour qcm / echelle (pas lien / mct, qui ont leur propre tableau)
+							// Popup (qcm / echelle), puis bouton "Continuer" vers la page finale
 							if (response[2] == "qcm" || response[2] == "echelle") {
 								let ci = parseInt(response[1], 10);
 								let correctText = "";
@@ -1373,16 +1543,11 @@ if(isset($_SESSION['reponses'])){
 								}
 								let explanation = response.slice(3).join("__");
 								let userCorrect = parseInt(buttonIndex, 10) === ci;
-								showAnswerPopup(correctText, explanation, userCorrect, function () {
-									window.location.href = window.location.href;
-								});
-							} else {
-								// types sans popup : ancien comportement (rechargement automatique)
-								setTimeout(function () {
-									timeout = false;
-									window.location.href = window.location.href;
-								}, 3000);
+								showAnswerPopup(correctText, explanation, userCorrect);
 							}
+							showContinueButton(function () {
+								window.location.href = window.location.href;
+							});
 						}
 
 						else {
@@ -1426,7 +1591,7 @@ if(isset($_SESSION['reponses'])){
 								}
 							});
 
-							// Popup avec la bonne réponse + explication (qcm / echelle) ; le fond change tout seul
+							// Popup avec la bonne réponse + explication (qcm / echelle) ; on attend le bouton "Continuer"
 							if (response[9] == "qcm" || response[9] == "echelle") {
 								let ci = parseInt(response[7], 10);
 								let correctText = "";
@@ -1439,7 +1604,7 @@ if(isset($_SESSION['reponses'])){
 								showAnswerPopup(correctText, explanation, userCorrect);
 							}
 
-							setTimeout(function () {
+							var pendingNext = function () {
 								timeout = false;
 								document.getElementById("Question").innerHTML = response[0];
 								answersarray.forEach(function (item, index) {
@@ -1813,7 +1978,8 @@ if(isset($_SESSION['reponses'])){
 									});
 								}
 								resize_questions();
-							}, cd);
+							};
+							showContinueButton(pendingNext);
 
 						}
 					}
