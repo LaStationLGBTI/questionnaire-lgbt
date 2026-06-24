@@ -44,6 +44,8 @@ if (isset($_SESSION['start'])) {
 	$prochaineQ  .= "__" . explode("__",$_SESSION["qtype"])[$_SESSION["LastQuestion"]]; //8
 	$prochaineQ  .= "__" . explode("__",$_SESSION["qtype"])[$_SESSION["LastQuestion"] - 1]; //9
 	$prochaineQ  .= "__" . explode("__",$_SESSION["IdInUse"])[$_SESSION["LastQuestion"]]; //10
+	// explication de la question à laquelle on vient de répondre (placée en dernier : peut contenir des espaces)
+	$prochaineQ  .= "__" . (isset($_SESSION["expliqs"]) ? explode("__",$_SESSION["expliqs"])[$_SESSION["LastQuestion"] - 1] : ""); //11
 
 	}
 		else
@@ -55,7 +57,10 @@ if (isset($_SESSION['start'])) {
 	else
 	{
 		$prochaineQ = "fin";
-		$prochaineQ  .= "__" . explode("__",$_SESSION["answer"])[$_SESSION["LastQuestion"]];
+		$prochaineQ  .= "__" . explode("__",$_SESSION["answer"])[$_SESSION["LastQuestion"]]; //1
+		$prochaineQ  .= "__" . explode("__",$_SESSION["qtype"])[$_SESSION["LastQuestion"]]; //2 type de la dernière question
+		// explication de la dernière question (placée en dernier : peut contenir des espaces)
+		$prochaineQ  .= "__" . (isset($_SESSION["expliqs"]) ? explode("__",$_SESSION["expliqs"])[$_SESSION["LastQuestion"]] : ""); //3
 $servername = "localhost";  
 $username = "root";
 $password = "";
