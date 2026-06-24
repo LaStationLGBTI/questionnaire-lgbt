@@ -4,3 +4,13 @@ $DB_HOSTNAME = getenv('DB_HOSTNAME', "localhost");
 $DB_USERNAME = getenv('DB_USERNAME', "USERNAME");
 $DB_PASSWORD = getenv('DB_PASSWORD', "PASSWORD");
 $DB_NAME = getenv('DB_NAME', "questionnaire-lgbti");
+// --- Envoi des résultats par e-mail (SMTP) ---
+// Renseigner ces variables d'environnement côté serveur/conteneur.
+// Tant que SMTP_HOST est vide, aucun e-mail n'est envoyé (le site fonctionne normalement).
+$SMTP_HOST   = getenv('SMTP_HOST') ?: '';                 // ex: smtp.votre-domaine.eu
+$SMTP_PORT   = getenv('SMTP_PORT') ?: '587';              // 587 (STARTTLS) ou 465 (SSL)
+$SMTP_SECURE = getenv('SMTP_SECURE') ?: 'tls';            // 'tls' pour 587, 'ssl' pour 465
+$SMTP_USER   = getenv('SMTP_USER') ?: '';                 // identifiant SMTP (souvent l'adresse complète)
+$SMTP_PASS   = getenv('SMTP_PASS') ?: '';                 // mot de passe SMTP
+$SMTP_FROM   = getenv('SMTP_FROM') ?: 'noreply@lastation-lgbti.eu'; // adresse expéditeur
+$SMTP_FROM_NAME = getenv('SMTP_FROM_NAME') ?: 'La Station LGBTQIA+'; // nom affiché
