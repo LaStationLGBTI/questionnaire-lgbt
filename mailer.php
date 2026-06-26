@@ -21,10 +21,10 @@ function send_results_email($to, $subject, $htmlBody) {
     try {
         $mail->isSMTP();
         $mail->Host       = $SMTP_HOST;
-        $mail->SMTPAuth   = true;
+        $mail->SMTPAuth   = $SMTP_USER === '' ? false : true;
         $mail->Username   = $SMTP_USER;
         $mail->Password   = $SMTP_PASS;
-        $mail->SMTPSecure = ($SMTP_SECURE === 'ssl') ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->SMTPSecure = $SMTP_SECURE === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : $SMTP_SECURE === 'tls' ? PHPMailer::ENCRYPTION_STARTTLS : '';
         $mail->Port       = (int) $SMTP_PORT;
         $mail->CharSet    = 'UTF-8';
 
