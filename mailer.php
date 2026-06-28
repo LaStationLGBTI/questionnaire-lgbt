@@ -12,19 +12,35 @@ require_once __DIR__ . '/vendor/phpmailer/src/SMTP.php';
 function send_results_email($to, $subject, $htmlBody) {
     global $SMTP_HOST, $SMTP_PORT, $SMTP_SECURE, $SMTP_USER, $SMTP_PASS, $SMTP_FROM, $SMTP_FROM_NAME;
 
-    // Pas de configuration SMTP, ou adresse invalide -> on n'envoie rien (le site continue normalement)
-    if (empty($SMTP_HOST) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+    // --- Diagnostic : on logue la raison exacte d'un non-envoi ---
+    $missing = array();
+    if (empty($SMTP_HOST)) { $missing[] = 'SMTP_HOST vide'; }
+    if (empty($SMTP_USER)) { $missing[] = 'SMTP_USER vide'; }
+    if (empty($SMTP_PASS)) { $missing[] = 'SMTP_PASS vide'; }
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { $missing[] = "adresse destinataire invalide ('$to')"; }
+    if (!empty($missing)) {
+        error_log('[mail] Envoi annule : ' . implode(', ', $missing));
         return false;
     }
+    // On masque le login pour ne pas l'exposer dans les logs : ab***@domaine.eu
+    $userMasked = $SMTP_USER;
+    if (strpos($SMTP_USER, '@') !== false) {
+        list($u, $d) = explode('@', $SMTP_USER, 2);
+        $userMasked = substr($u, 0, 2) . '***@' . $d;
+    }
+    error_log("[mail] Config OK (host=$SMTP_HOST, port=$SMTP_PORT, secure=$SMTP_SECURE, user=$userMasked) -> tentative d'envoi");
 
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();
+        // Trace SMTP detaillee dans les logs du conteneur (connexion, auth, TLS...)
+        $mail->SMTPDebug   = 2; // SMTP::DEBUG_SERVER
+        $mail->Debugoutput = function ($str, $level) { error_log('[mail][smtp] ' . trim($str)); };
         $mail->Host       = $SMTP_HOST;
-        $mail->SMTPAuth   = ($SMTP_USER === '') ? false : true;
+        $mail->SMTPAuth   = true;
         $mail->Username   = $SMTP_USER;
         $mail->Password   = $SMTP_PASS;
-        $mail->SMTPSecure = ($SMTP_SECURE === 'ssl') ? PHPMailer::ENCRYPTION_SMTPS : (($SMTP_SECURE === 'tls') ? PHPMailer::ENCRYPTION_STARTTLS : '');
+        $mail->SMTPSecure = ($SMTP_SECURE === 'ssl') ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = (int) $SMTP_PORT;
         $mail->CharSet    = 'UTF-8';
 
