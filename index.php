@@ -1,5 +1,67 @@
 <!DOCTYPE html>
 <?php
+// --- Mode test CLI : tester l'envoi SMTP sans passer par le questionnaire ---
+// Usage :  php index.php destinataire@exemple.com
+// Dans le conteneur : docker exec <conteneur> php /var/www/html/index.php destinataire@exemple.com
+// Affiche la raison exacte (lignes [mail]) en cas d'echec. Aucun mot de passe n'est logue.
+if (PHP_SAPI === 'cli') {
+    $to = isset($argv[1]) ? trim($argv[1]) : '';
+    if ($to === '' || $to === '--help' || $to === '-h') {
+        fwrite(STDERR, "Usage: php index.php destinataire@exemple.com\n");
+        exit(1);
+    }
+    require_once __DIR__ . '/conf.php';
+    require_once __DIR__ . '/mailer.php';
+    fwrite(STDOUT, "Test d'envoi SMTP vers : $to\n");
+    $ok = send_results_email(
+        $to,
+        'Test SMTP - La Station LGBTQIA+',
+        '<html><head><meta charset="UTF-8"></head><body>'
+            . '<p>Ceci est un message de test envoye depuis index.php (CLI).</p>'
+            . '</body></html>'
+    );
+    fwrite(STDOUT, $ok
+        ? "Resultat : ENVOYE (verifiez la boite de reception, y compris les spams)\n"
+        : "Resultat : ECHEC -> voir les lignes [mail] ci-dessus pour la raison exacte\n");
+    exit($ok ? 0 : 1);
+}
+
+// --- Auto-test SMTP par URL (TEMPORAIRE : a retirer apres le test) ---
+// Permet de tester l'envoi depuis le navigateur, sans acces au serveur.
+
+// Avant de pousser : remplacez le jeton ci-dessous par une chaine aleatoire a vous.
+if (isset($_GET['selftest'])) {
+    $SELFTEST_TOKEN = 'AowGKhu4zgf2QxkZVC5tJNyU';
+    header('Content-Type: text/plain; charset=UTF-8');
+    if ($SELFTEST_TOKEN === 'AowGKhu4zgf2QxkZVC5tJNyU' || $_GET['selftest'] !== $SELFTEST_TOKEN) {
+        http_response_code(403);
+        echo "Acces refuse : jeton invalide ou non configure.\n";
+        exit;
+    }
+    $to = isset($_GET['to']) ? trim($_GET['to']) : '';
+    require_once __DIR__ . '/conf.php';
+    require_once __DIR__ . '/mailer.php';
+    echo "== Auto-test SMTP ==\n";
+    echo 'SMTP_HOST : ' . (!empty($SMTP_HOST) ? 'defini' : 'VIDE') . "\n";
+    echo 'SMTP_USER : ' . (!empty($SMTP_USER) ? 'defini' : 'VIDE') . "\n";
+    echo 'SMTP_PASS : ' . (!empty($SMTP_PASS) ? 'defini' : 'VIDE') . "\n";
+    echo 'Destinataire : ' . $to . "\n\n";
+    $ok = send_results_email(
+        $to,
+        'Test SMTP - La Station LGBTQIA+',
+        '<html><head><meta charset="UTF-8"></head><body><p>Message de test (auto-test web).</p></body></html>'
+    );
+    echo $ok
+        ? "Resultat : ENVOYE (verifiez la boite de reception, y compris les spams)\n"
+        : "Resultat : ECHEC\n";
+    if (!$ok && !empty($GLOBALS['mail_last_error'])) {
+        echo 'Raison : ' . $GLOBALS['mail_last_error'] . "\n";
+    }
+    if (!empty($GLOBALS['mail_debug'])) {
+        echo "\n--- Trace SMTP ---\n" . $GLOBALS['mail_debug'];
+    }
+    exit;
+}
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 ini_set('display_errors', 1); ini_set('display_startup_errors', 1); error_reporting(E_ALL);
