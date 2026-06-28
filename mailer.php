@@ -19,7 +19,9 @@ function send_results_email($to, $subject, $htmlBody) {
     if (empty($SMTP_PASS)) { $missing[] = 'SMTP_PASS vide'; }
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { $missing[] = "adresse destinataire invalide ('$to')"; }
     if (!empty($missing)) {
-        error_log('[mail] Envoi annule : ' . implode(', ', $missing));
+        $reason = 'Envoi annule : ' . implode(', ', $missing);
+        $GLOBALS['mail_last_error'] = $reason;   // lisible par l'auto-test web
+        error_log('[mail] ' . $reason);
         return false;
     }
     // On masque le login pour ne pas l'exposer dans les logs : ab***@domaine.eu
@@ -35,7 +37,11 @@ function send_results_email($to, $subject, $htmlBody) {
         $mail->isSMTP();
         // Trace SMTP detaillee dans les logs du conteneur (connexion, auth, TLS...)
         $mail->SMTPDebug   = 2; // SMTP::DEBUG_SERVER
-        $mail->Debugoutput = function ($str, $level) { error_log('[mail][smtp] ' . trim($str)); };
+        $mail->Debugoutput = function ($str, $level) {
+            error_log('[mail][smtp] ' . trim($str));
+            if (!isset($GLOBALS['mail_debug'])) { $GLOBALS['mail_debug'] = ''; }
+            $GLOBALS['mail_debug'] .= trim($str) . "\n"; // lisible par l'auto-test web
+        };
         $mail->Host       = $SMTP_HOST;
         $mail->SMTPAuth   = true;
         $mail->Username   = $SMTP_USER;
@@ -57,6 +63,7 @@ function send_results_email($to, $subject, $htmlBody) {
         $mail->send();
         return true;
     } catch (Exception $e) {
+        $GLOBALS['mail_last_error'] = $mail->ErrorInfo;   // lisible par l'auto-test web
         error_log('Envoi e-mail resultats echoue: ' . $mail->ErrorInfo);
         return false;
     }
