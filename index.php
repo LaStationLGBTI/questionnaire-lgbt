@@ -1505,26 +1505,30 @@ if(isset($_SESSION['reponses'])){
 		let cd = 0;
 
 		// Popup flottant (sans assombrir le fond), déplaçable, refermable et ré-ouvrable.
-		function showAnswerPopup(correctText, explanation, isCorrect) {
+		function showAnswerPopup(correctText, explanation, isCorrect, isNeutral) {
 			let oldBox = document.getElementById('answer-info-popup');
 			if (oldBox) oldBox.remove();
 			let oldReopen = document.getElementById('answer-reopen-btn');
 			if (oldReopen) oldReopen.remove();
 
-			const status = isCorrect
-				? (lang === 'de' ? '✓ Richtig!' : '✓ Correct !')
-				: (lang === 'de' ? '✗ Leider falsch' : '✗ Dommage');
+			const status = isNeutral
+				? (lang === 'de' ? 'Danke für deine Antwort' : 'Merci pour ta réponse')
+				: (isCorrect
+					? (lang === 'de' ? '✓ Richtig!' : '✓ Correct !')
+					: (lang === 'de' ? '✗ Leider falsch' : '✗ Dommage'));
 			const goodLabel = lang === 'de' ? 'Richtige Antwort' : 'Bonne réponse';
 			const reopenLabel = lang === 'de' ? 'Antwort anzeigen' : 'Voir la réponse';
+			// échelle : pas de bonne/mauvaise réponse, on n'affiche pas le texte "bonne réponse"
+			if (isNeutral) correctText = '';
 
 			const box = document.createElement('div');
 			box.id = 'answer-info-popup';
 			box.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#f4eefb;border-radius:10px;width:420px;max-width:92%;border:solid 0.3em #c7aecb;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:10000;';
 
 			const header = document.createElement('div');
-			header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:move;background:' + (isCorrect ? '#d6f5d6' : '#f7d6d6') + ';border-radius:7px 7px 0 0;user-select:none;';
+			header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:move;background:' + (isNeutral ? '#e9d9f2' : (isCorrect ? '#d6f5d6' : '#f7d6d6')) + ';border-radius:7px 7px 0 0;user-select:none;';
 			const title = document.createElement('span');
-			title.style.cssText = 'font-weight:700;color:' + (isCorrect ? '#2e7d32' : '#b5564a') + ';';
+			title.style.cssText = 'font-weight:700;color:' + (isNeutral ? '#5b4a8a' : (isCorrect ? '#2e7d32' : '#b5564a')) + ';';
 			title.textContent = status;
 			const closeX = document.createElement('span');
 			closeX.textContent = '✕';
@@ -1635,19 +1639,21 @@ if(isset($_SESSION['reponses'])){
 									innerAnswers.classList.remove('fade-to-white');
 								}
 							});
-							// Ensuite, nous montrons la bonne/mauvaise réponse
-							answersarray.forEach(function (item, index) {
-								const innerAnswers = item.querySelectorAll('div#question_container');
-								if (innerAnswers.length > 0) {
-									innerAnswers.forEach(function (innerAnswer) {
-										if (index === parseInt(response[1], 10) - 1) {
-											innerAnswer.classList.add("fade-to-green");
-										} else {
-											innerAnswer.classList.add("fade-to-red");
-										}
-									});
-								}
-							});
+							// Ensuite, nous montrons la bonne/mauvaise réponse (pas pour échelle : pas de bonne/mauvaise réponse)
+							if (response[2] == "qcm") {
+								answersarray.forEach(function (item, index) {
+									const innerAnswers = item.querySelectorAll('div#question_container');
+									if (innerAnswers.length > 0) {
+										innerAnswers.forEach(function (innerAnswer) {
+											if (index === parseInt(response[1], 10) - 1) {
+												innerAnswer.classList.add("fade-to-green");
+											} else {
+												innerAnswer.classList.add("fade-to-red");
+											}
+										});
+									}
+								});
+							}
 							// Popup (qcm / echelle), puis bouton "Continuer" vers la page finale
 							if (response[2] == "qcm" || response[2] == "echelle") {
 								let ci = parseInt(response[1], 10);
@@ -1657,8 +1663,9 @@ if(isset($_SESSION['reponses'])){
 									if (rep) correctText = rep.innerText;
 								}
 								let explanation = response.slice(3).join("__");
+								let isEchelle = response[2] == "echelle";
 								let userCorrect = parseInt(buttonIndex, 10) === ci;
-								showAnswerPopup(correctText, explanation, userCorrect);
+								showAnswerPopup(correctText, explanation, userCorrect, isEchelle);
 							}
 							showContinueButton(function () {
 								window.location.href = window.location.href;
@@ -1715,8 +1722,9 @@ if(isset($_SESSION['reponses'])){
 									if (rep) correctText = rep.innerText;
 								}
 								let explanation = response.slice(11).join("__");
+								let isEchelle = response[9] == "echelle";
 								let userCorrect = parseInt(buttonIndex, 10) === ci;
-								showAnswerPopup(correctText, explanation, userCorrect);
+								showAnswerPopup(correctText, explanation, userCorrect, isEchelle);
 							}
 
 							var pendingNext = function () {
