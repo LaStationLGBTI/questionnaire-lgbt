@@ -1390,9 +1390,19 @@ if(isset($_SESSION['reponses'])){
                         ? 'Ihre Ergebnisse - La Station LGBTQIA+'
                         : 'Vos résultats - La Station LGBTQIA+';
                     require_once __DIR__ . '/mailer.php';
+                    error_log('[mail] Bloc envoi atteint pour ' . $_SESSION["emailr"]);
                     if (send_results_email($_SESSION["emailr"], $email_subject, $email_body)) {
                         $_SESSION["mail_sent"] = 1;
+                        error_log('[mail] Resultat : ENVOYE');
+                    } else {
+                        error_log('[mail] Resultat : ECHEC (voir lignes [mail] ci-dessus)');
                     }
+                } else {
+                    // Pourquoi le bloc d'envoi n'est meme pas entre
+                    error_log('[mail] Bloc envoi IGNORE : '
+                        . (!empty($_SESSION["mail_sent"]) ? 'deja envoye (mail_sent=1) ' : '')
+                        . (empty($_SESSION["emailr"]) ? 'emailr vide ' : '')
+                        . (!empty($_SESSION["emailr"]) && !filter_var($_SESSION["emailr"], FILTER_VALIDATE_EMAIL) ? "emailr invalide ('".$_SESSION["emailr"]."') " : ''));
                 }
                 ?>
 
