@@ -854,6 +854,7 @@ if (!isset($_SESSION['level'])) {
 
 
     session_unset();
+    $_SESSION['language'] = $lang; // session_unset() efface la langue : on la restaure pour la conserver
     $levels = [];
     $error_message = '';
 	$level_titles = [];
@@ -879,6 +880,19 @@ if (!isset($_SESSION['level'])) {
                     <h2 class="u-align-center u-text u-text-default u-text-1">
                         <b><?php echo $texts[$lang]['choose_questionnaire']; ?></b>
                     </h2>
+
+                    <div class="language-selector">
+                        <span style="align-self: center;">Français</span>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="language" value="fr">
+                            <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>">
+                        </form>
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="language" value="en">
+                            <input type="image" src="images/uk.svg" alt="English" class="language-flag <?php echo $lang === 'en' ? 'selected' : ''; ?>">
+                        </form>
+                        <span style="align-self: center;">English</span>
+                    </div>
 
                     <?php if ($error_message): ?>
                         <p class="error u-text"><?= htmlspecialchars($error_message) ?></p>
@@ -2187,3 +2201,47 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
