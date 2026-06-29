@@ -12,11 +12,11 @@ require_once __DIR__ . '/vendor/phpmailer/src/SMTP.php';
 function send_results_email($to, $subject, $htmlBody) {
     global $SMTP_HOST, $SMTP_PORT, $SMTP_SECURE, $SMTP_USER, $SMTP_PASS, $SMTP_FROM, $SMTP_FROM_NAME;
 
-    // --- Diagnostic : on logue la raison exacte d'un non-envoi ---
+    // --- Diagnostic : seuls SMTP_HOST et le destinataire sont obligatoires ---
+    // SMTP_USER / SMTP_PASS sont facultatifs : un relais sur le reseau local
+    // accepte le courrier sans authentification (cf. config admin).
     $missing = array();
     if (empty($SMTP_HOST)) { $missing[] = 'SMTP_HOST vide'; }
-    if (empty($SMTP_USER)) { $missing[] = 'SMTP_USER vide'; }
-    if (empty($SMTP_PASS)) { $missing[] = 'SMTP_PASS vide'; }
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { $missing[] = "adresse destinataire invalide ('$to')"; }
     if (!empty($missing)) {
         $reason = 'Envoi annule : ' . implode(', ', $missing);
@@ -24,9 +24,11 @@ function send_results_email($to, $subject, $htmlBody) {
         error_log('[mail] ' . $reason);
         return false;
     }
+    // Authentification seulement si un identifiant est fourni
+    $useAuth = !empty($SMTP_USER);
     // On masque le login pour ne pas l'exposer dans les logs : ab***@domaine.eu
-    $userMasked = $SMTP_USER;
-    if (strpos($SMTP_USER, '@') !== false) {
+    $userMasked = $useAuth ? $SMTP_USER : '(sans auth)';
+    if ($useAuth && strpos($SMTP_USER, '@') !== false) {
         list($u, $d) = explode('@', $SMTP_USER, 2);
         $userMasked = substr($u, 0, 2) . '***@' . $d;
     }
@@ -43,10 +45,22 @@ function send_results_email($to, $subject, $htmlBody) {
             $GLOBALS['mail_debug'] .= trim($str) . "\n"; // lisible par l'auto-test web
         };
         $mail->Host       = $SMTP_HOST;
-        $mail->SMTPAuth   = true;
-        $mail->Username   = $SMTP_USER;
-        $mail->Password   = $SMTP_PASS;
-        $mail->SMTPSecure = ($SMTP_SECURE === 'ssl') ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->SMTPAuth   = $useAuth;
+        if ($useAuth) {
+            $mail->Username = $SMTP_USER;
+            $mail->Password = $SMTP_PASS;
+        }
+        // Chiffrement : 'ssl' -> SMTPS, 'tls' -> STARTTLS, 'none'/'' -> aucun (relais local)
+        $secure = strtolower((string) $SMTP_SECURE);
+        if ($secure === 'ssl') {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        } elseif ($secure === 'tls') {
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        } else {
+            // Pas de chiffrement (ex: relais local en clair sur le port 25)
+            $mail->SMTPSecure  = false;
+            $mail->SMTPAutoTLS = false;
+        }
         $mail->Port       = (int) $SMTP_PORT;
         $mail->CharSet    = 'UTF-8';
 
