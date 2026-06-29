@@ -33,11 +33,11 @@ if (PHP_SAPI === 'cli') {
 
 // Avant de pousser : remplacez le jeton ci-dessous par une chaine aleatoire a vous.
 if (isset($_GET['selftest'])) {
-    $SELFTEST_TOKEN = 'AowGKhu4zgf2QxkZVC5tJNyU';
+    $SELFTEST_TOKEN = 'AowGKhu4zgf2QxkZVC5tJNyU'; // votre jeton aleatoire
     header('Content-Type: text/plain; charset=UTF-8');
-    if ($SELFTEST_TOKEN === 'AowGKhu4zgf2QxkZVC5tJNyU' || $_GET['selftest'] !== $SELFTEST_TOKEN) {
+    if ($SELFTEST_TOKEN === '' || (string) $_GET['selftest'] !== $SELFTEST_TOKEN) {
         http_response_code(403);
-        echo "Acces refuse : jeton invalide ou non configure.\n";
+        echo "Acces refuse : jeton invalide.\n";
         exit;
     }
     $to = isset($_GET['to']) ? trim($_GET['to']) : '';
