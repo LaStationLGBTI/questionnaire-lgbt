@@ -1,7 +1,5 @@
 <!DOCTYPE html>
 <?php
-// TEMPORAIRE : forcer l'affichage des erreurs tout en haut pour diagnostiquer l'ecran blanc.
-ini_set('display_errors', 1); ini_set('display_startup_errors', 1); error_reporting(E_ALL);
 // --- Mode test CLI : tester l'envoi SMTP sans passer par le questionnaire ---
 // Usage :  php index.php destinataire@exemple.com
 // Dans le conteneur : docker exec <conteneur> php /var/www/html/index.php destinataire@exemple.com
@@ -99,12 +97,12 @@ if (isset($_GET['level']) && !isset($_SESSION['level'])) {
     exit();
 }
 if (!isset($_SESSION['language'])) {
-    $_SESSION['language'] = isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr']) ? $_POST['language'] : 'fr';
+    $_SESSION['language'] = isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr', 'en']) ? $_POST['language'] : 'fr';
 }
 if (isset($_GET['level'])) {
     $_SESSION['level'] = $_GET['level'];
 }
-if (isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr'])) {
+if (isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr', 'en'])) {
     $_SESSION['language'] = $_POST['language'];
 }
 $lang = $_SESSION['language'];
@@ -187,6 +185,45 @@ $texts = [
         'none' => 'Keine',
 		'question_choise' => "AUSWÄHLEN",
         'return_to_start' => 'Zurück zum Start'
+    ],
+    'en' => [
+	    'choose_questionnaire' => 'Choose a questionnaire',
+        'questionnaire_level' => 'The survey: Module `{level}`',
+        'no_questionnaires_available' => 'No questionnaire available.',
+        'project_title' => 'Raising awareness of sexual and gender-based violence and other forms of discrimination (Online self-assessment training)',
+        'project_desc' => '',
+        'objectives' => 'Project objectives:',
+        'awareness' => 'Awareness: Encourage students to better understand the realities and challenges faced by LGBTQIA+ people.',
+        'inclusion' => 'Inclusion: Promote a respectful school environment where everyone feels accepted, whatever their identity or orientation.',
+        'engagement' => 'Civic engagement: Show how concrete actions can help change attitudes and strengthen the values of respect and solidarity.',
+        'why_survey' => 'Why an online survey?',
+        'survey_reason' => 'The student chose this interactive format to allow their classmates to take part anonymously and to express themselves freely.',
+        'impact' => 'The expected impact:',
+        'impact_desc' => 'By involving their peers in this participatory process, the student does much more than raise awareness: they act as a vector of change by encouraging others to adopt inclusive behaviours and to become ambassadors of respect themselves.',
+        'project_note' => 'This project, both educational and supportive, is fully in line with the values of the Collège international Vauban and reflects the commitment of an inspiring student to building a fairer and more tolerant world.',
+        'warning_title' => 'Notice about the survey',
+        'anonymity' => 'Guaranteed anonymity: All your answers are collected anonymously. No personal information will be associated with your answers.',
+        'voluntary' => 'Free participation: Taking part in this survey is entirely optional. You may choose not to answer certain questions if you do not wish to.',
+        'results' => 'Results available: If you would like to receive a summary of the results once the survey is complete, you may leave your email address at the end. This step is completely optional and does not compromise the anonymity of your answers.',
+        'thanks' => 'Thank you for taking part in this project, which helps raise awareness and promote respect and inclusion within our queer community.',
+        'continue' => 'Continue',
+        'footer' => 'Page design: R. (Hex); internship supervisors: Gérald Schlemminger, Christian Bergemann, (c) 2025 La STATION',
+        'final_warning' => 'Notice about the final questions',
+        'final_warning_desc' => 'The last questions of the survey are more personal and concern your gender identity and sexual orientation. We understand that these topics may be perceived as sensitive or intrusive. There is no obligation to answer: you are free not to answer these questions if you do not feel comfortable. This will in no way affect your participation in the survey.',
+        'gender_question' => 'Do you identify with any of the following genders?',
+        'gender_prompt' => 'Select the description that suits you',
+        'sexuality_question' => 'Do you identify with any of the following sexual orientations?',
+        'sexuality_prompt' => 'Select the description that suits you',
+        'email_prompt' => 'Enter your email address if you would like to receive the results of the survey.',
+        'submit' => 'Submit and finish the questionnaire',
+        'thank_you' => 'Thank you!',
+        'popup_title' => 'Definition',
+        'popup_prompt' => 'Choose an option from the list:',
+        'popup_close' => 'Close',
+        'corrections' => 'Corrections:',
+        'none' => 'None',
+		'question_choise' => "CHOOSE",
+        'return_to_start' => 'Back to home'
     ]
 ];
 $lang = $_SESSION['language'];
@@ -823,9 +860,12 @@ if (!isset($_SESSION['level'])) {
     try {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $stmt = $pdo->query("SELECT DISTINCT level FROM GSDatabase ORDER BY level ASC");
+        // En anglais : on liste les modules traduits (mêmes niveaux logiques que la version FR).
+        $list_table  = ($lang === 'en') ? 'GSDatabase_en'  : 'GSDatabase';
+        $title_table = ($lang === 'en') ? 'GSDatabaseT_en' : 'GSDatabaseT';
+        $stmt = $pdo->query("SELECT DISTINCT level FROM $list_table ORDER BY level ASC");
         $levels = $stmt->fetchAll(PDO::FETCH_COLUMN);
-		$stmt_titles = $pdo->query("SELECT level, titre FROM GSDatabaseT");
+		$stmt_titles = $pdo->query("SELECT level, titre FROM $title_table");
         $all_titles = $stmt_titles->fetchAll(PDO::FETCH_KEY_PAIR);
     } catch (PDOException $e) {
         $error_message = "Erreur de connexion à la base de données : " . $e->getMessage();
@@ -998,6 +1038,11 @@ if (!isset($_SESSION['level'])) {
                         <input type="hidden" name="language" value="fr">
                         <input type="image" src="images/france.svg" alt="Français" class="language-flag <?php echo $lang === 'fr' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
                     </form>
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="language" value="en">
+                        <input type="image" src="images/uk.svg" alt="English" class="language-flag <?php echo $lang === 'en' ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
+                    </form>
+                    <span style="align-self: center;">English</span>
                     <!-- Bouton de sélection de l'allemand masqué (retirer les commentaires pour le réafficher)
                     <form method="POST" style="display: inline;">
                         <input type="hidden" name="language" value="de">
@@ -1011,7 +1056,7 @@ if (!isset($_SESSION['level'])) {
                     <div class="u-align-right u-form-group u-form-submit">
                         <a href="index.php?back=1"
                            style="display:inline-block; margin-top:1vh; margin-right:12px; padding:0.55em 1.3em; border-radius:50px; border:2px solid #9c5a86; color:#9c5a86; text-decoration:none; font-weight:700; font-size:14px;">
-                            &larr; <?php echo $lang === 'de' ? 'Zurück zur Modulauswahl' : 'Retour au choix du module'; ?>
+                            &larr; <?php echo $lang === 'en' ? 'Back to module selection' : ($lang === 'de' ? 'Zurück zur Modulauswahl' : 'Retour au choix du module'); ?>
                         </a>
                         <button style="margin-top:1vh;" value="1" name="start" type="submit"
                             class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
@@ -1037,7 +1082,11 @@ if (!isset($_SESSION["start"])) {
     } catch (PDOException $e) {
         echo "Erreur connection: " . $e->getMessage();
     }
-    $table = $lang === 'de' ? 'GSDatabase' : 'GSDatabase';
+    // En anglais on tire les questions de la table traduite. fr_id (colonne de GSDatabase_en)
+    // pointe vers GSDatabase.id : on l'utilise comme identifiant logique pour que les réponses
+    // FR et EN se regroupent sur la même question dans les statistiques.
+    $useEn = ($lang === 'en');
+    $table = $useEn ? 'GSDatabase_en' : 'GSDatabase';
     $stmt = $conn->prepare("SELECT * FROM $table WHERE level = ? ORDER BY `id` ASC");
     $stmt->execute([$_SESSION['level']]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1063,7 +1112,10 @@ if (!isset($_SESSION["start"])) {
             $_SESSION["Rep3"] .= "__" . $row["rep3"];
             $_SESSION["Rep4"] .= "__" . $row["rep4"];
             $_SESSION["Rep5"] .= "__" . $row["rep5"];
-            $_SESSION["IdInUse"] .= "__" . $row["id"];
+            // En anglais : on stocke fr_id (id logique français) pour que GSDatabaseR et les
+            // statistiques regroupent FR + EN. Repli sur l'id EN si fr_id est absent.
+            $logical_id = ($useEn && !empty($row["fr_id"])) ? $row["fr_id"] : $row["id"];
+            $_SESSION["IdInUse"] .= "__" . $logical_id;
             $_SESSION["answer"] .= "__" . $row["answer"];
             $_SESSION["qtype"] .= "__" . $row["qtype"];
 			$_SESSION["expliqs"] .= "__" . $row["expliq"];
@@ -1073,7 +1125,7 @@ if (!isset($_SESSION["start"])) {
         $_SESSION["start"] = 1;
         $_SESSION["LastQuestion"] = "1";
     } else {
-        echo $lang === 'de' ? "Fehlende Daten für die gewählte Stufe. Bitte kontaktieren Sie 'La STATION'" : "Manque des données pour le niveau choisi. Veuillez contacter 'La STATION'";
+        echo $lang === 'en' ? "Missing data for the chosen level. Please contact 'La STATION'" : ($lang === 'de' ? "Fehlende Daten für die gewählte Stufe. Bitte kontaktieren Sie 'La STATION'" : "Manque des données pour le niveau choisi. Veuillez contacter 'La STATION'");
         exit();
     }
 }
@@ -1086,7 +1138,7 @@ if (!isset($_SESSION["start"])) {
             $currentRep5 = explode("__", $_SESSION["Rep5"])[$_SESSION["LastQuestion"]];
             $qtype = explode("__", $_SESSION["qtype"])[$_SESSION["LastQuestion"]];
         } else {
-            echo $lang === 'de' ? "Fehler bei der Auswahl der Frage, bitte kontaktieren Sie 'La STATION'" : "Erreur lors de la sélection de la question, veuillez contacter 'La STATION'";
+            echo $lang === 'en' ? "Error while selecting the question, please contact 'La STATION'" : ($lang === 'de' ? "Fehler bei der Auswahl der Frage, bitte kontaktieren Sie 'La STATION'" : "Erreur lors de la sélection de la question, veuillez contacter 'La STATION'");
         }
 
         // --- Rappel : on récupère le texte du module et on garde la partie à partir de "Informations" ---
@@ -1094,11 +1146,14 @@ if (!isset($_SESSION["start"])) {
         try {
             $pdo_rappel = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
             $pdo_rappel->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt_rappel = $pdo_rappel->prepare("SELECT text FROM GSDatabaseT WHERE level = ?");
+            $rappel_table = ($lang === 'en') ? 'GSDatabaseT_en' : 'GSDatabaseT';
+            $stmt_rappel = $pdo_rappel->prepare("SELECT text FROM $rappel_table WHERE level = ?");
             $stmt_rappel->execute([$_SESSION['level']]);
             $row_rappel = $stmt_rappel->fetch(PDO::FETCH_ASSOC);
             if ($row_rappel && !empty($row_rappel['text'])) {
-                $pos = stripos($row_rappel['text'], 'Informations');
+                // FR : "Informations" ; EN : "Information" (stripos => sous-chaîne, couvre les deux)
+                $rappel_keyword = ($lang === 'en') ? 'Information' : 'Informations';
+                $pos = stripos($row_rappel['text'], $rappel_keyword);
                 if ($pos !== false) {
                     $rappel_text = substr($row_rappel['text'], $pos);
                 }
@@ -1114,19 +1169,19 @@ if (!isset($_SESSION["start"])) {
                 Question <?php echo $_SESSION["LastQuestion"]; ?>
             </h5>
             <button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4" style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next" onclick="updateQuestion(-1)">
-                <?php echo $lang === 'de' ? 'Ohne Antwort fortfahren' : 'Continuer sans répondre'; ?>
+                <?php echo $lang === 'en' ? 'Continue without answering' : ($lang === 'de' ? 'Ohne Antwort fortfahren' : 'Continuer sans répondre'); ?>
             </button>
             <?php if (!empty($rappel_text)): ?>
             <button type="button" id="rappel-btn" onclick="document.getElementById('rappel-popup').style.display='block'"
                 class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4"
                 style="color:black; margin-top:0; margin-left:10px; background-color:#e8c06b;">
-                📌 <?php echo $lang === 'de' ? 'Erinnerung' : 'Rappel'; ?>
+                📌 <?php echo $lang === 'en' ? 'Reminder' : ($lang === 'de' ? 'Erinnerung' : 'Rappel'); ?>
             </button>
             <?php endif; ?>
             <a href="index.php?back=1" id="quit-to-modules"
-               onclick="return confirm('<?php echo $lang === 'de' ? 'Fragebogen verlassen und zur Modulauswahl zurückkehren? Ihr Fortschritt geht verloren.' : 'Quitter le questionnaire et revenir au choix du module ? Votre progression sera perdue.'; ?>')"
+               onclick="return confirm('<?php echo $lang === 'en' ? 'Leave the questionnaire and return to module selection? Your progress will be lost.' : ($lang === 'de' ? 'Fragebogen verlassen und zur Modulauswahl zurückkehren? Ihr Fortschritt geht verloren.' : 'Quitter le questionnaire et revenir au choix du module ? Votre progression sera perdue.'); ?>')"
                style="display:inline-block; margin-top:0; margin-left:10px; padding:0.5em 1em; border-radius:50px; border:2px solid #b5564a; color:#b5564a; text-decoration:none; font-weight:700; font-size:14px;">
-                &larr; <?php echo $lang === 'de' ? 'Verlassen (Modul wechseln)' : 'Quitter (changer de module)'; ?>
+                &larr; <?php echo $lang === 'en' ? 'Leave (change module)' : ($lang === 'de' ? 'Verlassen (Modul wechseln)' : 'Quitter (changer de module)'); ?>
             </a>
             <b>
                 <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background:linear-gradient(135deg,#e9d9f2 0%,#dcd4f3 50%,#cfe3f2 100%); border-left:6px solid #8a7bf4;">
@@ -1145,7 +1200,7 @@ if (!isset($_SESSION["start"])) {
         style="display:none; position:fixed; top:90px; left:50%; transform:translateX(-50%); background:#f4eefb; border-radius:10px; width:560px; max-width:92%; border:solid 0.3em #c7aecb; box-shadow:0 6px 24px rgba(0,0,0,0.25); z-index:10001;">
         <div id="rappel-popup-header"
             style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; cursor:move; background:#ffe9a8; border-radius:7px 7px 0 0; user-select:none;">
-            <span style="font-weight:700;">📌 <?php echo $lang === 'de' ? 'Erinnerung' : 'Rappel'; ?></span>
+            <span style="font-weight:700;">📌 <?php echo $lang === 'en' ? 'Reminder' : ($lang === 'de' ? 'Erinnerung' : 'Rappel'); ?></span>
             <span onclick="document.getElementById('rappel-popup').style.display='none'"
                 style="cursor:pointer; font-size:18px; line-height:1; padding:0 4px; color:#555;">&#10005;</span>
         </div>
@@ -1154,7 +1209,7 @@ if (!isset($_SESSION["start"])) {
             <div style="text-align:center;">
                 <button type="button" onclick="document.getElementById('rappel-popup').style.display='none'"
                     style="margin-top:16px; background:#8a7bf4; color:#fff; border:none; padding:8px 18px; border-radius:20px; cursor:pointer; font-size:14px;">
-                    <?php echo $lang === 'de' ? 'Schließen' : 'Fermer'; ?>
+                    <?php echo $lang === 'en' ? 'Close' : ($lang === 'de' ? 'Schließen' : 'Fermer'); ?>
                 </button>
             </div>
         </div>
@@ -1207,14 +1262,14 @@ if (!isset($_SESSION["start"])) {
                                 <div style="display: flex; align-items: center; gap:10px;">
                                     <p style="margin:0;"><?php echo $texts[$lang]['gender_prompt']; ?></p>
                                     <select style="margin:0; padding-left:0;" id="name-bb9b" name="genre" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                        <option value="1"><?php echo $lang === 'de' ? 'Cisgender' : 'Cisgenre'; ?></option>
-                                        <option value="2"><?php echo $lang === 'de' ? 'Transgender' : 'Transgenre'; ?></option>
-                                        <option value="3"><?php echo $lang === 'de' ? 'Nicht-binär' : 'Non-binaire'; ?></option>
-                                        <option value="4"><?php echo $lang === 'de' ? 'Genderfluid' : 'Genre fluide'; ?></option>
-                                        <option value="5"><?php echo $lang === 'de' ? 'Intersex' : 'Intersexe'; ?></option>
-                                        <option value="6"><?php echo $lang === 'de' ? 'Keines' : 'Aucun'; ?></option>
-                                        <option value="7"><?php echo $lang === 'de' ? 'Andere' : 'Autre'; ?></option>
-                                        <option value="8"><?php echo $lang === 'de' ? 'Ich möchte nicht antworten.' : 'Je ne souhaite pas répondre.'; ?></option>
+                                        <option value="1"><?php echo $lang === 'en' ? 'Cisgender' : ($lang === 'de' ? 'Cisgender' : 'Cisgenre'); ?></option>
+                                        <option value="2"><?php echo $lang === 'en' ? 'Transgender' : ($lang === 'de' ? 'Transgender' : 'Transgenre'); ?></option>
+                                        <option value="3"><?php echo $lang === 'en' ? 'Non-binary' : ($lang === 'de' ? 'Nicht-binär' : 'Non-binaire'); ?></option>
+                                        <option value="4"><?php echo $lang === 'en' ? 'Genderfluid' : ($lang === 'de' ? 'Genderfluid' : 'Genre fluide'); ?></option>
+                                        <option value="5"><?php echo $lang === 'en' ? 'Intersex' : ($lang === 'de' ? 'Intersex' : 'Intersexe'); ?></option>
+                                        <option value="6"><?php echo $lang === 'en' ? 'None' : ($lang === 'de' ? 'Keines' : 'Aucun'); ?></option>
+                                        <option value="7"><?php echo $lang === 'en' ? 'Other' : ($lang === 'de' ? 'Andere' : 'Autre'); ?></option>
+                                        <option value="8"><?php echo $lang === 'en' ? 'I prefer not to answer.' : ($lang === 'de' ? 'Ich möchte nicht antworten.' : 'Je ne souhaite pas répondre.'); ?></option>
                                     </select>
                                 </div>
                             </div><br><br>
@@ -1223,14 +1278,14 @@ if (!isset($_SESSION["start"])) {
                                 <div style="display: flex; align-items: center; gap:10px;">
                                     <p style="margin:0;"><?php echo $texts[$lang]['sexuality_prompt']; ?></p>
                                     <select style="margin:0; padding-left:0;" id="email-bb9b" name="orient" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
-                                        <option value="1"><?php echo $lang === 'de' ? 'Heterosexualität' : 'Hétérosexualité'; ?></option>
-                                        <option value="2"><?php echo $lang === 'de' ? 'Homosexualität' : 'Homosexualité'; ?></option>
-                                        <option value="3"><?php echo $lang === 'de' ? 'Bisexualität' : 'Bisexualité'; ?></option>
-                                        <option value="4"><?php echo $lang === 'de' ? 'Pansexualität' : 'Pansexualité'; ?></option>
-                                        <option value="5"><?php echo $lang === 'de' ? 'Asexualität' : 'Asexualité'; ?></option>
-                                        <option value="6"><?php echo $lang === 'de' ? 'Keines' : 'Aucun'; ?></option>
-                                        <option value="7"><?php echo $lang === 'de' ? 'Andere' : 'Autre'; ?></option>
-                                        <option value="8"><?php echo $lang === 'de' ? 'Ich möchte nicht antworten.' : 'Je ne souhaite pas répondre.'; ?></option>
+                                        <option value="1"><?php echo $lang === 'en' ? 'Heterosexuality' : ($lang === 'de' ? 'Heterosexualität' : 'Hétérosexualité'); ?></option>
+                                        <option value="2"><?php echo $lang === 'en' ? 'Homosexuality' : ($lang === 'de' ? 'Homosexualität' : 'Homosexualité'); ?></option>
+                                        <option value="3"><?php echo $lang === 'en' ? 'Bisexuality' : ($lang === 'de' ? 'Bisexualität' : 'Bisexualité'); ?></option>
+                                        <option value="4"><?php echo $lang === 'en' ? 'Pansexuality' : ($lang === 'de' ? 'Pansexualität' : 'Pansexualité'); ?></option>
+                                        <option value="5"><?php echo $lang === 'en' ? 'Asexuality' : ($lang === 'de' ? 'Asexualität' : 'Asexualité'); ?></option>
+                                        <option value="6"><?php echo $lang === 'en' ? 'None' : ($lang === 'de' ? 'Keines' : 'Aucun'); ?></option>
+                                        <option value="7"><?php echo $lang === 'en' ? 'Other' : ($lang === 'de' ? 'Andere' : 'Autre'); ?></option>
+                                        <option value="8"><?php echo $lang === 'en' ? 'I prefer not to answer.' : ($lang === 'de' ? 'Ich möchte nicht antworten.' : 'Je ne souhaite pas répondre.'); ?></option>
                                     </select>
                                 </div>
                             </div><br><br>
@@ -1340,24 +1395,24 @@ if(isset($_SESSION['reponses'])){
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color-box user-answer-color"></div>
-                        <span><?php echo $lang === 'de' ? 'Ihre Antwort' : 'Votre Réponse'; ?></span>
+                        <span><?php echo $lang === 'en' ? 'Your answer' : ($lang === 'de' ? 'Ihre Antwort' : 'Votre Réponse'); ?></span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color-box correct-answer-color"></div>
-                        <span><?php echo $lang === 'de' ? 'Richtige Antwort' : 'Réponse correcte'; ?></span>
+                        <span><?php echo $lang === 'en' ? 'Correct answer' : ($lang === 'de' ? 'Richtige Antwort' : 'Réponse correcte'); ?></span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-color-box user-correct-answer-color"></div>
-                        <span><?php echo $lang === 'de' ? 'Ihre richtige Antwort' : 'Votre réponse est correcte'; ?></span>
+                        <span><?php echo $lang === 'en' ? 'Your correct answer' : ($lang === 'de' ? 'Ihre richtige Antwort' : 'Votre réponse est correcte'); ?></span>
                     </div>
                 </div>
 
 <table class="results-table">
     <thead>
         <tr>
-            <th class="question-column">Question</th>
-            <th colspan="5">Réponses</th>
-			<th class="expliq-column">Explication</th>
+            <th class="question-column"><?php echo $lang === 'en' ? 'Question' : ($lang === 'de' ? 'Frage' : 'Question'); ?></th>
+            <th colspan="5"><?php echo $lang === 'en' ? 'Answers' : ($lang === 'de' ? 'Antworten' : 'Réponses'); ?></th>
+			<th class="expliq-column"><?php echo $lang === 'en' ? 'Explanation' : ($lang === 'de' ? 'Erklärung' : 'Explication'); ?></th>
         </tr>
     </thead>
     <tbody>
@@ -1419,7 +1474,9 @@ if(isset($_SESSION['reponses'])){
 
                 <p class="score-display">
                     <?php
-                    if ($lang === 'de') {
+                    if ($lang === 'en') {
+                        echo "You answered {$correct_answers_count} out of {$total_questions_in_summary} questions correctly.";
+                    } else if ($lang === 'de') {
                         echo "Sie haben {$correct_answers_count} von {$total_questions_in_summary} Fragen richtig beantwortet.";
                     } else {
                         echo "Vous avez répondu correctement à {$correct_answers_count} questions sur  {$total_questions_in_summary}";
@@ -1445,14 +1502,18 @@ if(isset($_SESSION['reponses'])){
                         . '.legend-color-box{display:inline-block;width:14px;height:14px;border:1px solid #ccc;vertical-align:middle;margin-right:5px;}'
                         . '.user-answer-color{background:#a0c4ff;}.correct-answer-color{background:#90ee90;}.user-correct-answer-color{background:#bfe6a0;}'
                         . '</style>';
-                    $greeting = $lang === 'de'
-                        ? '<p>Vielen Dank für Ihre Teilnahme. Hier sind Ihre Ergebnisse:</p>'
-                        : '<p>Merci pour votre participation. Voici vos résultats :</p>';
+                    $greeting = $lang === 'en'
+                        ? '<p>Thank you for your participation. Here are your results:</p>'
+                        : ($lang === 'de'
+                            ? '<p>Vielen Dank für Ihre Teilnahme. Hier sind Ihre Ergebnisse:</p>'
+                            : '<p>Merci pour votre participation. Voici vos résultats :</p>');
                     $email_body = '<html><head><meta charset="UTF-8">' . $email_styles . '</head><body>'
                         . $greeting . $results_capture . '</body></html>';
-                    $email_subject = $lang === 'de'
-                        ? 'Ihre Ergebnisse - La Station LGBTQIA+'
-                        : 'Vos résultats - La Station LGBTQIA+';
+                    $email_subject = $lang === 'en'
+                        ? 'Your results - La Station LGBTQIA+'
+                        : ($lang === 'de'
+                            ? 'Ihre Ergebnisse - La Station LGBTQIA+'
+                            : 'Vos résultats - La Station LGBTQIA+');
                     require_once __DIR__ . '/mailer.php';
                     error_log('[mail] Bloc envoi atteint pour ' . $_SESSION["emailr"]);
                     if (send_results_email($_SESSION["emailr"], $email_subject, $email_body)) {
@@ -1512,12 +1573,12 @@ if(isset($_SESSION['reponses'])){
 			if (oldReopen) oldReopen.remove();
 
 			const status = isNeutral
-				? (lang === 'de' ? 'Danke für deine Antwort' : 'Merci pour ta réponse')
+				? (lang === 'en' ? 'Thank you for your answer' : (lang === 'de' ? 'Danke für deine Antwort' : 'Merci pour ta réponse'))
 				: (isCorrect
-					? (lang === 'de' ? '✓ Richtig!' : '✓ Correct !')
-					: (lang === 'de' ? '✗ Leider falsch' : '✗ Dommage'));
-			const goodLabel = lang === 'de' ? 'Richtige Antwort' : 'Bonne réponse';
-			const reopenLabel = lang === 'de' ? 'Antwort anzeigen' : 'Voir la réponse';
+					? (lang === 'en' ? '✓ Correct!' : (lang === 'de' ? '✓ Richtig!' : '✓ Correct !'))
+					: (lang === 'en' ? '✗ Too bad' : (lang === 'de' ? '✗ Leider falsch' : '✗ Dommage')));
+			const goodLabel = lang === 'en' ? 'Correct answer' : (lang === 'de' ? 'Richtige Antwort' : 'Bonne réponse');
+			const reopenLabel = lang === 'en' ? 'See the answer' : (lang === 'de' ? 'Antwort anzeigen' : 'Voir la réponse');
 			// échelle : pas de bonne/mauvaise réponse, on n'affiche pas le texte "bonne réponse"
 			if (isNeutral) correctText = '';
 
@@ -1605,7 +1666,7 @@ if(isset($_SESSION['reponses'])){
 			const btn = document.createElement('button');
 			btn.id = 'continue-next-btn';
 			btn.type = 'button';
-			btn.textContent = (lang === 'de' ? 'Weiter →' : 'Continuer →');
+			btn.textContent = (lang === 'en' ? 'Continue →' : (lang === 'de' ? 'Weiter →' : 'Continuer →'));
 			btn.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10001;background:#5cb37a;color:#fff;border:none;padding:12px 28px;border-radius:24px;cursor:pointer;font-size:16px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,0.3);';
 			btn.addEventListener('click', function () {
 				btn.remove();
