@@ -1,5 +1,31 @@
+<?php
+session_start();
+require_once 'conf.php';
+
+// Liste des modules (anciennement "niveaux") pour le sélecteur.
+$modules = [];
+try {
+    $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $levels = $pdo->query("SELECT DISTINCT level FROM GSDatabase ORDER BY level ASC")->fetchAll(PDO::FETCH_COLUMN);
+    $titles = $pdo->query("SELECT level, titre FROM GSDatabaseT")->fetchAll(PDO::FETCH_KEY_PAIR);
+    foreach ($levels as $lvl) {
+        $modules[$lvl] = isset($titles[$lvl]) ? $titles[$lvl] : '';
+    }
+} catch (PDOException $e) {
+    $modules = [];
+}
+// Module sélectionné par défaut : 2 s'il existe, sinon le premier disponible.
+if (isset($modules[2])) {
+    $selected_module = 2;
+} elseif (count($modules)) {
+    reset($modules);
+    $selected_module = key($modules);
+} else {
+    $selected_module = 2;
+}
+?>
 <!DOCTYPE html>
-<?php session_start(); ?>
 <html style="font-size: 16px;" lang="fr">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -111,8 +137,19 @@
             <div class="u-container-layout u-container-layout-1">
                 <div class="u-clearfix u-sheet u-sheet-1" style="text-align: center;">
 
+                    <div style="margin: 1em auto;">
+                        <label for="moduleSelect" style="font-weight:bold; margin-right:8px;">Module :</label>
+                        <select id="moduleSelect" style="padding:8px 12px; font-size:16px; border-radius:8px; border:1px solid #ccc;">
+                            <?php foreach ($modules as $lvl => $titre): ?>
+                                <option value="<?= htmlspecialchars($lvl) ?>" <?= ($lvl == $selected_module) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars('Module ' . $lvl . ($titre !== '' ? ' : ' . $titre : '')) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
                     <div id="totalCount" class="count-box">
-                        <span id="totalCountText">Total des réponses (Niveau 2) : 0</span>
+                        <span id="totalCountText">Total des réponses (Module <?= htmlspecialchars($selected_module) ?>) : 0</span>
                     </div>
                     <div id="chartsContainer" class="chart-container"></div>
                 </div>
@@ -132,11 +169,12 @@
                 delete chartInstances[key];
             });
 
-            fetch(`stats_getdata.php`) // Le paramètre lang a été supprimé
+            const selectedModule = document.getElementById('moduleSelect').value;
+            fetch(`stats_getdata.php?level=${encodeURIComponent(selectedModule)}`)
                 .then(response => response.json())
                 .then(data => {
                     const totalResponses = data.totalResponses || 0;
-                    document.getElementById('totalCountText').textContent = `Total des réponses (Niveau 2) : ${totalResponses}`;
+                    document.getElementById('totalCountText').textContent = `Total des réponses (Module ${selectedModule}) : ${totalResponses}`;
 
                     data.formattedData.forEach(item => {
                         chartCounter++; // Augmenter le compteur pour chaque nouveau graphique
@@ -320,6 +358,9 @@
             });
             div.appendChild(legendContainer);
         }
+
+        // Recharger les statistiques quand on change de module
+        document.getElementById('moduleSelect').addEventListener('change', loadStats);
 
         loadStats(); // Chargement des statistiques à l'ouverture de la page
     </script>
