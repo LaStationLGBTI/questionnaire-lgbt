@@ -6,15 +6,20 @@ try {
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    $level2_stmt = $pdo->query("SELECT id FROM GSDatabase WHERE level = 2");
-    $level2_question_ids = $level2_stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+    // Module sélectionné (anciennement "niveau"). Par défaut module 2.
+    $level = isset($_GET['level']) && $_GET['level'] !== '' ? (int) $_GET['level'] : 2;
+
+    $level_stmt = $pdo->prepare("SELECT id FROM GSDatabase WHERE level = ?");
+    $level_stmt->execute([$level]);
+    $level2_question_ids = $level_stmt->fetchAll(PDO::FETCH_COLUMN, 0);
 
     if (empty($level2_question_ids)) {
-        echo json_encode(["formattedData" => [], "answers" => [], "totalResponses" => 0]);
+        echo json_encode(["formattedData" => [], "answers" => [], "totalResponses" => 0, "level" => $level]);
         exit;
     }
 
-    $stmt = $pdo->query("SELECT * FROM GSDatabase WHERE level = 2");
+    $stmt = $pdo->prepare("SELECT * FROM GSDatabase WHERE level = ?");
+    $stmt->execute([$level]);
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $stmt = $pdo->query("SELECT * FROM GSDatabaseR");
@@ -102,7 +107,8 @@ try {
     $response = [
         "formattedData" => $formattedData,
         "answers" => $QuestionsR,
-        "totalResponses" => $totalResponses
+        "totalResponses" => $totalResponses,
+        "level" => $level
     ];
     echo json_encode($response);
 
