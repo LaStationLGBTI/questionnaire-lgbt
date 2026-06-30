@@ -1,0 +1,293 @@
+<?php
+// play.php — interface joueur (téléphone) du « Mode Jeu ».
+// Page autonome et légère (pas de nicepage). Toute la logique passe par game.php.
+$prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_GET['pin'] : '';
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>La Station — Mode Jeu</title>
+<style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        background: linear-gradient(160deg, #6a5cf0 0%, #8a7bf4 45%, #b06fd8 100%);
+        color: #fff; display: flex; flex-direction: column; min-height: 100%;
+    }
+    .wrap { flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; padding: 22px; text-align: center; gap: 16px; }
+    .card { background: #fff; color: #2b2b2b; border-radius: 18px; padding: 22px;
+        width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .sub { font-size: 14px; opacity: .85; margin: 0; }
+    input {
+        width: 100%; padding: 15px; font-size: 20px; text-align: center;
+        border: 2px solid #d8cff7; border-radius: 12px; margin-top: 14px; outline: none;
+    }
+    input:focus { border-color: #8a7bf4; }
+    button.main {
+        width: 100%; padding: 15px; font-size: 18px; font-weight: 800; color: #fff;
+        background: #5cb37a; border: none; border-radius: 12px; margin-top: 14px;
+        cursor: pointer;
+    }
+    button.main:active { transform: translateY(1px); }
+    .err { color: #d23; font-size: 14px; margin-top: 10px; min-height: 18px; }
+    .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;
+        max-width: 480px; }
+    .ans {
+        border: none; border-radius: 14px; color: #fff; font-size: 17px; font-weight: 800;
+        padding: 22px 12px; min-height: 96px; cursor: pointer; display: flex; gap: 8px;
+        align-items: center; justify-content: center; line-height: 1.2;
+        box-shadow: 0 5px 0 rgba(0,0,0,.18); text-shadow: 0 1px 2px rgba(0,0,0,.25);
+    }
+    .ans:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+    .ans .sym { font-size: 20px; }
+    .big { font-size: 26px; font-weight: 900; margin: 6px 0; }
+    .score-pill { display: inline-block; background: rgba(255,255,255,.22);
+        padding: 8px 16px; border-radius: 40px; font-weight: 800; font-size: 18px; }
+    .lobby-name { font-size: 20px; font-weight: 800; margin-top: 6px; }
+    .dots::after { content: ''; animation: dots 1.4s steps(4,end) infinite; }
+    @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
+    .hidden { display: none !important; }
+    .lead { width: 100%; max-width: 420px; text-align: left; }
+    .lead .row { display: flex; justify-content: space-between; padding: 8px 12px;
+        background: #fff; color: #2b2b2b; border-radius: 10px; margin-top: 8px; font-weight: 700; }
+    .lead .row.me { outline: 3px solid #ffd54a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+    <!-- 1. Saisie du PIN -->
+    <div id="screen-pin" class="card hidden">
+        <h1>🎮 Mode Jeu</h1>
+        <p class="sub" id="t-pin-sub">Entre le code PIN affiché à l'écran</p>
+        <input id="pin-input" inputmode="numeric" pattern="\d*" maxlength="6" placeholder="123456" value="<?php echo htmlspecialchars($prefillPin); ?>">
+        <div class="err" id="pin-err"></div>
+        <button class="main" id="pin-go">OK</button>
+    </div>
+
+    <!-- 2. Saisie du pseudo -->
+    <div id="screen-name" class="card hidden">
+        <h1 id="t-name-h1">Ton pseudo</h1>
+        <p class="sub" id="t-name-sub">Comment veux-tu apparaître ?</p>
+        <input id="name-input" maxlength="24" placeholder="Alex">
+        <div class="err" id="name-err"></div>
+        <button class="main" id="name-go">C'est parti</button>
+    </div>
+
+    <!-- 3. Lobby (en attente) -->
+    <div id="screen-lobby" class="card hidden">
+        <h1 id="t-lobby-h1">Tu es dans la partie !</h1>
+        <p class="lobby-name" id="lobby-name"></p>
+        <p class="sub dots" id="t-lobby-sub">En attente du démarrage</p>
+    </div>
+
+    <!-- 4. Question : boutons de réponse -->
+    <div id="screen-question" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <p class="sub" id="q-progress"></p>
+        <div class="answers" id="answers"></div>
+    </div>
+
+    <!-- 5. En attente / résultat de la question -->
+    <div id="screen-wait" class="card hidden">
+        <h1 id="wait-title">Réponse envoyée</h1>
+        <p class="sub dots" id="wait-sub">En attente des autres</p>
+        <p class="big" id="wait-result"></p>
+        <span class="score-pill" id="wait-score"></span>
+    </div>
+
+    <!-- 6. Fin : classement -->
+    <div id="screen-end" class="card hidden">
+        <h1 id="t-end-h1">Partie terminée !</h1>
+        <p class="big" id="end-rank"></p>
+        <span class="score-pill" id="end-score"></span>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    "use strict";
+    // Palette Kahoot (couleur + symbole), indexée par position de réponse.
+    var PALETTE = [
+        { c: "#e21b3c", s: "▲" }, // rouge  ▲
+        { c: "#1368ce", s: "◆" }, // bleu   ◆
+        { c: "#d89e00", s: "●" }, // jaune  ●
+        { c: "#26890c", s: "■" }, // vert   ■
+        { c: "#7a1fa2", s: "★" }  // violet ★ (5e réponse éventuelle)
+    ];
+
+    var T = {
+        fr: { pinSub:"Entre le code PIN affiché à l'écran", nameH1:"Ton pseudo", nameSub:"Comment veux-tu apparaître ?",
+              lobbyH1:"Tu es dans la partie !", lobbySub:"En attente du démarrage", waitTitle:"Réponse envoyée",
+              waitSub:"En attente des autres", correct:"Correct ! +100", wrong:"Raté", noAnswer:"Pas de réponse",
+              endH1:"Partie terminée !", rank:"e place", first:"1re place", score:"points",
+              badPin:"Partie introuvable", emptyName:"Entre un pseudo", ended:"La partie est terminée" }
+    };
+    T.en = { pinSub:"Enter the PIN shown on screen", nameH1:"Your nickname", nameSub:"How should you appear?",
+             lobbyH1:"You're in!", lobbySub:"Waiting for the host", waitTitle:"Answer sent",
+             waitSub:"Waiting for others", correct:"Correct! +100", wrong:"Wrong", noAnswer:"No answer",
+             endH1:"Game over!", rank:"th place", first:"1st place", score:"points",
+             badPin:"Game not found", emptyName:"Enter a nickname", ended:"The game has ended" };
+
+    var lang = "fr", t = T.fr;
+    var pin = "", pid = "", myName = "";
+    var pollTimer = null, lastStatus = "", lastQNumber = -1, answeredThisQ = false;
+
+    function $(id) { return document.getElementById(id); }
+    function show(id) {
+        ["screen-pin","screen-name","screen-lobby","screen-question","screen-wait","screen-end"]
+            .forEach(function (s) { $(s).classList.toggle("hidden", s !== id); });
+    }
+    function applyLang(l) {
+        if (l && T[l]) { lang = l; t = T[l]; }
+        $("t-pin-sub").textContent = t.pinSub;
+        $("t-name-h1").textContent = t.nameH1; $("t-name-sub").textContent = t.nameSub;
+        $("t-lobby-h1").textContent = t.lobbyH1; $("t-lobby-sub").textContent = t.lobbySub;
+        $("wait-title").textContent = t.waitTitle; $("wait-sub").textContent = t.waitSub;
+        $("t-end-h1").textContent = t.endH1;
+    }
+
+    function api(params) {
+        var body = Object.keys(params).map(function (k) {
+            return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+        }).join("&");
+        return fetch("game.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body
+        }).then(function (r) { return r.json(); });
+    }
+
+    // --- Écran PIN ---
+    $("pin-go").addEventListener("click", function () {
+        var v = $("pin-input").value.replace(/\D/g, "");
+        if (!/^\d{6}$/.test(v)) { $("pin-err").textContent = "PIN = 6 chiffres"; return; }
+        // Vérifie que la partie existe.
+        api({ action: "state", pin: v }).then(function (res) {
+            if (!res.ok) { $("pin-err").textContent = t.badPin; return; }
+            pin = v; applyLang(res.lang);
+            show("screen-name"); $("name-input").focus();
+        });
+    });
+
+    // --- Écran pseudo ---
+    $("name-go").addEventListener("click", function () {
+        var nm = $("name-input").value.trim();
+        if (!nm) { $("name-err").textContent = t.emptyName; return; }
+        api({ action: "join", pin: pin, name: nm }).then(function (res) {
+            if (!res.ok) { $("name-err").textContent = res.error === "ended" ? t.ended : t.badPin; return; }
+            pid = res.pid; myName = res.name;
+            $("lobby-name").textContent = myName;
+            show("screen-lobby");
+            startPolling();
+        });
+    });
+
+    // --- Rendu de la question ---
+    function renderQuestion(q) {
+        var box = $("answers");
+        box.innerHTML = "";
+        $("q-progress").textContent = "Question " + q.qNumber + (q.totalQ ? " / " + q.totalQ : "");
+        q.answers.forEach(function (a, i) {
+            var pal = PALETTE[i % PALETTE.length];
+            var btn = document.createElement("button");
+            btn.className = "ans";
+            btn.style.background = pal.c;
+            btn.innerHTML = '<span class="sym">' + pal.s + '</span><span>' + a.text + '</span>';
+            btn.addEventListener("click", function () { sendAnswer(a.n); });
+            box.appendChild(btn);
+        });
+        if (q.answers.length === 1) box.style.gridTemplateColumns = "1fr";
+        else box.style.gridTemplateColumns = "1fr 1fr";
+    }
+
+    function sendAnswer(choice) {
+        if (answeredThisQ) return;
+        answeredThisQ = true;
+        $("wait-result").textContent = "";
+        $("wait-score").textContent = "";
+        show("screen-wait");
+        api({ action: "answer", pin: pin, pid: pid, choice: choice }).then(function (res) {
+            if (res.ok && res.me) { $("wait-score").textContent = res.me.score + " " + t.score; }
+        });
+    }
+
+    // --- Polling de l'état ---
+    function startPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        poll();
+        pollTimer = setInterval(poll, 1500);
+    }
+    function poll() {
+        api({ action: "state", pin: pin, pid: pid }).then(handleState).catch(function () {});
+    }
+    function handleState(res) {
+        if (!res.ok) return;
+        var me = res.me || { score: 0 };
+
+        if (res.status === "lobby") {
+            lastQNumber = -1;
+            show("screen-lobby");
+            return;
+        }
+        if (res.status === "question" && res.question) {
+            // Nouvelle question → réinitialise et affiche les boutons.
+            if (res.question.qNumber !== lastQNumber) {
+                lastQNumber = res.question.qNumber;
+                answeredThisQ = !!me.answered;
+            }
+            if (answeredThisQ || me.answered) {
+                $("wait-result").textContent = "";
+                $("wait-score").textContent = me.score + " " + t.score;
+                show("screen-wait");
+            } else {
+                renderQuestion(res.question);
+                show("screen-question");
+            }
+            return;
+        }
+        if (res.status === "reveal") {
+            var msg, color;
+            if (me.lastChoice == null) { msg = t.noAnswer; color = "#bbb"; }
+            else if (res.correctIndex && me.lastChoice === res.correctIndex) { msg = t.correct; color = "#26890c"; }
+            else { msg = t.wrong; color = "#e21b3c"; }
+            $("wait-result").textContent = msg;
+            $("wait-result").style.color = color;
+            $("wait-sub").textContent = "";
+            $("wait-score").textContent = me.score + " " + t.score;
+            show("screen-wait");
+            return;
+        }
+        if (res.status === "ended") {
+            if (pollTimer) clearInterval(pollTimer);
+            var rank = 1;
+            for (var i = 0; i < res.players.length; i++) {
+                if (res.players[i].pid === pid) { rank = i + 1; break; }
+            }
+            $("end-rank").textContent = rank === 1 ? t.first : (rank + t.rank);
+            $("end-score").textContent = me.score + " " + t.score;
+            show("screen-end");
+            return;
+        }
+    }
+
+    // Init : si un PIN est pré-rempli (lien QR), on passe direct au pseudo.
+    applyLang("fr");
+    var pre = $("pin-input").value.replace(/\D/g, "");
+    if (/^\d{6}$/.test(pre)) {
+        api({ action: "state", pin: pre }).then(function (res) {
+            if (res.ok) { pin = pre; applyLang(res.lang); show("screen-name"); $("name-input").focus(); }
+            else { show("screen-pin"); }
+        });
+    } else {
+        show("screen-pin");
+    }
+})();
+</script>
+</body>
+</html>
