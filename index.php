@@ -66,9 +66,20 @@ ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 ini_set('display_errors', 1); ini_set('display_startup_errors', 1); error_reporting(E_ALL);
 if (isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] >= 3) {
-	echo '
+	$blocked_lang = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
+	if ($blocked_lang === 'en') {
+		echo '
+            <h1>Access Blocked</h1>
+            <p class="error" name="session_bloquee">Your access is blocked. Please contact the administrator.</p>';
+	} elseif ($blocked_lang === 'de') {
+		echo '
+            <h1>Zugang gesperrt</h1>
+            <p class="error" name="session_bloquee">Ihr Zugang ist gesperrt. Bitte kontaktieren Sie den Administrator.</p>';
+	} else {
+		echo '
             <h1>Accès Bloqué</h1>
             <p class="error" name="session_bloquee">Votre accès est bloqué. Veuillez contacter l`administrateur.</p>';
+	}
 	exit();
 }
 if (isset($_POST['reset_session'])) {
@@ -997,7 +1008,9 @@ if (!isset($_SESSION['level'])) {
         $pdo_desc->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         // Préparons une requête pour obtenir le texte actuel $_SESSION['level']
-        $stmt_desc = $pdo_desc->prepare("SELECT titre, text FROM GSDatabaseT WHERE level = ?");
+        // En anglais : description traduite depuis GSDatabaseT_en.
+        $desc_table = ($lang === 'en') ? 'GSDatabaseT_en' : 'GSDatabaseT';
+        $stmt_desc = $pdo_desc->prepare("SELECT titre, text FROM $desc_table WHERE level = ?");
         $stmt_desc->execute([$_SESSION['level']]);
         $level_data = $stmt_desc->fetch(PDO::FETCH_ASSOC);
 
@@ -1566,7 +1579,7 @@ if(isset($_SESSION['reponses'])){
             const newDiv = document.createElement('div');
             newDiv.id = "footer-placeholder";
             section.insertAdjacentElement('afterend', newDiv);
-            fetch('pages/footer.php')
+            fetch('pages/footer.php?lang=<?php echo $lang; ?>')
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('footer-placeholder').innerHTML = data;
@@ -2017,7 +2030,7 @@ if(isset($_SESSION['reponses'])){
 																}
 															}
 
-															document.getElementById('connections').innerHTML = `Corrections:<br>${connections}`;
+															document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
 															selectedQ = null;
 															selectedR = null;
 														}
@@ -2075,7 +2088,7 @@ if(isset($_SESSION['reponses'])){
 											connections.push(goodconnection);
 
 										});
-										document.getElementById('connections').innerHTML = `Corrections:<br>${connections}`;
+										document.getElementById('connections').innerHTML = `${texts[lang].corrections}<br>${connections}`;
 									}
 								}
 								else if (response[8] == "mct") {
@@ -2184,7 +2197,7 @@ if(isset($_SESSION['reponses'])){
 					else if (xhr.readyState == 4) {
 						// Si la requête s'est terminée par une erreur, nous autorisons à nouveau les clics
 						timeout = false;
-						alert("Une erreur s'est produite. Veuillez réessayer.");
+						alert(lang === 'en' ? "An error occurred. Please try again." : (lang === 'de' ? "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut." : "Une erreur s'est produite. Veuillez réessayer."));
 					}
 				};
 				if (ismultiple == true) {
@@ -2201,47 +2214,3 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
