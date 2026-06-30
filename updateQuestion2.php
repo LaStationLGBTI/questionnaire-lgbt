@@ -61,7 +61,10 @@ if (isset($_SESSION['start'])) {
 		$prochaineQ  .= "__" . explode("__",$_SESSION["qtype"])[$_SESSION["LastQuestion"]]; //2 type de la dernière question
 		// explication de la dernière question (placée en dernier : peut contenir des espaces)
 		$prochaineQ  .= "__" . (isset($_SESSION["expliqs"]) ? explode("__",$_SESSION["expliqs"])[$_SESSION["LastQuestion"]] : ""); //3
-$servername = "localhost";  
+// Mode Jeu (Kahoot) : aucune écriture en base, aucun e-mail. Le classement se fait
+// côté game.php (fichier de partie). On se contente de marquer la fin.
+if (empty($_SESSION['game_mode'])) {
+$servername = "localhost";
 $username = "root";
 $password = "";
 $database = "lastation";
@@ -89,8 +92,9 @@ if(!isset($_SESSION["emailr"]))
 	$_SESSION["emailr"] = "null";
 }
 $conn->prepare("INSERT INTO GSDatabaseR (ip, genre, orientation, reponse, repmail, lang) VALUES (?,?,?,?,?,?)")->execute([$_SERVER['REMOTE_ADDR'], $_SESSION["genre"], $_SESSION["orient"], $_SESSION['reponses'], $_SESSION["emailr"], $_SESSION["language"]]);
-	$_SESSION["LastQuestion"] += 1;
 	$_SESSION["id_user"] = $conn->lastInsertId();
+}
+	$_SESSION["LastQuestion"] += 1;
 	$_SESSION["finish"] = 1;
 	}
 }
