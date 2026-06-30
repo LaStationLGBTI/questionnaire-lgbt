@@ -291,9 +291,19 @@ switch ($action) {
         // Nettoyage / limite de longueur du pseudo.
         $name = mb_substr(htmlspecialchars($name, ENT_QUOTES, 'UTF-8'), 0, 24);
         $pid  = rand_hex(8);
+        $reconnected = false;
         try {
-            $game = mutate_game($GAME_DIR, $pin, function (&$g) use ($pid, $name) {
+            $game = mutate_game($GAME_DIR, $pin, function (&$g) use (&$pid, $name, &$reconnected) {
                 if ($g['status'] === 'ended') throw new GameError('ended');
+                // Reconnexion : si un joueur porte déjà ce pseudo (sortie accidentelle / perte de
+                // connexion), on le réutilise tel quel => score et progression conservés.
+                foreach ($g['players'] as $existingPid => $p) {
+                    if (isset($p['name']) && mb_strtolower($p['name']) === mb_strtolower($name)) {
+                        $pid = $existingPid;
+                        $reconnected = true;
+                        return;
+                    }
+                }
                 if (count($g['players']) >= 200) throw new GameError('full');
                 $g['players'][$pid] = array(
                     'name'       => $name,
@@ -304,7 +314,13 @@ switch ($action) {
             });
         } catch (GameError $e) { jerr($e->getMessage()); }
         if (!$game) jerr('no_game');
-        jexit(['ok' => true, 'pid' => $pid, 'name' => $name, 'status' => $game['status']]);
+        jexit(array(
+            'ok'          => true,
+            'pid'         => $pid,
+            'name'        => $game['players'][$pid]['name'], // casse d'origine conservée
+            'status'      => $game['status'],
+            'reconnected' => $reconnected,
+        ));
     }
 
     case 'answer': {
