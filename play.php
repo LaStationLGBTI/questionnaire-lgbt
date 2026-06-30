@@ -173,6 +173,16 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
         }).then(function (r) { return r.json(); });
     }
 
+    // --- Mémorisation de la session (reconnexion après refresh / sortie accidentelle) ---
+    var SKEY = "lgbt_kahoot_session";
+    function saveSession() {
+        try { localStorage.setItem(SKEY, JSON.stringify({ pin: pin, pid: pid, name: myName })); } catch (e) {}
+    }
+    function loadSession() {
+        try { return JSON.parse(localStorage.getItem(SKEY) || "null"); } catch (e) { return null; }
+    }
+    function clearSession() { try { localStorage.removeItem(SKEY); } catch (e) {} }
+
     // --- Écran PIN ---
     $("pin-go").addEventListener("click", function () {
         var v = $("pin-input").value.replace(/\D/g, "");
@@ -192,6 +202,7 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
         api({ action: "join", pin: pin, name: nm }).then(function (res) {
             if (!res.ok) { $("name-err").textContent = res.error === "ended" ? t.ended : t.badPin; return; }
             pid = res.pid; myName = res.name;
+            saveSession(); // pour pouvoir revenir au même joueur après un refresh
             $("lobby-name").textContent = myName;
             show("screen-lobby");
             startPolling();
@@ -237,6 +248,7 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
     }
     function showCancelled() {
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        clearSession();
         $("wait-title").textContent = t.cancelled;
         $("wait-sub").textContent = "";
         $("wait-result").textContent = "✕";
@@ -287,6 +299,7 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
         }
         if (res.status === "ended") {
             if (pollTimer) clearInterval(pollTimer);
+            clearSession();
             var rank = 1;
             for (var i = 0; i < res.players.length; i++) {
                 if (res.players[i].pid === pid) { rank = i + 1; break; }
@@ -298,16 +311,43 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
         }
     }
 
-    // Init : si un PIN est pré-rempli (lien QR), on passe direct au pseudo.
+    // Init : reprise de session si possible, sinon PIN (ou pseudo si PIN pré-rempli via QR).
     applyLang("fr");
     var pre = $("pin-input").value.replace(/\D/g, "");
-    if (/^\d{6}$/.test(pre)) {
-        api({ action: "state", pin: pre }).then(function (res) {
-            if (res.ok) { pin = pre; applyLang(res.lang); show("screen-name"); $("name-input").focus(); }
-            else { show("screen-pin"); }
-        });
+    var saved = loadSession();
+
+    function gotoPinOrName() {
+        if (/^\d{6}$/.test(pre)) {
+            api({ action: "state", pin: pre }).then(function (res) {
+                if (res.ok) {
+                    pin = pre; applyLang(res.lang);
+                    if (saved && saved.name) $("name-input").value = saved.name; // pré-remplit l'ancien pseudo
+                    show("screen-name"); $("name-input").focus();
+                } else { show("screen-pin"); }
+            }).catch(function () { show("screen-pin"); });
+        } else {
+            if (saved && saved.name) $("name-input").value = saved.name;
+            show("screen-pin");
+        }
+    }
+
+    // Si une session est mémorisée et qu'on ne vient pas d'un QR vers une AUTRE partie → on tente la reprise.
+    if (saved && /^\d{6}$/.test(String(saved.pin)) && (!/^\d{6}$/.test(pre) || pre === String(saved.pin))) {
+        api({ action: "state", pin: saved.pin, pid: saved.pid }).then(function (res) {
+            if (res.ok && res.me && res.status !== "ended") {
+                // Le joueur existe encore : on le replace directement dans la partie.
+                pin = saved.pin; pid = saved.pid; myName = res.me.name || saved.name;
+                applyLang(res.lang);
+                $("lobby-name").textContent = myName;
+                show("screen-lobby"); // placeholder le temps du 1er polling
+                startPolling(); // handleState affichera le bon écran (lobby / question / reveal)
+            } else {
+                clearSession();
+                gotoPinOrName();
+            }
+        }).catch(function () { clearSession(); gotoPinOrName(); });
     } else {
-        show("screen-pin");
+        gotoPinOrName();
     }
 })();
 </script>
