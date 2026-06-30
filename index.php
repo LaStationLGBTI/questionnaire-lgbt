@@ -92,7 +92,7 @@ if (isset($_GET['back'])) {
     foreach (['level', 'start', 'LastQuestion', 'TotalQuestions', 'QuestionToUse',
               'Rep1', 'Rep2', 'Rep3', 'Rep4', 'Rep5', 'IdInUse', 'answer', 'qtype',
               'expliqs', 'reponses', 'id_user', 'finish', 'acc', 'genre', 'orient', 'emailr',
-              'mail_sent'] as $k) {
+              'mail_sent', 'game_mode', 'game_pin'] as $k) {
         unset($_SESSION[$k]);
     }
     header('Location: index.php');
@@ -117,6 +117,10 @@ if (isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr', 'en']
     $_SESSION['language'] = $_POST['language'];
 }
 $lang = $_SESSION['language'];
+
+// Mode Jeu (style Kahoot) : actif si déjà mémorisé en session OU si la case a été cochée
+// sur l'écran d'intro (POST). Cf. game.php / play.php pour la mécanique temps réel.
+$game_mode = (!empty($_SESSION['game_mode']) || isset($_POST['game_mode']));
 
 $texts = [
     'fr' => [
@@ -470,6 +474,38 @@ $lang = $_SESSION['language'];
         }
 	let texts = <?php echo json_encode($texts); ?>;
 	let lang = "<?php echo $lang; ?>";
+	// --- Mode Jeu (Kahoot) ---
+	var GAME_MODE = <?php echo $game_mode ? 'true' : 'false'; ?>;
+	var GAME_PIN = "";
+	// Palette Kahoot (couleur + symbole), identique à play.php, indexée par position de réponse.
+	var GAME_PALETTE = [
+		{ c: "#e21b3c", s: "▲" }, // rouge  ▲
+		{ c: "#1368ce", s: "◆" }, // bleu   ◆
+		{ c: "#d89e00", s: "●" }, // jaune  ●
+		{ c: "#26890c", s: "■" }, // vert   ■
+		{ c: "#7a1fa2", s: "★" }  // violet ★
+	];
+	// Colore les blocs de réponse façon Kahoot (uniquement en Mode Jeu).
+	function applyGameColors() {
+		if (!GAME_MODE) return;
+		var blocks = document.querySelectorAll('div[id^="reponse_"]');
+		Array.prototype.forEach.call(blocks, function (block, i) {
+			var pal = GAME_PALETTE[i % GAME_PALETTE.length];
+			var qc = block.querySelector('#question_container');
+			if (qc) {
+				qc.classList.remove('u-palette-2-light-2');
+				qc.style.backgroundColor = pal.c;
+				var rep = qc.querySelector('#rep');
+				if (rep) {
+					rep.style.color = "#fff";
+					if (!rep.getAttribute('data-symed')) {
+						rep.innerHTML = '<span style="font-size:1.3em; margin-right:.4em;">' + pal.s + '</span>' + rep.innerHTML;
+						rep.setAttribute('data-symed', '1');
+					}
+				}
+			}
+		});
+	}
         let ismultiple = false;
         let parentDiv = null;
         window.onload = resize_questions;
@@ -558,7 +594,8 @@ function startQuestion() {
                             let button = reponse_elem.querySelector("#button_choix");
                             let p_elem = reponse_elem.querySelector("#rep");
                             p_elem.innerText = response[i];
-                            button.addEventListener("click", function () { updateQuestion(i); });
+                            // En Mode Jeu, l'écran hôte n'est pas cliquable : ce sont les téléphones qui répondent.
+                            if (!GAME_MODE) button.addEventListener("click", function () { updateQuestion(i); });
                         }
                     } else {
                         let reponse_elem = document.getElementById("reponse_" + i);
@@ -567,6 +604,7 @@ function startQuestion() {
                         }
                     }
                 }
+                if (GAME_MODE) { applyGameColors(); if (typeof gameAfterRender === 'function') gameAfterRender(); }
 } else if (response[7] == "lien") {
     ismultiple = true;
     const blocks = document.querySelectorAll('div[id^="reponse_"]');
@@ -892,6 +930,15 @@ if (!isset($_SESSION['level'])) {
                         <b><?php echo $texts[$lang]['choose_questionnaire']; ?></b>
                     </h2>
 
+                    <!-- Rejoindre une partie en cours (Mode Jeu) avec un PIN -->
+                    <div style="max-width:420px; margin:0 auto 1.4em; padding:14px 16px; border:2px solid #8a7bf4; border-radius:16px; background:#f4eefb;">
+                        <div style="font-weight:800; color:#4a3a86; margin-bottom:8px;">🎮 <?php echo $lang === 'en' ? 'Join a game' : ($lang === 'de' ? 'Einem Spiel beitreten' : 'Rejoindre une partie'); ?></div>
+                        <form onsubmit="var p=this.pin.value.replace(/\D/g,''); if(/^\d{6}$/.test(p)){window.location.href='play.php?pin='+p;} return false;" style="display:flex; gap:8px; justify-content:center;">
+                            <input name="pin" inputmode="numeric" maxlength="6" placeholder="PIN" style="flex:1; max-width:170px; padding:11px; font-size:18px; text-align:center; border:2px solid #d8cff7; border-radius:10px;">
+                            <button type="submit" style="border:none; border-radius:10px; padding:0 20px; font-weight:800; color:#fff; background:#8a7bf4; cursor:pointer;">OK</button>
+                        </form>
+                    </div>
+
                     <div class="language-selector">
                         <span style="align-self: center;">Français</span>
                         <form method="POST" style="display: inline;">
@@ -1080,6 +1127,10 @@ if (!isset($_SESSION['level'])) {
                 </div>
 
                 <form method="POST" action="">
+                    <label style="display:inline-flex; align-items:center; gap:10px; margin:0.5em auto 0; padding:0.7em 1.1em; border:2px solid #8a7bf4; border-radius:14px; background:#f4eefb; color:#4a3a86; font-weight:700; font-size:15px; cursor:pointer;">
+                        <input type="checkbox" name="game_mode" value="1" style="width:20px; height:20px; accent-color:#8a7bf4;">
+                        🎮 <?php echo $lang === 'en' ? 'Launch in game mode (PIN + QR, on-screen)' : ($lang === 'de' ? 'Im Spielmodus starten (PIN + QR)' : 'Lancer en mode jeu (PIN + QR, sur écran)'); ?>
+                    </label>
                     <div class="u-align-right u-form-group u-form-submit">
                         <a href="index.php?back=1"
                            style="display:inline-block; margin-top:1vh; margin-right:12px; padding:0.55em 1.3em; border-radius:50px; border:2px solid #9c5a86; color:#9c5a86; text-decoration:none; font-weight:700; font-size:14px;">
@@ -1150,6 +1201,8 @@ if (!isset($_SESSION["start"])) {
         $ids = explode("__", $_SESSION["IdInUse"]);
         $_SESSION["TotalQuestions"] = count($ids) - 1;
         $_SESSION["start"] = 1;
+        // Mode Jeu : mémorisé pour toute la durée de la partie (case cochée sur l'écran d'intro).
+        $_SESSION["game_mode"] = isset($_POST["game_mode"]) ? 1 : 0;
         $_SESSION["LastQuestion"] = "1";
     } else {
         echo $lang === 'en' ? "Missing data for the chosen level. Please contact 'La STATION'" : ($lang === 'de' ? "Fehlende Daten für die gewählte Stufe. Bitte kontaktieren Sie 'La STATION'" : "Manque des données pour le niveau choisi. Veuillez contacter 'La STATION'");
@@ -1270,9 +1323,223 @@ if (!isset($_SESSION["start"])) {
     <?php endif; ?>
 </section>
 
+<?php if ($game_mode): ?>
+<?php
+    // Libellés localisés pour l'UI du Mode Jeu (hôte).
+    $kh = function ($fr, $en) use ($lang) { return $lang === 'en' ? $en : $fr; };
+?>
+<script src="js/qrcode.min.js"></script>
+<style>
+    .kh-overlay { position: fixed; inset: 0; z-index: 9000; display: flex;
+        align-items: center; justify-content: center; padding: 18px;
+        background: linear-gradient(160deg,#6a5cf0 0%,#8a7bf4 45%,#b06fd8 100%); color:#fff; }
+    .kh-overlay.kh-hidden { display: none; }
+    .kh-card { background:#fff; color:#2b2b2b; border-radius:20px; padding:26px 24px;
+        max-width:760px; width:100%; text-align:center; box-shadow:0 14px 40px rgba(0,0,0,.3); }
+    .kh-pin { font-size:46px; font-weight:900; letter-spacing:6px; color:#6a5cf0; margin:6px 0; }
+    .kh-pin-label { text-transform:uppercase; letter-spacing:.12em; font-size:13px; font-weight:800; color:#8a7bf4; }
+    #kh-qr { display:inline-block; margin:14px auto; padding:10px; background:#fff; border-radius:12px; }
+    .kh-url { font-size:13px; color:#666; word-break:break-all; }
+    .kh-players { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:16px 0; }
+    .kh-chip { background:#f0ecfb; color:#5a3a86; font-weight:700; padding:7px 14px; border-radius:30px; font-size:15px; }
+    .kh-chip.ans { background:#cdeccd; color:#1c6b1c; }
+    .kh-btn { border:none; border-radius:40px; padding:14px 30px; font-size:18px; font-weight:800;
+        color:#fff; background:#5cb37a; cursor:pointer; }
+    .kh-btn:active { transform:translateY(1px); }
+    .kh-btn.alt { background:#6a5cf0; }
+    .kh-bar { position:fixed; left:0; right:0; bottom:0; z-index:8000; display:none;
+        align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+        padding:12px 18px; background:#2b2b3a; color:#fff; box-shadow:0 -4px 14px rgba(0,0,0,.2); }
+    .kh-bar.show { display:flex; }
+    .kh-bar .info { font-size:18px; font-weight:800; }
+    .kh-lead-row { display:flex; justify-content:space-between; align-items:center;
+        padding:12px 18px; border-radius:12px; margin-top:10px; font-weight:800; font-size:18px;
+        background:#f0ecfb; color:#3a2a66; }
+    .kh-lead-row.top { background:linear-gradient(90deg,#ffd54a,#ffb300); color:#5a3a00; }
+    .kh-correct-host { outline:5px solid #ffd54a !important; outline-offset:3px; border-radius:12px; }
+</style>
+
+<!-- Lobby hôte -->
+<div id="kh-lobby" class="kh-overlay kh-hidden">
+    <div class="kh-card">
+        <h2 style="margin:0 0 4px;">🎮 <?php echo $kh('Mode Jeu', 'Game mode'); ?></h2>
+        <div class="kh-pin-label"><?php echo $kh('Rejoignez avec le PIN', 'Join with PIN'); ?></div>
+        <div class="kh-pin" id="kh-pin">······</div>
+        <div id="kh-qr"></div>
+        <div class="kh-url" id="kh-url"></div>
+        <div class="kh-players" id="kh-players"></div>
+        <p style="font-weight:700;"><span id="kh-count">0</span> <?php echo $kh('joueur(s)', 'player(s)'); ?></p>
+        <button class="kh-btn" id="kh-start"><?php echo $kh('Démarrer la partie', 'Start the game'); ?> →</button>
+        <div id="kh-lobby-err" style="color:#d23; margin-top:10px; min-height:18px;"></div>
+    </div>
+</div>
+
+<!-- Barre de contrôle hôte (pendant les questions) -->
+<div id="kh-bar" class="kh-bar">
+    <span class="info"><span id="kh-answered">0</span> / <span id="kh-total">0</span> <?php echo $kh('ont répondu', 'answered'); ?></span>
+    <button class="kh-btn alt" id="kh-action"><?php echo $kh('Révéler les réponses', 'Reveal answers'); ?></button>
+</div>
+
+<!-- Classement final -->
+<div id="kh-leader" class="kh-overlay kh-hidden">
+    <div class="kh-card">
+        <h2 style="margin:0 0 12px;">🏆 <?php echo $kh('Classement final', 'Final leaderboard'); ?></h2>
+        <div id="kh-leader-list"></div>
+        <button class="kh-btn" style="margin-top:18px;" onclick="window.location.href='index.php?back=1'"><?php echo $kh('Terminer', 'Finish'); ?></button>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+    var KH = {
+        reveal: "<?php echo $kh('Révéler les réponses', 'Reveal answers'); ?>",
+        next:   "<?php echo $kh('Question suivante', 'Next question'); ?> →",
+        finish: "<?php echo $kh('Voir le classement', 'Show leaderboard'); ?> →",
+        err:    "<?php echo $kh('Erreur de partie. Réessayez.', 'Game error. Please retry.'); ?>",
+        pts:    "<?php echo $kh('pts', 'pts'); ?>"
+    };
+    var lobbyTimer = null, ansTimer = null, phase = "question", revealed = false;
+
+    function el(id) { return document.getElementById(id); }
+    function gameApi(params) {
+        var body = Object.keys(params).map(function (k) {
+            return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+        }).join("&");
+        return fetch("game.php", { method:"POST",
+            headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body: body
+        }).then(function (r) { return r.json(); });
+    }
+    function playUrl(pin) {
+        var base = location.href.split("?")[0].replace(/[^\/]*$/, "");
+        return base + "play.php?pin=" + pin;
+    }
+
+    // --- Lobby ---
+    window.initHostGame = function () {
+        // Masque l'écran de question tant qu'on est dans le lobby.
+        var qcm = document.getElementById("qcm");
+        if (qcm) qcm.style.display = "none";
+        var bn = document.getElementById("button_next"); if (bn) bn.style.display = "none";
+        var quit = document.getElementById("quit-to-modules"); if (quit) quit.style.display = "none";
+        el("kh-lobby").classList.remove("kh-hidden");
+        gameApi({ action: "create" }).then(function (res) {
+            if (!res.ok) { el("kh-lobby-err").textContent = KH.err; return; }
+            GAME_PIN = res.pin;
+            el("kh-pin").textContent = res.pin;
+            var url = playUrl(res.pin);
+            el("kh-url").textContent = url;
+            el("kh-qr").innerHTML = "";
+            try { new QRCode(el("kh-qr"), { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
+            lobbyTimer = setInterval(lobbyPoll, 1500);
+            lobbyPoll();
+        });
+    };
+    function lobbyPoll() {
+        gameApi({ action: "state", pin: GAME_PIN }).then(function (res) {
+            if (!res.ok) return;
+            el("kh-count").textContent = res.count;
+            var box = el("kh-players"); box.innerHTML = "";
+            res.players.forEach(function (p) {
+                var c = document.createElement("span"); c.className = "kh-chip"; c.textContent = p.name;
+                box.appendChild(c);
+            });
+        }).catch(function () {});
+    }
+    el("kh-start").addEventListener("click", function () {
+        if (!GAME_PIN) { return; } // la partie n'est pas encore créée (PIN en attente)
+        if (lobbyTimer) { clearInterval(lobbyTimer); lobbyTimer = null; }
+        el("kh-lobby").classList.add("kh-hidden");
+        var qcm = document.getElementById("qcm");
+        if (qcm) qcm.style.display = "";
+        el("kh-bar").classList.add("show");
+        startQuestion(); // rend la 1re question ; gameAfterRender() est appelé ensuite
+    });
+
+    // --- Après le rendu de chaque question ---
+    window.gameAfterRender = function () {
+        revealed = false; phase = "question";
+        el("kh-action").textContent = KH.reveal;
+        el("kh-action").disabled = false;
+        clearHostHighlight();
+        gameApi({ action: "setq", pin: GAME_PIN }).then(function (res) {
+            if (res.ok && res.question) { el("kh-total").textContent = res.count; }
+        });
+        if (ansTimer) clearInterval(ansTimer);
+        ansTimer = setInterval(pollAnswered, 1500);
+        pollAnswered();
+    };
+    function pollAnswered() {
+        gameApi({ action: "state", pin: GAME_PIN }).then(function (res) {
+            if (!res.ok) return;
+            el("kh-answered").textContent = res.answeredCount;
+            el("kh-total").textContent = res.count;
+        }).catch(function () {});
+    }
+
+    function clearHostHighlight() {
+        var blocks = document.querySelectorAll('div[id^="reponse_"]');
+        Array.prototype.forEach.call(blocks, function (b) { b.classList.remove("kh-correct-host"); });
+    }
+    function highlightCorrectHost(ci) {
+        clearHostHighlight();
+        var elc = document.getElementById("reponse_" + ci);
+        if (elc) elc.classList.add("kh-correct-host");
+    }
+
+    // --- Bouton d'action de la barre : Révéler → Suivant ---
+    el("kh-action").addEventListener("click", function () {
+        if (phase === "question") {
+            // Révéler : on fige les réponses, on montre la bonne sur l'écran et sur les téléphones.
+            el("kh-action").disabled = true;
+            gameApi({ action: "reveal", pin: GAME_PIN }).then(function (res) {
+                if (res.ok && res.correctIndex) highlightCorrectHost(res.correctIndex);
+                revealed = true; phase = "reveal";
+                el("kh-action").textContent = KH.next;
+                el("kh-action").disabled = false;
+                if (ansTimer) { clearInterval(ansTimer); ansTimer = null; }
+            }).catch(function () { el("kh-action").disabled = false; }); // ne pas bloquer en cas d'échec réseau
+        } else {
+            // Question suivante (ou fin) : updateQuestion(-1) enchaîne via le flux existant.
+            el("kh-action").disabled = true;
+            updateQuestion(-1);
+        }
+    });
+
+    // --- Fin de partie : classement ---
+    window.gameEnd = function () {
+        if (ansTimer) { clearInterval(ansTimer); ansTimer = null; }
+        el("kh-bar").classList.remove("show");
+        gameApi({ action: "end", pin: GAME_PIN }).then(function (res) {
+            renderLeaderboard(res.ok ? res.players : []);
+            el("kh-leader").classList.remove("kh-hidden");
+        });
+    };
+    function renderLeaderboard(players) {
+        var list = el("kh-leader-list"); list.innerHTML = "";
+        if (!players.length) {
+            list.innerHTML = "<p><?php echo $kh('Aucun joueur.', 'No players.'); ?></p>"; return;
+        }
+        players.forEach(function (p, i) {
+            var row = document.createElement("div");
+            row.className = "kh-lead-row" + (i === 0 ? " top" : "");
+            var medal = i === 0 ? "🥇 " : (i === 1 ? "🥈 " : (i === 2 ? "🥉 " : (i + 1) + ". "));
+            row.innerHTML = "<span>" + medal + p.name + "</span><span>" + p.score + " " + KH.pts + "</span>";
+            list.appendChild(row);
+        });
+    }
+})();
+</script>
+<?php endif; ?>
+
         <?php
         if (!isset($_SESSION["finish"])) {
-            echo '<script type="text/javascript">startQuestion();</script>';
+            if ($game_mode) {
+                // Mode Jeu : on n'enchaîne pas tout de suite — on affiche le lobby (PIN + QR).
+                echo '<script type="text/javascript">window.addEventListener("load", function(){ if (typeof initHostGame === "function") initHostGame(); });</script>';
+            } else {
+                echo '<script type="text/javascript">startQuestion();</script>';
+            }
         }
     } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && !(isset($_POST["acc"]) || isset($_SESSION["acc"]))) { ?>
         <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
@@ -1718,6 +1985,8 @@ if(isset($_SESSION['reponses'])){
 						var answersarray = findAllBlocks();
 						if (response[0] == "fin") {
 							timeout = true;
+							// Mode Jeu : pas de page finale solo → on clôt la partie et on affiche le classement.
+							if (GAME_MODE) { if (typeof gameEnd === 'function') gameEnd(); return; }
 							// Tout d'abord, supprimons toutes les classes précédentes pour plus de clarté
 							answersarray.forEach(function (item, index) {
 								const innerAnswers = item.querySelector('div#question_container');
@@ -1802,7 +2071,7 @@ if(isset($_SESSION['reponses'])){
 							});
 
 							// Popup avec la bonne réponse + explication (qcm / echelle) ; on attend le bouton "Continuer"
-							if (response[9] == "qcm" || response[9] == "echelle") {
+							if (!GAME_MODE && (response[9] == "qcm" || response[9] == "echelle")) {
 								let ci = parseInt(response[7], 10);
 								let correctText = "";
 								if (answersarray[ci - 1]) {
@@ -1873,7 +2142,7 @@ if(isset($_SESSION['reponses'])){
 												let button = reponse_elem.querySelector("#button_choix");
 												let p_elem = reponse_elem.querySelector("#rep");
 												p_elem.innerText = decodedString;
-												button.addEventListener("click", function () { updateQuestion(i); });
+												if (!GAME_MODE) button.addEventListener("click", function () { updateQuestion(i); });
 											}
 										}
 										else {
@@ -2190,7 +2459,15 @@ if(isset($_SESSION['reponses'])){
 								}
 								resize_questions();
 							};
-							showContinueButton(pendingNext);
+							// Mode Jeu : pas de popup solo ni de bouton « Continuer » → on enchaîne
+							// directement vers la question suivante (l'hôte pilote via sa barre de contrôle).
+							if (GAME_MODE) {
+								pendingNext();
+								applyGameColors();
+								if (typeof gameAfterRender === 'function') gameAfterRender();
+							} else {
+								showContinueButton(pendingNext);
+							}
 
 						}
 					}
@@ -2214,3 +2491,47 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
