@@ -15,14 +15,15 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
     body {
         font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
         background: linear-gradient(160deg, #6a5cf0 0%, #8a7bf4 45%, #b06fd8 100%);
-        color: #fff; display: flex; flex-direction: column; min-height: 100%;
+        color: #fff; overflow: hidden;
     }
-    .wrap { flex: 1; display: flex; flex-direction: column; align-items: center;
-        justify-content: center; padding: 22px; text-align: center; gap: 16px; }
+    /* Plein écran, sans défilement : la page tient toujours dans l'écran du téléphone. */
+    .wrap { height: 100vh; height: 100dvh; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; padding: 12px; text-align: center; gap: 12px; }
     .card { background: #fff; color: #2b2b2b; border-radius: 18px; padding: 22px;
         width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
     h1 { font-size: 22px; margin: 0 0 4px; }
-    .sub { font-size: 14px; opacity: .85; margin: 0; }
+    .sub { font-size: 14px; opacity: .9; margin: 0; }
     input {
         width: 100%; padding: 15px; font-size: 20px; text-align: center;
         border: 2px solid #d8cff7; border-radius: 12px; margin-top: 14px; outline: none;
@@ -35,16 +36,23 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
     }
     button.main:active { transform: translateY(1px); }
     .err { color: #d23; font-size: 14px; margin-top: 10px; min-height: 18px; }
-    .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;
-        max-width: 480px; }
+    /* Écran question : panneau de boutons qui remplit l'espace disponible (2 colonnes). */
+    #screen-question { flex: 1; width: 100%; max-width: 560px; display: flex;
+        flex-direction: column; gap: 10px; padding: 2px 0; }
+    .q-head { font-size: 15px; font-weight: 800; opacity: .95; flex: 0 0 auto;
+        background: rgba(255,255,255,.18); padding: 8px 14px; border-radius: 30px; align-self: center; }
+    .answers { flex: 1 1 auto; display: grid; grid-template-columns: 1fr 1fr;
+        grid-auto-rows: 1fr; gap: 10px; width: 100%; min-height: 0; }
+    .answers.single { grid-template-columns: 1fr; }
     .ans {
-        border: none; border-radius: 14px; color: #fff; font-size: 17px; font-weight: 800;
-        padding: 22px 12px; min-height: 96px; cursor: pointer; display: flex; gap: 8px;
-        align-items: center; justify-content: center; line-height: 1.2;
-        box-shadow: 0 5px 0 rgba(0,0,0,.18); text-shadow: 0 1px 2px rgba(0,0,0,.25);
+        border: none; border-radius: 16px; color: #fff; font-weight: 800;
+        font-size: clamp(15px, 4.4vw, 24px); padding: 10px 12px; min-height: 0;
+        cursor: pointer; display: flex; gap: 10px; align-items: center; justify-content: center;
+        line-height: 1.15; box-shadow: 0 5px 0 rgba(0,0,0,.18); text-shadow: 0 1px 2px rgba(0,0,0,.25);
+        overflow: hidden; word-break: break-word;
     }
     .ans:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
-    .ans .sym { font-size: 20px; }
+    .ans .sym { font-size: 1.6em; flex: 0 0 auto; }
     .big { font-size: 26px; font-weight: 900; margin: 6px 0; }
     .score-pill { display: inline-block; background: rgba(255,255,255,.22);
         padding: 8px 16px; border-radius: 40px; font-weight: 800; font-size: 18px; }
@@ -87,8 +95,8 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
     </div>
 
     <!-- 4. Question : boutons de réponse -->
-    <div id="screen-question" class="hidden" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:16px;">
-        <p class="sub" id="q-progress"></p>
+    <div id="screen-question" class="hidden">
+        <div class="q-head" id="q-progress"></div>
         <div class="answers" id="answers"></div>
     </div>
 
@@ -126,13 +134,15 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
               lobbyH1:"Tu es dans la partie !", lobbySub:"En attente du démarrage", waitTitle:"Réponse envoyée",
               waitSub:"En attente des autres", correct:"Correct ! +100", wrong:"Raté", noAnswer:"Pas de réponse",
               endH1:"Partie terminée !", rank:"e place", first:"1re place", score:"points",
-              badPin:"Partie introuvable", emptyName:"Entre un pseudo", ended:"La partie est terminée" }
+              badPin:"Partie introuvable", emptyName:"Entre un pseudo", ended:"La partie est terminée",
+              cancelled:"Partie annulée par l'hôte" }
     };
     T.en = { pinSub:"Enter the PIN shown on screen", nameH1:"Your nickname", nameSub:"How should you appear?",
              lobbyH1:"You're in!", lobbySub:"Waiting for the host", waitTitle:"Answer sent",
              waitSub:"Waiting for others", correct:"Correct! +100", wrong:"Wrong", noAnswer:"No answer",
              endH1:"Game over!", rank:"th place", first:"1st place", score:"points",
-             badPin:"Game not found", emptyName:"Enter a nickname", ended:"The game has ended" };
+             badPin:"Game not found", emptyName:"Enter a nickname", ended:"The game has ended",
+             cancelled:"Game cancelled by the host" };
 
     var lang = "fr", t = T.fr;
     var pin = "", pid = "", myName = "";
@@ -202,8 +212,7 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
             btn.addEventListener("click", function () { sendAnswer(a.n); });
             box.appendChild(btn);
         });
-        if (q.answers.length === 1) box.style.gridTemplateColumns = "1fr";
-        else box.style.gridTemplateColumns = "1fr 1fr";
+        box.classList.toggle("single", q.answers.length === 1);
     }
 
     function sendAnswer(choice) {
@@ -226,8 +235,21 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
     function poll() {
         api({ action: "state", pin: pin, pid: pid }).then(handleState).catch(function () {});
     }
+    function showCancelled() {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        $("wait-title").textContent = t.cancelled;
+        $("wait-sub").textContent = "";
+        $("wait-result").textContent = "✕";
+        $("wait-result").style.color = "#e21b3c";
+        $("wait-score").textContent = "";
+        show("screen-wait");
+    }
     function handleState(res) {
-        if (!res.ok) return;
+        if (!res.ok) {
+            // La partie a été annulée/supprimée par l'hôte → on prévient le joueur.
+            if (res.error === "no_game" && pid) { showCancelled(); }
+            return;
+        }
         var me = res.me || { score: 0 };
 
         if (res.status === "lobby") {
