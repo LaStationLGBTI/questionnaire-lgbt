@@ -1484,9 +1484,16 @@ if (!isset($_SESSION["start"])) {
         startQuestion(); // rend la 1re question ; gameAfterRender() est appelé ensuite
     });
 
+    // Retire la fenêtre d'info (bonne réponse) si elle est encore ouverte.
+    function khRemovePopup() {
+        var p = document.getElementById("answer-info-popup"); if (p) p.remove();
+        var r = document.getElementById("answer-reopen-btn"); if (r) r.remove();
+    }
+
     // --- Après le rendu de chaque question ---
     window.gameAfterRender = function () {
         revealed = false; phase = "question";
+        khRemovePopup();
         el("kh-action").textContent = KH.reveal;
         el("kh-action").disabled = false;
         clearHostHighlight();
@@ -1525,6 +1532,10 @@ if (!isset($_SESSION["start"])) {
             el("kh-action").disabled = true;
             gameApi({ action: "reveal", pin: GAME_PIN }).then(function (res) {
                 if (res.ok && res.correctIndex) highlightCorrectHost(res.correctIndex);
+                // Même fenêtre d'info que le mode normal : bonne réponse + explication.
+                if (res.ok && typeof showAnswerPopup === "function") {
+                    showAnswerPopup(res.correctText || "", res.expliq || "", true, false);
+                }
                 revealed = true; phase = "reveal";
                 el("kh-action").textContent = KH.next;
                 el("kh-action").disabled = false;
@@ -1553,6 +1564,7 @@ if (!isset($_SESSION["start"])) {
     // --- Fin de partie : classement ---
     window.gameEnd = function () {
         if (ansTimer) { clearInterval(ansTimer); ansTimer = null; }
+        khRemovePopup();
         el("kh-bar").classList.remove("show");
         gameApi({ action: "end", pin: GAME_PIN }).then(function (res) {
             renderLeaderboard(res.ok ? res.players : []);
