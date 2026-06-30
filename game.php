@@ -134,6 +134,7 @@ function current_question_from_session() {
     $answerArr = explode('__', isset($_SESSION['answer']) ? $_SESSION['answer'] : '');
     $idArr     = explode('__', isset($_SESSION['IdInUse']) ? $_SESSION['IdInUse'] : '');
     $typeArr   = explode('__', isset($_SESSION['qtype']) ? $_SESSION['qtype'] : '');
+    $expliqArr = explode('__', isset($_SESSION['expliqs']) ? $_SESSION['expliqs'] : '');
 
     $answers = [];
     for ($i = 1; $i <= 5; $i++) {
@@ -145,6 +146,7 @@ function current_question_from_session() {
         'text'         => $q[$idx],
         'answers'      => $answers,
         'correctIndex' => isset($answerArr[$idx]) ? (int)$answerArr[$idx] : 0, // numéro de slot 1..5
+        'expliq'       => isset($expliqArr[$idx]) ? $expliqArr[$idx] : '',      // explication de la bonne réponse
         'qid'          => isset($idArr[$idx]) ? $idArr[$idx] : '',
         'qtype'        => isset($typeArr[$idx]) ? $typeArr[$idx] : 'qcm',
         'qNumber'      => $idx,
@@ -187,7 +189,16 @@ function public_state($game, $pid = null) {
         'question' => $q,
     ];
     if ($reveal && isset($game['question']['correctIndex'])) {
-        $out['correctIndex'] = (int)$game['question']['correctIndex'];
+        $ci = (int)$game['question']['correctIndex'];
+        $out['correctIndex'] = $ci;
+        // Texte de la bonne réponse + explication, pour la fenêtre d'info chez l'hôte.
+        $out['expliq'] = isset($game['question']['expliq']) ? $game['question']['expliq'] : '';
+        $out['correctText'] = '';
+        if (!empty($game['question']['answers'])) {
+            foreach ($game['question']['answers'] as $a) {
+                if (isset($a['n']) && (int)$a['n'] === $ci) { $out['correctText'] = $a['text']; break; }
+            }
+        }
     }
     // Vue personnelle du joueur (son propre choix / score).
     if ($pid !== null && isset($game['players'][$pid])) {
@@ -246,6 +257,7 @@ switch ($action) {
                     'text'         => $cq['text'],
                     'answers'      => $cq['answers'],
                     'correctIndex' => $cq['correctIndex'],
+                    'expliq'       => $cq['expliq'],
                     'qid'          => $cq['qid'],
                 );
                 $g['qNumber'] = $cq['qNumber'];
