@@ -491,6 +491,9 @@ $lang = $_SESSION['language'];
 		var blocks = document.querySelectorAll('div[id^="reponse_"]');
 		Array.prototype.forEach.call(blocks, function (block, i) {
 			var pal = GAME_PALETTE[i % GAME_PALETTE.length];
+			// L'hôte ne choisit pas la bonne réponse : on retire le bouton de sélection.
+			var choix = block.querySelector('#button_choix');
+			if (choix) choix.remove();
 			var qc = block.querySelector('#question_container');
 			if (qc) {
 				qc.classList.remove('u-palette-2-light-2');
@@ -1347,6 +1350,8 @@ if (!isset($_SESSION["start"])) {
         color:#fff; background:#5cb37a; cursor:pointer; }
     .kh-btn:active { transform:translateY(1px); }
     .kh-btn.alt { background:#6a5cf0; }
+    .kh-btn.danger { background:#d23; }
+    .kh-btn.ghost { background:transparent; color:#d23; border:2px solid #d23; padding:11px 22px; }
     .kh-bar { position:fixed; left:0; right:0; bottom:0; z-index:8000; display:none;
         align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
         padding:12px 18px; background:#2b2b3a; color:#fff; box-shadow:0 -4px 14px rgba(0,0,0,.2); }
@@ -1356,7 +1361,24 @@ if (!isset($_SESSION["start"])) {
         padding:12px 18px; border-radius:12px; margin-top:10px; font-weight:800; font-size:18px;
         background:#f0ecfb; color:#3a2a66; }
     .kh-lead-row.top { background:linear-gradient(90deg,#ffd54a,#ffb300); color:#5a3a00; }
-    .kh-correct-host { outline:5px solid #ffd54a !important; outline-offset:3px; border-radius:12px; }
+    .kh-correct-host {
+        position:relative; z-index:2; border-radius:14px;
+        outline:6px solid #26ff7a; outline-offset:4px;
+        box-shadow:0 0 0 4px #0a8a3f, 0 0 26px 8px rgba(38,255,122,.85);
+        animation:khPulse 1s ease-in-out infinite;
+    }
+    .kh-correct-host::after {
+        content:"✓"; position:absolute; top:-16px; right:-16px; z-index:3;
+        width:40px; height:40px; border-radius:50%; background:#0a8a3f; color:#fff;
+        font-size:24px; font-weight:900; line-height:40px; text-align:center;
+        box-shadow:0 2px 8px rgba(0,0,0,.35); animation:khPop .35s ease-out;
+    }
+    @keyframes khPulse {
+        0%,100% { box-shadow:0 0 0 4px #0a8a3f, 0 0 20px 6px rgba(38,255,122,.65); transform:scale(1); }
+        50%     { box-shadow:0 0 0 5px #0a8a3f, 0 0 34px 12px rgba(38,255,122,1);  transform:scale(1.04); }
+    }
+    @keyframes khPop { 0% { transform:scale(0); } 70% { transform:scale(1.25); } 100% { transform:scale(1); } }
+    .kh-dim { opacity:.35; filter:grayscale(.4); transition:opacity .3s ease, filter .3s ease; }
 </style>
 
 <!-- Lobby hôte -->
@@ -1369,7 +1391,10 @@ if (!isset($_SESSION["start"])) {
         <div class="kh-url" id="kh-url"></div>
         <div class="kh-players" id="kh-players"></div>
         <p style="font-weight:700;"><span id="kh-count">0</span> <?php echo $kh('joueur(s)', 'player(s)'); ?></p>
-        <button class="kh-btn" id="kh-start"><?php echo $kh('Démarrer la partie', 'Start the game'); ?> →</button>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:4px;">
+            <button class="kh-btn" id="kh-start"><?php echo $kh('Démarrer la partie', 'Start the game'); ?> →</button>
+            <button class="kh-btn ghost kh-cancel" type="button"><?php echo $kh('Annuler la partie', 'Cancel the game'); ?></button>
+        </div>
         <div id="kh-lobby-err" style="color:#d23; margin-top:10px; min-height:18px;"></div>
     </div>
 </div>
@@ -1377,7 +1402,10 @@ if (!isset($_SESSION["start"])) {
 <!-- Barre de contrôle hôte (pendant les questions) -->
 <div id="kh-bar" class="kh-bar">
     <span class="info"><span id="kh-answered">0</span> / <span id="kh-total">0</span> <?php echo $kh('ont répondu', 'answered'); ?></span>
-    <button class="kh-btn alt" id="kh-action"><?php echo $kh('Révéler les réponses', 'Reveal answers'); ?></button>
+    <span style="display:flex; gap:10px;">
+        <button class="kh-btn danger kh-cancel" type="button"><?php echo $kh('Annuler', 'Cancel'); ?></button>
+        <button class="kh-btn alt" id="kh-action"><?php echo $kh('Révéler les réponses', 'Reveal answers'); ?></button>
+    </span>
 </div>
 
 <!-- Classement final -->
@@ -1479,11 +1507,14 @@ if (!isset($_SESSION["start"])) {
 
     function clearHostHighlight() {
         var blocks = document.querySelectorAll('div[id^="reponse_"]');
-        Array.prototype.forEach.call(blocks, function (b) { b.classList.remove("kh-correct-host"); });
+        Array.prototype.forEach.call(blocks, function (b) { b.classList.remove("kh-correct-host"); b.classList.remove("kh-dim"); });
     }
     function highlightCorrectHost(ci) {
         clearHostHighlight();
+        var blocks = document.querySelectorAll('div[id^="reponse_"]');
         var elc = document.getElementById("reponse_" + ci);
+        // On atténue les autres réponses pour faire ressortir la bonne.
+        Array.prototype.forEach.call(blocks, function (b) { if (b !== elc) b.classList.add("kh-dim"); });
         if (elc) elc.classList.add("kh-correct-host");
     }
 
@@ -1504,6 +1535,19 @@ if (!isset($_SESSION["start"])) {
             el("kh-action").disabled = true;
             updateQuestion(-1);
         }
+    });
+
+    // --- Annuler la partie (lobby ou en cours) : supprime la partie et déconnecte les joueurs ---
+    function khAbort() {
+        var msg = "<?php echo $kh('Annuler la partie ? Les joueurs seront déconnectés.', 'Cancel the game? Players will be disconnected.'); ?>";
+        if (!window.confirm(msg)) return;
+        if (lobbyTimer) { clearInterval(lobbyTimer); lobbyTimer = null; }
+        if (ansTimer) { clearInterval(ansTimer); ansTimer = null; }
+        var done = function () { window.location.href = "index.php?back=1"; };
+        gameApi({ action: "abort", pin: GAME_PIN }).then(done).catch(done);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".kh-cancel"), function (b) {
+        b.addEventListener("click", khAbort);
     });
 
     // --- Fin de partie : classement ---
