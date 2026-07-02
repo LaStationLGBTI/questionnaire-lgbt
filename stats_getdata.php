@@ -1,6 +1,14 @@
 <?php
-require_once 'conf.php'; 
+require_once 'conf.php';
 header('Content-Type: application/json');
+// Accès au site par clé (access.php) : refuse les données si aucune clé valide en session.
+session_start();
+require_once __DIR__ . '/access.php';
+if (!access_session_valid()) {
+    http_response_code(403);
+    echo json_encode(['error' => 'access_key_required']);
+    exit();
+}
 
 try {
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
