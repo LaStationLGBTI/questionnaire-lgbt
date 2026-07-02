@@ -1,57 +1,19 @@
 <?php
-// Nous connectons la configuration et lançons la session
-require_once 'conf.php';
-session_start();
-
-// --- Section 1 : Section 1 : Logique d'entrée et de sortie (similaire à d'autres fichiers) --
-
-// Initialisons le compteur de connexions
-if (!isset($_SESSION['login_attempts'])) {
-    $_SESSION['login_attempts'] = 0;
-}
-
-// Traitement de la déconnexion
-if (isset($_POST['logout'])) {
-    session_unset();
-    session_destroy();
-    header('Location: gestion_gsdatabase.php');
-    exit();
-}
-
-// Traitement de l'entrée
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($_SESSION['login_attempts'] < 3) {
-        $login = $_POST['identifiant'];
-        $pass = $_POST['mot_de_passe'];
-        try {
-            $pdo_login = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo_login->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo_login->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
-            $stmt->execute([$login]);
-            $user = $stmt->fetch();
-            if ($user && $pass === $user['passconn']) {
-                $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0;
-            } else {
-                $_SESSION['login_attempts']++;
-                $login_error = "Identifiant ou mot de passe incorrect.";
-            }
-        } catch (PDOException $e) {
-            $login_error = "Erreur de connexion : " . $e->getMessage();
-        }
-    }
-}
+// Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
+require_once 'auth.php';
+$login_error = admin_handle_auth();
 
 // --- Section 2 : Traitement des données (création, mise à jour, suppression) ---
 $message = ''; // Pour les messages à l'utilisateur (succès, erreur)
 
-if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
+if (admin_is_logged_in()) {
     try {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         // Traitement de la création d'une nouvelle question
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_question'])) {
+            admin_require_csrf();
             $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
             $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, expliq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
@@ -65,6 +27,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
         // Traitement de la mise à jour d'une question
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_question'])) {
+            admin_require_csrf();
             $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
             $sql = "UPDATE GSDatabase SET level=?, question=?, rep1=?, rep2=?, rep3=?, rep4=?, rep5=?, answer=?, qtype=?, expliq=? WHERE id=?";
             $stmt = $pdo->prepare($sql);
@@ -78,6 +41,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
         // Traitement de la suppression d'une question
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_question'])) {
+            admin_require_csrf();
             $stmt = $pdo->prepare("DELETE FROM GSDatabase WHERE id = ?");
             $stmt->execute([$_POST['id']]);
             header('Location: gestion_gsdatabase.php?deleted=true');
@@ -85,7 +49,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         }
 
     } catch (PDOException $e) {
-        $message = "<div class='error'>Erreur de base de données : " . $e->getMessage() . "</div>";
+        error_log('[gestion_gsdatabase] ' . $e->getMessage());
+        $message = "<div class='error'>Erreur de base de données.</div>";
     }
 }
 
@@ -152,10 +117,11 @@ if (isset($_GET['deleted'])) {
 </head>
 <body>
 
-<?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
+<?php if (admin_is_logged_in()) : ?>
 
     <div class="container">
         <form action="" method="post" class="logout-form">
+            <?php echo csrf_input(); ?>
             <button type="submit" name="logout">Déconnexion</button>
         </form>
 
@@ -215,6 +181,7 @@ if (isset($_GET['deleted'])) {
             <h2><?php echo $is_edit_mode ? 'Modifier la question' : 'Créer une nouvelle question'; ?></h2>
 
             <form action="gestion_gsdatabase.php" method="POST" id="question-form">
+                <?php echo csrf_input(); ?>
                 <?php if ($is_edit_mode): ?>
                     <input type="hidden" name="id" value="<?php echo htmlspecialchars($question_data['id']); ?>">
                 <?php endif; ?>
@@ -280,19 +247,19 @@ if (isset($_GET['deleted'])) {
         <?php endif; ?>
     </div>
 
-<?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+<?php elseif (admin_login_throttled()['blocked']) : ?>
     <div class="container login-container">
         <h1>Accès Bloqué</h1>
-        <p class="error">Votre accès est bloqué après 3 tentatives infructueuses.</p>
+        <p class="error">Trop de tentatives de connexion. Veuillez réessayer plus tard.</p>
     </div>
 <?php else : ?>
     <div class="container login-container">
         <h1>Accès Administrateur</h1>
-        <?php if (isset($login_error)) : ?>
-            <p class="error"><?php echo $login_error; ?></p>
-            <p style="text-align:center;">Tentative <?php echo $_SESSION['login_attempts']; ?> sur 3.</p>
+        <?php if (isset($login_error) && $login_error) : ?>
+            <p class="error"><?php echo htmlspecialchars($login_error); ?></p>
         <?php endif; ?>
         <form action="" method="post">
+            <?php echo csrf_input(); ?>
             <div class="form-group">
                 <label for="identifiant">Identifiant :</label>
                 <input type="text" id="identifiant" name="identifiant" required>
