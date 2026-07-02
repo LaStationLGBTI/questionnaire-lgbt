@@ -1,52 +1,21 @@
 <?php
-// Inclure la configuration et démarrer la session
-require_once 'conf.php';
-session_start();
+// Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
+require_once 'auth.php';
 
 $uploadDir = 'dopplegenImages/';
 $message = '';
 
-// --- Logique de connexion et déconnexion ---
-if (!isset($_SESSION['login_attempts'])) {
-    $_SESSION['login_attempts'] = 0;
-}
-if (isset($_POST['logout'])) {
-    session_unset();
-    session_destroy();
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit();
-}
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($_SESSION['login_attempts'] < 3) {
-        $login = $_POST['identifiant'];
-        $pass = $_POST['mot_de_passe'];
-        try {
-            $pdo_login = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo_login->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo_login->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
-            $stmt->execute([$login]);
-            $user = $stmt->fetch();
-            if ($user && $pass === $user['passconn']) {
-                $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0;
-            } else {
-                $_SESSION['login_attempts']++;
-                $login_error = "Identifiant ou mot de passe incorrect.";
-            }
-        } catch (PDOException $e) {
-            $login_error = "Erreur de connexion : " . $e->getMessage();
-        }
-    }
-}
+$login_error = admin_handle_auth('manage_dopplegen.php', 'manage_dopplegen.php');
 
 // ---- Logique de la page (UNIQUEMENT SI CONNECTÉ) ----
-if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
+if (admin_is_logged_in()) {
 
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // --- LOGIQUE D'AJOUT (PANNEAU GAUCHE) ---
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_entry'])) {
+        admin_require_csrf();
         $category = trim($_POST['category']);
         $name = trim($_POST['name']);
         $imageFile = $_FILES['image'];
@@ -58,8 +27,10 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             $safeFilename = uniqid('img_', true) . '.' . strtolower($fileExtension);
             $targetFile = $uploadDir . $safeFilename;
             $allowedTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            // Vérifie que le contenu est réellement une image (pas seulement l'extension).
+            $imgInfo = @getimagesize($imageFile['tmp_name']);
 
-            if (in_array(strtolower($fileExtension), $allowedTypes)) {
+            if (in_array(strtolower($fileExtension), $allowedTypes) && $imgInfo !== false) {
                 if (move_uploaded_file($imageFile['tmp_name'], $targetFile)) {
                     $stmt = $pdo->prepare("INSERT INTO dopplegen (category, name, image_name) VALUES (?, ?, ?)");
                     $stmt->execute([$category, $name, $safeFilename]);
@@ -77,6 +48,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
     // --- LOGIQUE DE SUPPRESSION (PANNEAU DROIT) ---
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_entry'])) {
+        admin_require_csrf();
         $id_to_delete = $_POST['delete_id'];
         $stmt_find = $pdo->prepare("SELECT image_name FROM dopplegen WHERE id = ?");
         $stmt_find->execute([$id_to_delete]);
@@ -94,6 +66,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
     }
 // --- LOGIQUE DE DUPLICATION (PANNEAU DROIT) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['duplicate_category'])) {
+    admin_require_csrf();
     $source_category = $_POST['source_category'];
     $new_category_name = trim($_POST['new_category_name']);
 
@@ -135,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['duplicate_category'])
 }
     // --- LOGIQUE DE RENOMMAGE (PANNEAU DROIT) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
+    admin_require_csrf();
     $old_category_name = $_POST['old_category_name'];
     $new_category_name = trim($_POST['new_category_name']);
 
@@ -278,9 +252,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
 </head>
 <body>
 
-    <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
+    <?php if (admin_is_logged_in()) : ?>
 
         <form method="POST" action="">
+            <?php echo csrf_input(); ?>
             <button type="submit" name="logout" class="logout-button">Déconnexion</button>
         </form>
 
@@ -303,6 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
             <div class="panel panel-left">
                 <h2>Ajouter une nouvelle entrée</h2>
                 <form action="manage_dopplegen.php" method="POST" enctype="multipart/form-data">
+                    <?php echo csrf_input(); ?>
                     <div class="form-group">
                         <label for="category">Catégorie :</label>
                         <input type="text" id="category" name="category" required
@@ -344,6 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
 
     <div style="flex: 1; min-width: 250px; background: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee;">
         <form action="manage_dopplegen.php?category_select=<?= urlencode($selected_category) ?>" method="POST">
+            <?php echo csrf_input(); ?>
             <h4>Dupliquer la catégorie</h4>
             <div class="form-group">
                 <label for="new_dup_category_name" style="font-weight: normal;">Nouveau nom :</label>
@@ -356,6 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
 
     <div style="flex: 1; min-width: 250px; background: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee;">
         <form action="manage_dopplegen.php" method="POST">
+            <?php echo csrf_input(); ?>
              <h4>Renommer "<?= htmlspecialchars($selected_category) ?>"</h4>
             <div class="form-group">
                 <label for="new_ren_category_name" style="font-weight: normal;">Nouveau nom :</label>
@@ -380,6 +358,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
             <img src="<?= htmlspecialchars($uploadDir . $entry['image_name']) ?>" alt="<?= htmlspecialchars($entry['name']) ?>">
             <p><?= htmlspecialchars($entry['name']) ?></p>
             <form action="manage_dopplegen.php?category_select=<?= urlencode($selected_category) ?>" method="POST" onsubmit="return confirm('Voulez-vous vraiment supprimer cette entrée ?');">
+                <?php echo csrf_input(); ?>
                 <input type="hidden" name="delete_id" value="<?= $entry['id'] ?>">
                 <button type="submit" name="delete_entry" class="delete-button">Supprimer</button>
             </form>
@@ -389,16 +368,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['rename_category'])) {
 <?php endif; ?>
             </div>
         </div>
-        <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+        <?php elseif (admin_login_throttled()['blocked']) : ?>
         <div class="login-container">
             <h1>Accès Bloqué</h1>
-            <p class="error">Vous avez échoué 3 tentatives de connexion. Accès verrouillé.</p>
+            <p class="error">Trop de tentatives de connexion. Veuillez réessayer plus tard.</p>
         </div>
     <?php else : ?>
         <div class="login-container">
             <h1>Connexion Administrateur</h1>
-            <?php if (isset($login_error)) : ?><p class="error"><?php echo $login_error; ?></p><?php endif; ?>
+            <?php if (isset($login_error) && $login_error) : ?><p class="error"><?php echo htmlspecialchars($login_error); ?></p><?php endif; ?>
             <form action="" method="post">
+                <?php echo csrf_input(); ?>
                 <div class="form-group">
                     <label for="identifiant">Identifiant :</label>
                     <input type="text" id="identifiant" name="identifiant" required>
