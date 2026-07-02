@@ -3,6 +3,12 @@
 header('Content-Type: application/json');
 session_start();
 require_once 'conf.php';
+// Accès par clé (access.php) : une clé doit avoir été validée dans cette session.
+// Pas de revérification "live" ici : un questionnaire déjà commencé peut être terminé.
+if (empty($_SESSION['access_key'])) {
+	echo "Erreur : accès non autorisé (clé d'accès requise).";
+	exit();
+}
 if(isset($_SESSION["finish"]))
 if($_SESSION["finish"] == 1)
 {
