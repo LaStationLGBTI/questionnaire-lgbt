@@ -64,24 +64,15 @@ if (isset($_GET['selftest'])) {
 }
 ini_set('session.gc_maxlifetime', 31536000);
 session_start();
-ini_set('display_errors', 1); ini_set('display_startup_errors', 1); error_reporting(E_ALL);
-if (isset($_SESSION['login_attempts']) && $_SESSION['login_attempts'] >= 3) {
-	$blocked_lang = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
-	if ($blocked_lang === 'en') {
-		echo '
-            <h1>Access Blocked</h1>
-            <p class="error" name="session_bloquee">Your access is blocked. Please contact the administrator.</p>';
-	} elseif ($blocked_lang === 'de') {
-		echo '
-            <h1>Zugang gesperrt</h1>
-            <p class="error" name="session_bloquee">Ihr Zugang ist gesperrt. Bitte kontaktieren Sie den Administrator.</p>';
-	} else {
-		echo '
-            <h1>Accès Bloqué</h1>
-            <p class="error" name="session_bloquee">Votre accès est bloqué. Veuillez contacter l`administrateur.</p>';
-	}
-	exit();
+// Ne pas exposer les erreurs PHP au public (mettre APP_DEBUG=1 côté serveur pour le dev).
+if (getenv('APP_DEBUG') === '1') {
+    ini_set('display_errors', 1); ini_set('display_startup_errors', 1);
+} else {
+    ini_set('display_errors', 0); ini_set('display_startup_errors', 0);
 }
+error_reporting(E_ALL); ini_set('log_errors', '1');
+// NB : le verrouillage anti-force-brute de l'admin est désormais géré par fichier (auth.php),
+// indépendamment de cette session publique. Le questionnaire n'est plus jamais bloqué par ce biais.
 if (isset($_POST['reset_session'])) {
     session_unset();
     session_destroy();
@@ -921,7 +912,8 @@ if (!isset($_SESSION['level'])) {
 		$stmt_titles = $pdo->query("SELECT level, titre FROM $title_table");
         $all_titles = $stmt_titles->fetchAll(PDO::FETCH_KEY_PAIR);
     } catch (PDOException $e) {
-        $error_message = "Erreur de connexion à la base de données : " . $e->getMessage();
+        error_log('[index] ' . $e->getMessage());
+        $error_message = "Erreur de connexion à la base de données.";
     }
 ?>
     <section class="u-clearfix u-valign-middle u-section-1" id="sec-level-selection">
@@ -1161,7 +1153,7 @@ if (!isset($_SESSION["start"])) {
         $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     } catch (PDOException $e) {
-        echo "Erreur connection: " . $e->getMessage();
+        error_log('[index] ' . $e->getMessage()); echo "Erreur de connexion à la base de données.";
     }
     // En anglais on tire les questions de la table traduite. fr_id (colonne de GSDatabase_en)
     // pointe vers GSDatabase.id : on l'utilise comme identifiant logique pour que les réponses
@@ -1665,7 +1657,7 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
         $conn = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     } catch (PDOException $e) {
-        echo "Erreur connection: " . $e->getMessage();
+        error_log('[index] ' . $e->getMessage()); echo "Erreur de connexion à la base de données.";
     }
 
     $query = "UPDATE GSDatabaseR SET genre = :genre, orientation = :orientation, repmail = :repmail, lang = :lang WHERE id = :id";
@@ -2547,47 +2539,3 @@ if(isset($_SESSION['reponses'])){
 	</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
