@@ -1,44 +1,7 @@
 <?php
-// Nous connectons la configuration et lançons la session
-require_once 'conf.php';
-session_start();
-
-// Initialisation du compteur de tentatives de connexion
-if (!isset($_SESSION['login_attempts'])) {
-    $_SESSION['login_attempts'] = 0;
-}
-
-// Traitement de la déconnexion
-if (isset($_POST['logout'])) {
-    session_unset();
-    session_destroy();
-    header('Location: db_viewer.php');
-    exit();
-}
-
-// Traitement de l'entrée
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($_SESSION['login_attempts'] < 3) {
-        $login = $_POST['identifiant'];
-        $pass = $_POST['mot_de_passe'];
-        try {
-            $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
-            $stmt->execute([$login]);
-            $user = $stmt->fetch();
-            if ($user && $pass === $user['passconn']) {
-                $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0;
-            } else {
-                $_SESSION['login_attempts']++;
-                $login_error = "Identifiant ou mot de passe incorrect.";
-            }
-        } catch (PDOException $e) {
-            $login_error = "Erreur de connexion : " . $e->getMessage();
-        }
-    }
-}
+// Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
+require_once 'auth.php';
+$login_error = admin_handle_auth();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -74,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
         <div class="container">
             <form action="" method="post" class="logout-form">
+                <?php echo csrf_input(); ?>
                 <button type="submit" name="logout">Déconnexion</button>
             </form>
 
@@ -85,98 +49,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // --- MODIFICATION 1 : Ajout d'une logique pour les tables (FR + EN) ---
+                // --- MODIFICATION 1 : Ajout d'une logique pour le troisième tableau ---
                 $current_view_param = $_GET['view'] ?? 'results'; // 'results' par défaut
 
                 if ($current_view_param === 'questions') {
                     $view = 'GSDatabase';
                 } elseif ($current_view_param === 'texts') {
                     $view = 'GSDatabaseT';
-                } elseif ($current_view_param === 'questions_en') {
-                    $view = 'GSDatabase_en';
-                } elseif ($current_view_param === 'texts_en') {
-                    $view = 'GSDatabaseT_en';
                 } else {
                     $view = 'GSDatabaseR';
                 }
 
-                // --- MODIFICATION 2 : Ajout des onglets (dont les tables anglaises) ---
+                // --- MODIFICATION 2 : Ajout d'un bouton pour un nouvel onglet ---
                 echo '<div class="tabs">';
                 echo '<a href="?view=results" class="' . ($view === 'GSDatabaseR' ? 'active' : '') . '">Voir les Résultats (GSDatabaseR)</a>';
                 echo '<a href="?view=questions" class="' . ($view === 'GSDatabase' ? 'active' : '') . '">Voir les Questions (GSDatabase)</a>';
-                echo '<a href="?view=texts" class="' . ($view === 'GSDatabaseT' ? 'active' : '') . '">Voir les Textes (GSDatabaseT)</a>';
-                echo '<a href="?view=questions_en" class="' . ($view === 'GSDatabase_en' ? 'active' : '') . '">Questions EN (GSDatabase_en)</a>';
-                echo '<a href="?view=texts_en" class="' . ($view === 'GSDatabaseT_en' ? 'active' : '') . '">Textes EN (GSDatabaseT_en)</a>';
+                echo '<a href="?view=texts" class="' . ($view === 'GSDatabaseT' ? 'active' : '') . '">Voir les Textes (GSDatabaseT)</a>'; // Nouvelle chaîne
                 echo '</div>';
 
                 echo "<h2>Affichage de la table : `$view`</h2>";
 
-                // Les tables anglaises ne sont créées qu'au premier import anglais :
-                // on vérifie leur existence pour afficher un message clair le cas échéant.
-                $stmt_exists = $pdo->prepare("SHOW TABLES LIKE ?");
-                $stmt_exists->execute([$view]);
-                if ($stmt_exists->fetchColumn() === false) {
-                    echo "<p>La table `" . htmlspecialchars($view) . "` n'existe pas encore. Elle sera créée automatiquement lors de la première importation anglaise via import.php.</p>";
-                } else {
-                    // Obtenir les noms des colonnes
-                    $stmt_cols = $pdo->query("DESCRIBE `$view`");
-                    $columns = $stmt_cols->fetchAll(PDO::FETCH_COLUMN);
+                // Obtenir les noms des colonnes
+                $stmt_cols = $pdo->query("DESCRIBE `$view`");
+                $columns = $stmt_cols->fetchAll(PDO::FETCH_COLUMN);
 
-                    // Colonne de tri : `id` si présente (GSDatabaseT_en n'a pas d'id -> tri par sa 1re colonne)
-                    $order_col = in_array('id', $columns) ? 'id' : $columns[0];
+                // Nous obtenons toutes les données du tableau
+                $stmt_data = $pdo->query("SELECT * FROM `$view` ORDER BY id DESC");
+                $results = $stmt_data->fetchAll(PDO::FETCH_ASSOC);
 
-                    // Nous obtenons toutes les données du tableau
-                    $stmt_data = $pdo->query("SELECT * FROM `$view` ORDER BY `$order_col` DESC");
-                    $results = $stmt_data->fetchAll(PDO::FETCH_ASSOC);
-
-                    if (count($results) > 0) {
-                        echo "<table>";
-                        // Création dynamique d'un en-tête de tableau
-                        echo "<thead><tr>";
-                        foreach ($columns as $col) {
-                            echo "<th>" . htmlspecialchars($col) . "</th>";
-                        }
-                        echo "</tr></thead>";
-
-                        // Affichage dynamique des chaînes
-                        echo "<tbody>";
-                        foreach ($results as $row) {
-                            echo "<tr>";
-                            foreach ($columns as $col) {
-                                // On a simplement enlevé htmlspecialchars()
-                                echo "<td>" . $row[$col] . "</td>";
-                            }
-                            echo "</tr>";
-                        }
-                        echo "</tbody></table>";
-                    } else {
-                        echo "<p>Aucun résultat trouvé dans la table `$view`.</p>";
+                if (count($results) > 0) {
+                    echo "<table>";
+                    // Création dynamique d'un en-tête de tableau
+                    echo "<thead><tr>";
+                    foreach ($columns as $col) {
+                        echo "<th>" . htmlspecialchars($col) . "</th>";
                     }
+                    echo "</tr></thead>";
+
+                    // Affichage dynamique des chaînes
+// NOUVEAU CODE CORRIGÉ
+echo "<tbody>";
+foreach ($results as $row) {
+    echo "<tr>";
+    foreach ($columns as $col) {
+        // Échappement obligatoire : ces données proviennent des réponses au questionnaire (XSS stocké).
+        echo "<td>" . htmlspecialchars((string) $row[$col], ENT_QUOTES, 'UTF-8') . "</td>";
+    }
+    echo "</tr>";
+}
+echo "</tbody></table>";
+                } else {
+                    echo "<p>Aucun résultat trouvé dans la table `$view`.</p>";
                 }
 
             } catch (PDOException $e) {
-                echo "<p class='error'>Erreur de connexion à la base de données : " . $e->getMessage() . "</p>";
+                error_log('[db_viewer] ' . $e->getMessage());
+                echo "<p class='error'>Erreur de connexion à la base de données.</p>";
             }
             // =================== LES CHANGEMENTS S'ARRÊTENT ICI ===================
             ?>
         </div>
 
-    <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+    <?php elseif (admin_login_throttled()['blocked']) : ?>
 
         <div class="container login-container">
             <h1>Accès Bloqué</h1>
-            <p class="error">Votre accès est bloqué après 3 tentatives infructueuses.</p>
+            <p class="error">Trop de tentatives de connexion. Veuillez réessayer plus tard.</p>
         </div>
 
     <?php else : ?>
 
         <div class="container login-container">
             <h1>Accès Administrateur</h1>
-            <?php if (isset($login_error)) : ?>
-                <p class="error"><?php echo $login_error; ?></p>
-                <p>Tentative <?php echo $_SESSION['login_attempts']; ?> sur 3.</p>
+            <?php if (isset($login_error) && $login_error) : ?>
+                <p class="error"><?php echo htmlspecialchars($login_error); ?></p>
             <?php endif; ?>
             <form action="" method="post">
+                <?php echo csrf_input(); ?>
                 <div class="form-group">
                     <label for="identifiant">Identifiant :</label>
                     <input type="text" id="identifiant" name="identifiant" required>
