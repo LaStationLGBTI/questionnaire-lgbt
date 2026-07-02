@@ -1,44 +1,11 @@
 <?php
-// Inclure la configuration et démarrer la session
-require_once 'conf.php';
-session_start();
-
-// --- Logique de connexion (IDENTIQUE) ---
-if (!isset($_SESSION['login_attempts'])) {
-    $_SESSION['login_attempts'] = 0;
-}
-if (isset($_POST['logout'])) {
-    session_unset();
-    session_destroy();
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit();
-}
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($_SESSION['login_attempts'] < 3) {
-        $login = $_POST['identifiant'];
-        $pass = $_POST['mot_de_passe'];
-        try {
-            $pdo_login = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo_login->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo_login->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
-            $stmt->execute([$login]);
-            $user = $stmt->fetch();
-            if ($user && $pass === $user['passconn']) {
-                $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0;
-            } else {
-                $_SESSION['login_attempts']++;
-                $login_error = "Identifiant ou mot de passe incorrect.";
-            }
-        } catch (PDOException $e) {
-            $login_error = "Erreur de connexion : " . $e->getMessage();
-        }
-    }
-}
+// Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
+require_once 'auth.php';
+$login_error = admin_handle_auth('generate_dopplegen.php', 'generate_dopplegen.php');
 
 
 // --- Logique du générateur Dobble (UNIQUEMENT SI CONNECTÉ) ---
-if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
+if (admin_is_logged_in()) {
     $all_cards_indices = [];
     $symbols_to_use = [];
     $categories_list = [];
@@ -123,7 +90,8 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         } // Fin de if(isset($_GET['generate']))
 
     } catch (PDOException $e) {
-        $generation_error = "Erreur de base de données : " . $e->getMessage();
+        error_log('[generate_dopplegen] ' . $e->getMessage());
+        $generation_error = "Erreur de base de données.";
     }
 }
 ?>
@@ -309,9 +277,10 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 </head>
 <body>
 
-    <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
+    <?php if (admin_is_logged_in()) : ?>
 
         <form method="POST" action="">
+            <?php echo csrf_input(); ?>
             <button type="submit" name="logout" class="logout-button no-print">Déconnexion</button>
         </form>
 
@@ -564,16 +533,17 @@ function build_slots($config_layers, $min_mod, $max_mod, $center_x = 50, $center
             <?php endif; ?>
 
 
-    <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+    <?php elseif (admin_login_throttled()['blocked']) : ?>
         <div class="login-container">
             <h1>Accès Bloqué</h1>
-            <p class="error">Vous avez échoué 3 tentatives de connexion. Accès verrouillé.</p>
+            <p class="error">Trop de tentatives de connexion. Veuillez réessayer plus tard.</p>
         </div>
     <?php else : ?>
         <div class="login-container">
             <h1>Connexion Administrateur</h1>
-            <?php if (isset($login_error)) : ?><p class="error"><?php echo $login_error; ?></p><?php endif; ?>
+            <?php if (isset($login_error) && $login_error) : ?><p class="error"><?php echo htmlspecialchars($login_error); ?></p><?php endif; ?>
             <form action="" method="post">
+                <?php echo csrf_input(); ?>
                 <div class="form-group">
                     <label for="identifiant">Identifiant :</label>
                     <input type="text" id="identifiant" name="identifiant" required>
