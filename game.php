@@ -220,6 +220,9 @@ switch ($action) {
     case 'create': {
         cleanup_old($GAME_DIR);
         if (!isset($_SESSION['level'])) jerr('no_level');
+        // Seul l'hôte (qui a validé une clé d'accès via index.php) peut créer une partie.
+        // Les joueurs (join/answer/state) n'ont jamais besoin de clé.
+        if (empty($_SESSION['access_key'])) jerr('no_access');
         // Génère un PIN à 6 chiffres non utilisé.
         $pin = null;
         for ($try = 0; $try < 30; $try++) {
