@@ -113,7 +113,8 @@ try {
     echo json_encode($response);
 
 } catch (PDOException $e) {
-    echo json_encode(['error' => $e->getMessage(), 'formattedData' => [], 'answers' => [], 'totalResponses' => 0]);
+    error_log('[stats_getdata] ' . $e->getMessage());
+    echo json_encode(['error' => 'Erreur base de données', 'formattedData' => [], 'answers' => [], 'totalResponses' => 0]);
 }
 ?>
 
