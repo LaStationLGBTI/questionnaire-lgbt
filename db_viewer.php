@@ -33,7 +33,7 @@ $login_error = admin_handle_auth();
 </head>
 <body>
 
-    <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
+    <?php if (admin_is_logged_in()) : ?>
 
         <div class="container">
             <form action="" method="post" class="logout-form">
@@ -49,57 +49,73 @@ $login_error = admin_handle_auth();
                 $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // --- MODIFICATION 1 : Ajout d'une logique pour le troisième tableau ---
+                // --- MODIFICATION 1 : Ajout d'une logique pour les tables (FR + EN) ---
                 $current_view_param = $_GET['view'] ?? 'results'; // 'results' par défaut
 
                 if ($current_view_param === 'questions') {
                     $view = 'GSDatabase';
                 } elseif ($current_view_param === 'texts') {
                     $view = 'GSDatabaseT';
+                } elseif ($current_view_param === 'questions_en') {
+                    $view = 'GSDatabase_en';
+                } elseif ($current_view_param === 'texts_en') {
+                    $view = 'GSDatabaseT_en';
                 } else {
                     $view = 'GSDatabaseR';
                 }
 
-                // --- MODIFICATION 2 : Ajout d'un bouton pour un nouvel onglet ---
+                // --- MODIFICATION 2 : Ajout des onglets (dont les tables anglaises) ---
                 echo '<div class="tabs">';
                 echo '<a href="?view=results" class="' . ($view === 'GSDatabaseR' ? 'active' : '') . '">Voir les Résultats (GSDatabaseR)</a>';
                 echo '<a href="?view=questions" class="' . ($view === 'GSDatabase' ? 'active' : '') . '">Voir les Questions (GSDatabase)</a>';
-                echo '<a href="?view=texts" class="' . ($view === 'GSDatabaseT' ? 'active' : '') . '">Voir les Textes (GSDatabaseT)</a>'; // Nouvelle chaîne
+                echo '<a href="?view=texts" class="' . ($view === 'GSDatabaseT' ? 'active' : '') . '">Voir les Textes (GSDatabaseT)</a>';
+                echo '<a href="?view=questions_en" class="' . ($view === 'GSDatabase_en' ? 'active' : '') . '">Questions EN (GSDatabase_en)</a>';
+                echo '<a href="?view=texts_en" class="' . ($view === 'GSDatabaseT_en' ? 'active' : '') . '">Textes EN (GSDatabaseT_en)</a>';
                 echo '</div>';
 
                 echo "<h2>Affichage de la table : `$view`</h2>";
 
-                // Obtenir les noms des colonnes
-                $stmt_cols = $pdo->query("DESCRIBE `$view`");
-                $columns = $stmt_cols->fetchAll(PDO::FETCH_COLUMN);
-
-                // Nous obtenons toutes les données du tableau
-                $stmt_data = $pdo->query("SELECT * FROM `$view` ORDER BY id DESC");
-                $results = $stmt_data->fetchAll(PDO::FETCH_ASSOC);
-
-                if (count($results) > 0) {
-                    echo "<table>";
-                    // Création dynamique d'un en-tête de tableau
-                    echo "<thead><tr>";
-                    foreach ($columns as $col) {
-                        echo "<th>" . htmlspecialchars($col) . "</th>";
-                    }
-                    echo "</tr></thead>";
-
-                    // Affichage dynamique des chaînes
-// NOUVEAU CODE CORRIGÉ
-echo "<tbody>";
-foreach ($results as $row) {
-    echo "<tr>";
-    foreach ($columns as $col) {
-        // Échappement obligatoire : ces données proviennent des réponses au questionnaire (XSS stocké).
-        echo "<td>" . htmlspecialchars((string) $row[$col], ENT_QUOTES, 'UTF-8') . "</td>";
-    }
-    echo "</tr>";
-}
-echo "</tbody></table>";
+                // Les tables anglaises ne sont créées qu'au premier import anglais :
+                // on vérifie leur existence pour afficher un message clair le cas échéant.
+                $stmt_exists = $pdo->prepare("SHOW TABLES LIKE ?");
+                $stmt_exists->execute([$view]);
+                if ($stmt_exists->fetchColumn() === false) {
+                    echo "<p>La table `" . htmlspecialchars($view) . "` n'existe pas encore. Elle sera créée automatiquement lors de la première importation anglaise via import.php.</p>";
                 } else {
-                    echo "<p>Aucun résultat trouvé dans la table `$view`.</p>";
+                    // Obtenir les noms des colonnes
+                    $stmt_cols = $pdo->query("DESCRIBE `$view`");
+                    $columns = $stmt_cols->fetchAll(PDO::FETCH_COLUMN);
+
+                    // Colonne de tri : `id` si présente (GSDatabaseT_en n'a pas d'id -> tri par sa 1re colonne)
+                    $order_col = in_array('id', $columns) ? 'id' : $columns[0];
+
+                    // Nous obtenons toutes les données du tableau
+                    $stmt_data = $pdo->query("SELECT * FROM `$view` ORDER BY `$order_col` DESC");
+                    $results = $stmt_data->fetchAll(PDO::FETCH_ASSOC);
+
+                    if (count($results) > 0) {
+                        echo "<table>";
+                        // Création dynamique d'un en-tête de tableau
+                        echo "<thead><tr>";
+                        foreach ($columns as $col) {
+                            echo "<th>" . htmlspecialchars($col) . "</th>";
+                        }
+                        echo "</tr></thead>";
+
+                        // Affichage dynamique des chaînes
+                        echo "<tbody>";
+                        foreach ($results as $row) {
+                            echo "<tr>";
+                            foreach ($columns as $col) {
+                                // Échappement obligatoire : données issues des réponses au questionnaire (XSS stocké).
+                                echo "<td>" . htmlspecialchars((string) $row[$col], ENT_QUOTES, 'UTF-8') . "</td>";
+                            }
+                            echo "</tr>";
+                        }
+                        echo "</tbody></table>";
+                    } else {
+                        echo "<p>Aucun résultat trouvé dans la table `$view`.</p>";
+                    }
                 }
 
             } catch (PDOException $e) {
