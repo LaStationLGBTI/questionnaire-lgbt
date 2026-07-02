@@ -1,45 +1,13 @@
 <?php
-// Nous connectons la configuration et lançons la session
-require_once 'conf.php';
-session_start();
-
-// Nous utilisons le même système de connexion que sur les autres pages de l'administrateur
-if (!isset($_SESSION['login_attempts'])) {
-    $_SESSION['login_attempts'] = 0;
-}
-if (isset($_POST['logout'])) {
-    session_unset();
-    session_destroy();
-    header('Location: clear_results.php');
-    exit();
-}
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($_SESSION['login_attempts'] < 3) {
-        $login = $_POST['identifiant'];
-        $pass = $_POST['mot_de_passe'];
-        try {
-            $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
-            $stmt->execute([$login]);
-            $user = $stmt->fetch();
-            if ($user && $pass === $user['passconn']) {
-                $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0;
-            } else {
-                $_SESSION['login_attempts']++;
-                $login_error = "Identifiant ou mot de passe incorrect.";
-            }
-        } catch (PDOException $e) {
-            $login_error = "Erreur de connexion : " . $e->getMessage();
-        }
-    }
-}
+// Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
+require_once 'auth.php';
+$login_error = admin_handle_auth();
 
 // Logique de suppression des données
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
-    if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
+    admin_require_csrf();
+    if (admin_is_logged_in()) {
         try {
             $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -49,7 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
 
             $message = "<p class='success'>Succès ! Tous les enregistrements de la table <strong>GSDatabaseR</strong> ont été supprimés.</p>";
         } catch (PDOException $e) {
-            $message = "<p class='error'>Erreur lors de la suppression des données : " . $e->getMessage() . "</p>";
+            error_log('[deleteResults] ' . $e->getMessage());
+            $message = "<p class='error'>Erreur lors de la suppression des données.</p>";
         }
     }
 }
@@ -75,9 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
 </head>
 <body>
     <div class="container">
-        <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
+        <?php if (admin_is_logged_in()) : ?>
 
             <form action="" method="post" class="logout-form">
+                <?php echo csrf_input(); ?>
                 <button type="submit" name="logout">Déconnexion</button>
             </form>
 
@@ -90,16 +60,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
             </div>
 
             <form action="" method="post" onsubmit="return confirm('Êtes-vous absolument certain de vouloir supprimer tous les résultats ? Cette action est irréversible.');">
+                <?php echo csrf_input(); ?>
                 <button type="submit" name="confirm_delete" class="delete-button">Oui, je suis sûr, supprimer tous les résultats</button>
             </form>
 
-        <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+        <?php elseif (admin_login_throttled()['blocked']) : ?>
             <h1>Accès bloqué</h1>
-            <p class="error">Votre accès est bloqué après 3 tentatives infructueuses.</p>
+            <p class="error">Trop de tentatives de connexion. Veuillez réessayer plus tard.</p>
         <?php else : ?>
             <h1>Connexion administrateur</h1>
-             <?php if (isset($login_error)) : ?><p class="error"><?php echo $login_error; ?></p><?php endif; ?>
+             <?php if (isset($login_error) && $login_error) : ?><p class="error"><?php echo htmlspecialchars($login_error); ?></p><?php endif; ?>
             <form action="" method="post" style="text-align: left;">
+                <?php echo csrf_input(); ?>
                 <div style="margin-bottom: 1rem;">
                     <label for="identifiant">Identifiant :</label>
                     <input type="text" id="identifiant" name="identifiant" required style="width: 100%; padding: 0.5rem; box-sizing: border-box;">
