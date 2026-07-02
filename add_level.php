@@ -1,50 +1,10 @@
 <?php
-// On inclut la configuration et on démarre la session
-require_once 'conf.php';
-session_start();
+// Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
+require_once 'auth.php';
 
-// --- SECTION 1 : Logique d'entrée et de sortie (copié depuis gestion_gsdatabase.php) ---
-
-$login_error = null;
-
-// Initialisation du compteur de tentatives de connexion
-if (!isset($_SESSION['login_attempts'])) {
-    $_SESSION['login_attempts'] = 0;
-}
-
-// Traitement de la déconnexion
-if (isset($_POST['logout'])) {
-    session_unset();
-    session_destroy();
-    header('Location: ' . $_SERVER['PHP_SELF']);
-    exit();
-}
-
-// Traitement de l'entrée
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($_SESSION['login_attempts'] < 3) {
-        $login = $_POST['identifiant'];
-        $pass = $_POST['mot_de_passe'];
-        try {
-            $pdo_login = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo_login->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo_login->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
-            $stmt->execute([$login]);
-            $user = $stmt->fetch();
-            if ($user && $pass === $user['passconn']) {
-                $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0;
-                header('Location: ' . $_SERVER['PHP_SELF']); // Recharger pour supprimer le POST
-                exit();
-            } else {
-                $_SESSION['login_attempts']++;
-                $login_error = "Identifiant ou mot de passe incorrect.";
-            }
-        } catch (PDOException $e) {
-            $login_error = "Erreur de connexion : " . $e->getMessage();
-        }
-    }
-}
+// --- SECTION 1 : Logique d'entrée et de sortie ---
+// Redirection vers un nom de fichier fixe (pas $_SERVER['PHP_SELF']) après connexion.
+$login_error = admin_handle_auth('add_level.php', 'add_level.php');
 
 
 // --- SECTION 2 : Logique de gestion des niveaux (uniquement si l'utilisateur est connecté) ---
@@ -76,13 +36,15 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     } catch (PDOException $e) {
-        die("<p class='error' style='padding: 20px; max-width: 800px; margin: auto;'>Erreur de connexion à la base de données : " . $e->getMessage() . "</p>");
+        error_log('[add_level] ' . $e->getMessage());
+        die("<p class='error' style='padding: 20px; max-width: 800px; margin: auto;'>Erreur de connexion à la base de données.</p>");
     }
 
     // --- LOGIQUE DE TRAITEMENT POST (Création, Mise à jour, Suppression) ---
 
     // 1. Traitement de la création du niveau
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_level'])) {
+        admin_require_csrf();
         $level = filter_input(INPUT_POST, 'level', FILTER_VALIDATE_INT);
         $titre = trim($_POST['titre']);
         $text = trim($_POST['text']);
@@ -97,7 +59,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 } else {
                     $stmt = $pdo->prepare("INSERT INTO GSDatabaseT (level, titre, text) VALUES (?, ?, ?)");
                     $stmt->execute([$level, $titre, $text]);
-                    header('Location: ' . $_SERVER['PHP_SELF'] . '?action=menu&created=true');
+                    header('Location: add_level.php?action=menu&created=true');
                     exit();
                 }
             } catch (PDOException $e) {
@@ -112,6 +74,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
     // 2. Traitement de la mise à jour du niveau
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_level'])) {
+        admin_require_csrf();
         $level_id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
         $titre = trim($_POST['titre']);
         $text = trim($_POST['text']);
@@ -120,7 +83,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             try {
                 $stmt = $pdo->prepare("UPDATE GSDatabaseT SET titre = ?, text = ? WHERE level = ?");
                 $stmt->execute([$titre, $text, $level_id]);
-                header('Location: ' . $_SERVER['PHP_SELF'] . '?action=menu&updated=true');
+                header('Location: add_level.php?action=menu&updated=true');
                 exit();
             } catch (PDOException $e) {
                 $message = "<p class='error'>Erreur lors de la mise à jour : " . $e->getMessage() . "</p>";
@@ -132,6 +95,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 
     // 3. Traitement de la suppression du niveau
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_level'])) {
+        admin_require_csrf();
         $level_id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
 
         if ($level_id) {
@@ -142,7 +106,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
                 $stmt_t = $pdo->prepare("DELETE FROM GSDatabaseT WHERE level = ?");
                 $stmt_t->execute([$level_id]);
                 $pdo->commit();
-                header('Location: ' . $_SERVER['PHP_SELF'] . '?action=menu&deleted=true');
+                header('Location: add_level.php?action=menu&deleted=true');
                 exit();
             } catch (PDOException $e) {
                 $pdo->rollBack();
@@ -215,10 +179,11 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
 </head>
 <body>
 
-<?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
+<?php if (admin_is_logged_in()) : ?>
 
     <div class="container">
         <form action="" method="post" class="logout-form">
+            <?php echo csrf_input(); ?>
             <button type="submit" name="logout">Déconnexion</button>
         </form>
 
@@ -245,6 +210,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             <a href="?action=menu" class="back-link">&larr; Retour au menu</a>
             <h2>Créer un nouveau niveau</h2>
             <form action="" method="post">
+                <?php echo csrf_input(); ?>
                 <div class="form-group">
                     <label for="level">Numéro du niveau (ex: 101, 102) :</label>
                     <input type="number" id="level" name="level" required>
@@ -310,6 +276,7 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
             <h2>Modifier/Supprimer le niveau : <?= htmlspecialchars($level_data['titre']) ?></h2>
 
             <form action="" method="post">
+                <?php echo csrf_input(); ?>
                 <input type="hidden" name="id" value="<?= htmlspecialchars($level_data['level']) ?>">
                 <div class="form-group">
                     <label for="level_display">Numéro du niveau :</label>
@@ -337,22 +304,22 @@ if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
         ?>
     </div>
 
-<?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+<?php elseif (admin_login_throttled()['blocked']) : ?>
 
     <div class="container login-container">
         <h1>Accès Bloqué</h1>
-        <p class="error">Votre accès est bloqué après 3 tentatives infructueuses.</p>
+        <p class="error">Trop de tentatives de connexion. Veuillez réessayer plus tard.</p>
     </div>
 
 <?php else : ?>
 
     <div class="container login-container">
         <h1>Accès Administrateur</h1>
-        <?php if (isset($login_error)) : ?>
-            <p class="error"><?php echo $login_error; ?></p>
-            <p style="text-align:center;">Tentative <?php echo $_SESSION['login_attempts']; ?> sur 3.</p>
+        <?php if (isset($login_error) && $login_error) : ?>
+            <p class="error"><?php echo htmlspecialchars($login_error); ?></p>
         <?php endif; ?>
         <form action="" method="post">
+            <?php echo csrf_input(); ?>
             <div class="form-group">
                 <label for="identifiant">Identifiant :</label>
                 <input type="text" id="identifiant" name="identifiant" required>
