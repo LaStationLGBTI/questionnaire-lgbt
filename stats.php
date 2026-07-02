@@ -1,6 +1,12 @@
 <?php
 session_start();
 require_once 'conf.php';
+// Accès au site par clé (access.php) : les statistiques exigent aussi une clé valide.
+require_once __DIR__ . '/access.php';
+$access_error = access_handle_post();
+if (!access_session_valid()) {
+    access_render_gate(isset($_SESSION['language']) ? $_SESSION['language'] : 'fr', $access_error);
+}
 
 // Liste des modules (anciennement "niveaux") pour le sélecteur.
 $modules = [];
