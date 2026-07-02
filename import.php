@@ -1,44 +1,12 @@
 <?php
-require_once 'conf.php';
-session_start();
-
-if (!isset($_SESSION['login_attempts'])) {
-    $_SESSION['login_attempts'] = 0;
-}
-
-if (isset($_POST['logout'])) {
-    session_unset();
-    session_destroy();
-    header('Location: import.php');
-    exit();
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
-    if ($_SESSION['login_attempts'] < 3) {
-        $login = $_POST['identifiant'];
-        $pass = $_POST['mot_de_passe'];
-        try {
-            $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $stmt = $pdo->prepare("SELECT passconn FROM stationl1 WHERE loginconn = ?");
-            $stmt->execute([$login]);
-            $user = $stmt->fetch();
-            if ($user && $pass === $user['passconn']) {
-                $_SESSION['is_logged_in'] = true;
-                $_SESSION['login_attempts'] = 0;
-            } else {
-                $_SESSION['login_attempts']++;
-                $login_error = "Identifiant ou mot de passe incorrect.";
-            }
-        } catch (PDOException $e) {
-            $login_error = "Erreur de connexion : " . $e->getMessage();
-        }
-    }
-}
+// Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
+require_once 'auth.php';
+$login_error = admin_handle_auth();
 
 $import_message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
-    if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in']) {
+    admin_require_csrf();
+    if (admin_is_logged_in()) {
         if (isset($_FILES['questionnaire_file']) && $_FILES['questionnaire_file']['error'] === UPLOAD_ERR_OK) {
 
             $file_tmp_path = $_FILES['questionnaire_file']['tmp_name'];
@@ -242,13 +210,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
 </head>
 <body>
     <div class="container">
-        <?php if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) : ?>
+        <?php if (admin_is_logged_in()) : ?>
             <form action="import.php" method="post" class="logout-form">
+                <?php echo csrf_input(); ?>
                 <button type="submit" name="logout">Déconnexion</button>
             </form>
             <h1>Importer un Questionnaire</h1>
             <?php if ($import_message) echo $import_message; ?>
             <form action="import.php" method="post" enctype="multipart/form-data" style="margin-top: 2rem;">
+                <?php echo csrf_input(); ?>
                 <div class="form-group">
                     <label for="lang">Langue du questionnaire :</label>
                     <select id="lang" name="lang" style="width:100%; padding:0.8rem; border:1px solid #ddd; border-radius:5px; box-sizing:border-box; font-family:inherit; font-size:1rem;">
@@ -271,16 +241,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
                 </div>
                 <button type="submit" name="upload">Importer le fichier</button>
             </form>
-        <?php elseif ($_SESSION['login_attempts'] >= 3) : ?>
+        <?php elseif (admin_login_throttled()['blocked']) : ?>
             <h1>Accès Bloqué</h1>
-            <p class="error" name="session_bloquee">Votre accès est bloqué. Veuillez contacter l'administrateur.</p>
+            <p class="error" name="session_bloquee">Trop de tentatives de connexion. Veuillez réessayer plus tard.</p>
         <?php else : ?>
             <h1>Accès Administrateur</h1>
-            <?php if (isset($login_error)) : ?>
-                <p class="error"><?php echo $login_error; ?></p>
-                <p>Tentative <?php echo $_SESSION['login_attempts']; ?> sur 3.</p>
+            <?php if (isset($login_error) && $login_error) : ?>
+                <p class="error"><?php echo htmlspecialchars($login_error); ?></p>
             <?php endif; ?>
             <form action="import.php" method="post">
+                <?php echo csrf_input(); ?>
                 <div class="form-group">
                     <label for="identifiant">Identifiant :</label>
                     <input type="text" id="identifiant" name="identifiant" required>
