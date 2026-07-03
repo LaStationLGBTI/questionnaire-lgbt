@@ -92,9 +92,12 @@ if (isset($_GET['back'])) {
 if (isset($_GET['level']) && !isset($_SESSION['level'])) {
     $new_level = $_GET['level'];
     $lang_to_preserve = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
+    // session_unset() effacerait aussi la clé d'accès (access.php) : on la préserve comme la langue.
+    $access_to_preserve = array_intersect_key($_SESSION, array_flip(['access_key', 'access_checked_at', 'access_checked_ok']));
     session_unset();
     $_SESSION['level'] = $new_level;
     $_SESSION['language'] = $lang_to_preserve;
+    foreach ($access_to_preserve as $ak => $av) { $_SESSION[$ak] = $av; }
     header('Location: index.php');
     exit();
 }
@@ -108,6 +111,19 @@ if (isset($_POST['language']) && in_array($_POST['language'], ['de', 'fr', 'en']
     $_SESSION['language'] = $_POST['language'];
 }
 $lang = $_SESSION['language'];
+
+// --- Accès au site par clé (access.php) -------------------------------------------------
+// Une clé valide (générée dans manage_keys.php) est exigée pour voir / lancer les modules.
+// Exception : un questionnaire DÉJÀ COMMENCÉ peut être terminé même si la clé vient
+// d'expirer ; seul le choix d'un nouveau module est alors bloqué (bannière + refus serveur).
+// Les joueurs du Mode Jeu passent par play.php / game.php : jamais de clé pour eux.
+require_once __DIR__ . '/access.php';
+$access_error = access_handle_post();
+// Vérification "live" (sans cache) au moment critique : choix / démarrage d'un module.
+$access_valid = access_session_valid(isset($_GET['level']) || isset($_POST['start']));
+if (!$access_valid && (!access_session_granted() || !isset($_SESSION['start']))) {
+    access_render_gate($lang, $access_error); // affiche l'écran de saisie puis exit()
+}
 
 // Mode Jeu (style Kahoot) : actif si déjà mémorisé en session OU si la case a été cochée
 // sur l'écran d'intro (POST). Cf. game.php / play.php pour la mécanique temps réel.
@@ -896,8 +912,11 @@ for (let i = 0; i < data1.length; i++) {
 if (!isset($_SESSION['level'])) {
 
 
+    // session_unset() efface la langue ET la clé d'accès : on les restaure pour les conserver.
+    $access_to_preserve = array_intersect_key($_SESSION, array_flip(['access_key', 'access_checked_at', 'access_checked_ok']));
     session_unset();
-    $_SESSION['language'] = $lang; // session_unset() efface la langue : on la restaure pour la conserver
+    $_SESSION['language'] = $lang;
+    foreach ($access_to_preserve as $ak => $av) { $_SESSION[$ak] = $av; }
     $levels = [];
     $error_message = '';
 	$level_titles = [];
@@ -2536,6 +2555,46 @@ if(isset($_SESSION['reponses'])){
 			}
 
 		}
+	</script>
+	<script type="text/javascript">
+		// --- Surveillance de la clé d'accès (access.php) --------------------------------
+		// Toutes les 3 minutes, on revérifie la validité de la clé côté serveur. Si elle a
+		// expiré / été révoquée : bannière + désactivation du choix d'un nouveau module.
+		// Le questionnaire EN COURS reste jouable jusqu'au bout (le serveur applique la
+		// même règle : access.php bloque ?level= / start, pas updateQuestion2.php).
+		(function () {
+			var accessValid = <?php echo !empty($access_valid) ? 'true' : 'false'; ?>;
+			var ACCESS_EXPIRED_MSG = <?php echo json_encode(access_texts($lang)['banner_expired']); ?>;
+			function applyAccessExpired() {
+				if (document.getElementById('access-expired-banner')) return;
+				var b = document.createElement('div');
+				b.id = 'access-expired-banner';
+				b.textContent = '🔒 ' + ACCESS_EXPIRED_MSG;
+				b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#fff3cd;color:#856404;'
+					+ 'border-bottom:2px solid #e8c06b;padding:10px 16px;text-align:center;font-weight:700;font-size:14px;';
+				document.body.appendChild(b);
+				// Cartes de modules (écran de sélection) : plus cliquables.
+				var cards = document.querySelectorAll('.module-card');
+				for (var i = 0; i < cards.length; i++) {
+					cards[i].style.pointerEvents = 'none';
+					cards[i].style.opacity = '0.45';
+				}
+			}
+			function checkAccess() {
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', 'access.php?action=status', true);
+				xhr.onreadystatechange = function () {
+					if (xhr.readyState !== 4 || xhr.status !== 200) return;
+					try {
+						var d = JSON.parse(xhr.responseText);
+						if (d && d.valid === false) { accessValid = false; applyAccessExpired(); }
+					} catch (e) { /* réponse inattendue : on ne change rien */ }
+				};
+				xhr.send();
+			}
+			if (!accessValid) applyAccessExpired();
+			setInterval(checkAccess, 180000); // 3 minutes
+		})();
 	</script>
 </body>
 </html>
