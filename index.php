@@ -1608,7 +1608,7 @@ if (!isset($_SESSION["start"])) {
                 echo '<script type="text/javascript">startQuestion();</script>';
             }
         }
-    } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && !(isset($_POST["acc"]) || isset($_SESSION["acc"]))) { ?>
+    } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && !((isset($_POST["acc"]) && isset($_POST["consent_rgpd"])) || isset($_SESSION["acc"]))) { ?>
         <section class="u-clearfix u-valign-middle u-section-1" id="sec-089e">
             <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
                 <div class="u-container-layout u-container-layout-1">
@@ -1623,6 +1623,8 @@ if (!isset($_SESSION["start"])) {
                                 <div style="display: flex; align-items: center; gap:10px;">
                                     <p style="margin:0;"><?php echo $texts[$lang]['gender_prompt']; ?></p>
                                     <select style="margin:0; padding-left:0;" id="name-bb9b" name="genre" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
+                                        <!-- RGPD : pas de valeur présélectionnée pour une donnée sensible ; le choix doit être actif -->
+                                        <option value="" selected disabled><?php echo $lang === 'en' ? '— please choose —' : ($lang === 'de' ? '— bitte wählen —' : '— choisir —'); ?></option>
                                         <option value="1"><?php echo $lang === 'en' ? 'Cisgender' : ($lang === 'de' ? 'Cisgender' : 'Cisgenre'); ?></option>
                                         <option value="2"><?php echo $lang === 'en' ? 'Transgender' : ($lang === 'de' ? 'Transgender' : 'Transgenre'); ?></option>
                                         <option value="3"><?php echo $lang === 'en' ? 'Non-binary' : ($lang === 'de' ? 'Nicht-binär' : 'Non-binaire'); ?></option>
@@ -1639,6 +1641,8 @@ if (!isset($_SESSION["start"])) {
                                 <div style="display: flex; align-items: center; gap:10px;">
                                     <p style="margin:0;"><?php echo $texts[$lang]['sexuality_prompt']; ?></p>
                                     <select style="margin:0; padding-left:0;" id="email-bb9b" name="orient" class="u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-btn-2" required>
+                                        <!-- RGPD : pas de valeur présélectionnée pour une donnée sensible ; le choix doit être actif -->
+                                        <option value="" selected disabled><?php echo $lang === 'en' ? '— please choose —' : ($lang === 'de' ? '— bitte wählen —' : '— choisir —'); ?></option>
                                         <option value="1"><?php echo $lang === 'en' ? 'Heterosexuality' : ($lang === 'de' ? 'Heterosexualität' : 'Hétérosexualité'); ?></option>
                                         <option value="2"><?php echo $lang === 'en' ? 'Homosexuality' : ($lang === 'de' ? 'Homosexualität' : 'Homosexualité'); ?></option>
                                         <option value="3"><?php echo $lang === 'en' ? 'Bisexuality' : ($lang === 'de' ? 'Bisexualität' : 'Bisexualité'); ?></option>
@@ -1653,6 +1657,19 @@ if (!isset($_SESSION["start"])) {
                             <div class="u-form-email u-form-group u-form-partition-factor-2">
                                 <label><?php echo $texts[$lang]['email_prompt']; ?></label>
                                 <input name="e_mm" class="u-radius-50 u-text-hover-white">
+                            </div><br>
+                            <!-- Consentement explicite (art. 9 RGPD) : obligatoire pour enregistrer les réponses -->
+                            <div class="u-form-group" style="text-align:left;">
+                                <label style="font-weight:normal; font-size:14px; display:flex; gap:8px; align-items:flex-start; cursor:pointer;">
+                                    <input type="checkbox" name="consent_rgpd" value="1" required style="margin-top:4px; width:auto; flex-shrink:0;">
+                                    <span>
+                                        <?php echo $lang === 'en'
+                                            ? 'I agree that my answers and the optional information above will be processed by La STATION in accordance with the '
+                                            : ($lang === 'de'
+                                                ? 'Ich bin damit einverstanden, dass meine Antworten und die obigen freiwilligen Angaben von La STATION gemäß der '
+                                                : 'J\'accepte que mes réponses et les informations facultatives ci-dessus soient traitées par La STATION conformément à la '); ?><a href="mentions.php" target="_blank" rel="noopener"><?php echo $lang === 'en' ? 'privacy policy' : ($lang === 'de' ? 'Datenschutzerklärung verarbeitet werden' : 'politique de confidentialité'); ?></a>.
+                                    </span>
+                                </label>
                             </div>
                             <div class="u-align-right u-form-group u-form-submit">
                                 <button type="submit" name="acc" class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
@@ -1665,7 +1682,7 @@ if (!isset($_SESSION["start"])) {
             </div>
         </section>
 
-    <?php } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && (isset($_POST["acc"]) || isset($_SESSION["acc"]))) {
+    <?php } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && ((isset($_POST["acc"]) && isset($_POST["consent_rgpd"])) || isset($_SESSION["acc"]))) {
         $_SESSION["acc"] = "1";
         $_SESSION["genre"] = isset($_POST['genre']) ? htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8') : '';
         $_SESSION["orient"] = isset($_POST['orient']) ? htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8') : '';
@@ -1679,12 +1696,13 @@ if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
         error_log('[index] ' . $e->getMessage()); echo "Erreur de connexion à la base de données.";
     }
 
-    $query = "UPDATE GSDatabaseR SET genre = :genre, orientation = :orientation, repmail = :repmail, lang = :lang WHERE id = :id";
+    // Minimisation RGPD : l'e-mail n'est jamais enregistré en base — l'envoi des résultats
+    // se fait depuis la session ($_SESSION["emailr"]). repmail est vidé (l'INSERT initial y met 'null').
+    $query = "UPDATE GSDatabaseR SET genre = :genre, orientation = :orientation, repmail = '', lang = :lang WHERE id = :id";
     $stmt = $conn->prepare($query);
     $stmt->execute([
         'genre' => $_SESSION["genre"],
         'orientation' => $_SESSION["orient"],
-        'repmail' => $_SESSION["emailr"],
         'lang' => $_SESSION["language"],
         'id' => $_SESSION["id_user"]
     ]);
