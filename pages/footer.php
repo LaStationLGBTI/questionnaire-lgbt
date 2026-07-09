@@ -2,10 +2,13 @@
 $flang = isset($_GET['lang']) && in_array($_GET['lang'], ['fr', 'de', 'en']) ? $_GET['lang'] : 'fr';
 if ($flang === 'en') {
     $footer_credit = 'Page design: R. (Hex); writing: Gérald Schlemminger, Christian Bergemann and queer activists (c) 2025 La STATION.';
+    $footer_legal  = 'Legal notice & privacy policy';
 } elseif ($flang === 'de') {
     $footer_credit = 'Seitengestaltung: R. (Hex); Redaktion: Gérald Schlemminger, Christian Bergemann und queere Aktivist·innen (c) 2025 La STATION.';
+    $footer_legal  = 'Impressum & Datenschutz';
 } else {
     $footer_credit = 'Conception de la page : R. (Hex) ; rédaction : Gérald Schlemminger, Christian Bergemann et des militant·es queer (c) 2025 La STATION.';
+    $footer_legal  = 'Mentions légales & confidentialité';
 }
 ?>
 <footer class="u-align-center u-clearfix u-container-align-center" id="sec-33ba" >
@@ -13,7 +16,8 @@ if ($flang === 'en') {
     <div style="display: flex;  align-items: center;" class="u-container-layout u-container-layout-1">
       <p style="margin:0; font-size:32px; color: #b480ff;" class="u-text u-text-1"> La Station LGBTQIA+</p>
       <img src="/images/station.jpg" alt="" style="width:100px; height:100px;">
-      <p style="margin-bottom:1em;margin-right:auto; margin-left:auto; margin-top:auto; text-align:center;  font-size:12px;"><?php echo $footer_credit; ?></p>
+      <p style="margin-bottom:1em;margin-right:auto; margin-left:auto; margin-top:auto; text-align:center;  font-size:12px;"><?php echo $footer_credit; ?><br>
+        <a href="mentions.php" style="color:#b480ff;"><?php echo $footer_legal; ?></a></p>
     </div>
   </div>
 </footer>
