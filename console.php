@@ -6,6 +6,13 @@
 require_once 'auth.php';
 $login_error = admin_handle_auth(basename($_SERVER['SCRIPT_NAME']), basename($_SERVER['SCRIPT_NAME']));
 
+// Fallback si l'extension mbstring est absente du conteneur (troncature UTF-8 approximative,
+// mais pas d'erreur fatale sur l'onglet Base de données).
+if (!function_exists('mb_strlen')) {
+    function mb_strlen($s) { return strlen($s); }
+    function mb_substr($s, $start, $length = null) { return $length === null ? substr($s, $start) : substr($s, $start, $length); }
+}
+
 $page = $_GET['page'] ?? 'questions';
 if (!in_array($page, ['questions', 'levels', 'import', 'database'], true)) { $page = 'questions'; }
 
@@ -14,6 +21,14 @@ $import_message = ''; // Messages pour l'onglet Import
 $action = $_GET['action'] ?? 'menu';
 $id = $_REQUEST['id'] ?? null;
 $pdo = null;
+
+// Langue du contenu édité : fr (GSDatabase / GSDatabaseT) ou en (GSDatabase_en / GSDatabaseT_en).
+// Permet de modifier / supprimer aussi le contenu anglais depuis les onglets Questions et Niveaux.
+$qlang       = (isset($_REQUEST['qlang']) && $_REQUEST['qlang'] === 'en') ? 'en' : 'fr';
+$q_table     = ($qlang === 'en') ? 'GSDatabase_en'  : 'GSDatabase';
+$t_table     = ($qlang === 'en') ? 'GSDatabaseT_en' : 'GSDatabaseT';
+$lang_suffix = ($qlang === 'en') ? ' (EN)' : '';
+$lang_qs     = ($qlang === 'en') ? '&qlang=en' : '';
 
 if (admin_is_logged_in()) {
     try {
@@ -26,40 +41,45 @@ if (admin_is_logged_in()) {
 
     // ==================== ONGLET QUESTIONS (GSDatabase) ====================
     try {
-        // Création d'une nouvelle question
+        // Création d'une nouvelle question (français uniquement : une question EN doit être
+        // créée via l'import, qui la relie à sa question française par fr_id)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_question'])) {
             admin_require_csrf();
-            $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
-            $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, expliq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                $_POST['level'], $_POST['question'], $_POST['rep1'], $_POST['rep2'],
-                $_POST['rep3'], $_POST['rep4'], $_POST['rep5'], $answer,
-                $_POST['qtype'], $_POST['expliq']
-            ]);
-            $message = "<div class='message success'>Question ajoutée avec succès !</div>";
+            if ($qlang === 'en') {
+                $message = "<div class='error'>La création d'une question anglaise se fait via l'onglet Import CSV (liaison fr_id obligatoire).</div>";
+            } else {
+                $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
+                $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, expliq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    $_POST['level'], $_POST['question'], $_POST['rep1'], $_POST['rep2'],
+                    $_POST['rep3'], $_POST['rep4'], $_POST['rep5'], $answer,
+                    $_POST['qtype'], $_POST['expliq']
+                ]);
+                $message = "<div class='message success'>Question ajoutée avec succès !</div>";
+            }
         }
 
-        // Mise à jour d'une question
+        // Mise à jour d'une question (FR ou EN selon qlang ; fr_id des questions EN jamais modifié)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_question'])) {
             admin_require_csrf();
             $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
-            $sql = "UPDATE GSDatabase SET level=?, question=?, rep1=?, rep2=?, rep3=?, rep4=?, rep5=?, answer=?, qtype=?, expliq=? WHERE id=?";
+            $sql = "UPDATE `$q_table` SET level=?, question=?, rep1=?, rep2=?, rep3=?, rep4=?, rep5=?, answer=?, qtype=?, expliq=? WHERE id=?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 $_POST['level'], $_POST['question'], $_POST['rep1'], $_POST['rep2'],
                 $_POST['rep3'], $_POST['rep4'], $_POST['rep5'], $answer,
                 $_POST['qtype'], $_POST['expliq'], $_POST['id']
             ]);
-            $message = "<div class='message success'>Question mise à jour avec succès !</div>";
+            $message = "<div class='message success'>Question" . $lang_suffix . " mise à jour avec succès !</div>";
         }
 
-        // Suppression d'une question
+        // Suppression d'une question (FR ou EN selon qlang)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_question'])) {
             admin_require_csrf();
-            $stmt = $pdo->prepare("DELETE FROM GSDatabase WHERE id = ?");
+            $stmt = $pdo->prepare("DELETE FROM `$q_table` WHERE id = ?");
             $stmt->execute([$_POST['id']]);
-            header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=questions&deleted=true');
+            header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=questions&deleted=true' . $lang_qs);
             exit();
         }
     } catch (PDOException $e) {
@@ -117,9 +137,9 @@ if (admin_is_logged_in()) {
 
         if ($level_id && !empty($titre)) {
             try {
-                $stmt = $pdo->prepare("UPDATE GSDatabaseT SET titre = ?, text = ? WHERE level = ?");
+                $stmt = $pdo->prepare("UPDATE `$t_table` SET titre = ?, text = ? WHERE level = ?");
                 $stmt->execute([$titre, $text, $level_id]);
-                header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=levels&action=menu&updated=true');
+                header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=levels&action=menu&updated=true' . $lang_qs);
                 exit();
             } catch (PDOException $e) {
                 $message = "<p class='error'>Erreur lors de la mise à jour : " . $e->getMessage() . "</p>";
@@ -129,7 +149,8 @@ if (admin_is_logged_in()) {
         }
     }
 
-    // Suppression du niveau (et de ses questions)
+    // Suppression du niveau (et de ses questions de la même langue : la suppression du
+    // niveau EN ne touche jamais le contenu français, et inversement)
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_level'])) {
         admin_require_csrf();
         $level_id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
@@ -137,12 +158,12 @@ if (admin_is_logged_in()) {
         if ($level_id) {
             try {
                 $pdo->beginTransaction();
-                $stmt_q = $pdo->prepare("DELETE FROM GSDatabase WHERE level = ?");
+                $stmt_q = $pdo->prepare("DELETE FROM `$q_table` WHERE level = ?");
                 $stmt_q->execute([$level_id]);
-                $stmt_t = $pdo->prepare("DELETE FROM GSDatabaseT WHERE level = ?");
+                $stmt_t = $pdo->prepare("DELETE FROM `$t_table` WHERE level = ?");
                 $stmt_t->execute([$level_id]);
                 $pdo->commit();
-                header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=levels&action=menu&deleted=true');
+                header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=levels&action=menu&deleted=true' . $lang_qs);
                 exit();
             } catch (PDOException $e) {
                 $pdo->rollBack();
@@ -472,6 +493,13 @@ if (admin_is_logged_in()) {
                     <input type="hidden" name="page" value="questions">
                     <input type="hidden" name="action" value="edit">
                     <div class="form-group">
+                        <label for="qlang">Langue :</label>
+                        <select id="qlang" name="qlang">
+                            <option value="fr" <?php echo $qlang === 'fr' ? 'selected' : ''; ?>>Français (GSDatabase)</option>
+                            <option value="en" <?php echo $qlang === 'en' ? 'selected' : ''; ?>>English (GSDatabase_en)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="id">Entrez l'ID de la question à modifier :</label>
                         <input type="number" id="id" name="id" required>
                     </div>
@@ -484,23 +512,31 @@ if (admin_is_logged_in()) {
                 $question_found = true;
                 if ($action === 'edit' && $id) {
                     $is_edit_mode = true;
-                    $stmt = $pdo->prepare("SELECT * FROM GSDatabase WHERE id = ?");
+                    $stmt = $pdo->prepare("SELECT * FROM `$q_table` WHERE id = ?");
                     $stmt->execute([$id]);
                     $question_data = $stmt->fetch(PDO::FETCH_ASSOC);
                     if (!$question_data) { $question_found = false; }
                 }
             ?>
                 <?php if (!$question_found) : ?>
-                    <div class='error'>Question avec l'ID <?php echo htmlspecialchars($id); ?> non trouvée.</div>
-                    <a href="?page=questions&action=edit" class="back-link">Essayer un autre ID</a>
+                    <div class='error'>Question avec l'ID <?php echo htmlspecialchars($id); ?> non trouvée dans <?php echo htmlspecialchars($q_table); ?>.</div>
+                    <a href="?page=questions&action=edit<?php echo $lang_qs; ?>" class="back-link">Essayer un autre ID</a>
                 <?php else : ?>
                     <a href="?page=questions" class="back-link">&larr; Retour au menu</a>
-                    <h2><?php echo $is_edit_mode ? 'Modifier la question' : 'Créer une nouvelle question'; ?></h2>
+                    <h2><?php echo $is_edit_mode ? 'Modifier la question' . $lang_suffix : 'Créer une nouvelle question'; ?></h2>
 
                     <form action="?page=questions" method="POST" id="question-form">
                         <?php echo csrf_input(); ?>
+                        <input type="hidden" name="qlang" value="<?php echo $qlang; ?>">
                         <?php if ($is_edit_mode): ?>
                             <input type="hidden" name="id" value="<?php echo htmlspecialchars($question_data['id']); ?>">
+                        <?php endif; ?>
+                        <?php if ($qlang === 'en' && isset($question_data['fr_id'])): ?>
+                            <div class="form-group">
+                                <label>Question française liée (fr_id) :</label>
+                                <input type="number" value="<?php echo htmlspecialchars($question_data['fr_id']); ?>" readonly>
+                                <small class="hint">La liaison fr_id (statistiques FR+EN) n'est pas modifiable ici — <a href="?page=questions&action=edit&id=<?php echo urlencode($question_data['fr_id']); ?>">voir la question française</a>.</small>
+                            </div>
                         <?php endif; ?>
 
                         <div class="form-group">
@@ -596,19 +632,25 @@ if (admin_is_logged_in()) {
 
             <?php elseif ($action === 'edit' && !$id) : ?>
                 <a href="?page=levels" class="back-link">&larr; Retour au menu</a>
-                <h2>Étape 1 : Choisir un niveau à Modifier/Supprimer</h2>
+                <h2>Étape 1 : Choisir un niveau à Modifier/Supprimer<?php echo $lang_suffix; ?></h2>
+                <p style="text-align:center; font-size:0.9rem;">
+                    Langue :
+                    <a href="?page=levels&action=edit" <?php echo $qlang === 'fr' ? 'style="font-weight:bold;"' : ''; ?>>Français</a> |
+                    <a href="?page=levels&action=edit&qlang=en" <?php echo $qlang === 'en' ? 'style="font-weight:bold;"' : ''; ?>>English</a>
+                </p>
                 <?php
                     $existing_levels = [];
                     try {
-                        $stmt_levels = $pdo->query("SELECT level, titre FROM GSDatabaseT ORDER BY level ASC");
+                        $stmt_levels = $pdo->query("SELECT level, titre FROM `$t_table` ORDER BY level ASC");
                         $existing_levels = $stmt_levels->fetchAll(PDO::FETCH_ASSOC);
                     } catch (PDOException $e) {
-                        echo "<p class='error'>Impossible de charger la liste des niveaux existants.</p>";
+                        echo "<p class='error'>Impossible de charger la liste des niveaux existants" . ($qlang === 'en' ? " (la table anglaise n'existe qu'après le premier import EN)" : "") . ".</p>";
                     }
                 ?>
                 <form action="" method="GET">
                     <input type="hidden" name="page" value="levels">
                     <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="qlang" value="<?php echo $qlang; ?>">
                     <div class="form-group">
                         <label for="id">Sélectionnez un niveau :</label>
                         <select id="id" name="id" required>
@@ -626,21 +668,26 @@ if (admin_is_logged_in()) {
             <?php elseif ($action === 'edit' && $id) :
                 $level_data = null;
                 if ($pdo) {
-                    $stmt = $pdo->prepare("SELECT * FROM GSDatabaseT WHERE level = ?");
-                    $stmt->execute([$id]);
-                    $level_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                    try {
+                        $stmt = $pdo->prepare("SELECT * FROM `$t_table` WHERE level = ?");
+                        $stmt->execute([$id]);
+                        $level_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                    } catch (PDOException $e) {
+                        error_log('[admin/levels] ' . $e->getMessage());
+                    }
                 }
 
                 if (!$level_data):
-                    echo "<p class='error'>Le niveau avec l'ID " . htmlspecialchars($id) . " n'a pas été trouvé.</p>";
-                    echo '<a href="?page=levels&action=edit" class="back-link">&larr; Essayer un autre ID</a>';
+                    echo "<p class='error'>Le niveau avec l'ID " . htmlspecialchars($id) . " n'a pas été trouvé dans " . htmlspecialchars($t_table) . ".</p>";
+                    echo '<a href="?page=levels&action=edit' . $lang_qs . '" class="back-link">&larr; Essayer un autre ID</a>';
                 else:
             ?>
-                <a href="?page=levels&action=edit" class="back-link">&larr; Retour au choix du niveau</a>
-                <h2>Modifier/Supprimer le niveau : <?= htmlspecialchars($level_data['titre']) ?></h2>
+                <a href="?page=levels&action=edit<?php echo $lang_qs; ?>" class="back-link">&larr; Retour au choix du niveau</a>
+                <h2>Modifier/Supprimer le niveau<?php echo $lang_suffix; ?> : <?= htmlspecialchars($level_data['titre']) ?></h2>
 
                 <form action="?page=levels" method="post">
                     <?php echo csrf_input(); ?>
+                    <input type="hidden" name="qlang" value="<?php echo $qlang; ?>">
                     <input type="hidden" name="id" value="<?= htmlspecialchars($level_data['level']) ?>">
                     <div class="form-group">
                         <label for="level_display">Numéro du niveau :</label>
@@ -652,12 +699,12 @@ if (admin_is_logged_in()) {
                     </div>
                     <div class="form-group">
                         <label for="text">Description/Texte pour le niveau (supporte le HTML) :</label>
-                        <textarea id="text" name="text" rows="8"><?= htmlspecialchars($level_data['text']) ?></textarea>
+                        <textarea id="text" name="text" rows="8"><?= htmlspecialchars((string) $level_data['text']) ?></textarea>
                     </div>
                     <div class="form-actions">
                         <button type="submit" name="update_level">Mettre à jour</button>
                         <button type="submit" name="delete_level"
-                                onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce niveau ?\n\nATTENTION : Toutes les questions associées à ce niveau (dans GSDatabase) seront également supprimées de façon irréversible.');">
+                                onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce niveau ?\n\nATTENTION : Toutes les questions <?php echo $qlang === 'en' ? 'ANGLAISES (GSDatabase_en)' : 'associées (GSDatabase)'; ?> de ce niveau seront également supprimées de façon irréversible.');">
                             Supprimer le niveau
                         </button>
                     </div>
@@ -828,11 +875,12 @@ if (admin_is_logged_in()) {
                         return '?' . http_build_query($base_params + ['p' => $p]);
                     };
 
-                    // Action par ligne selon la table : édition (FR) ou suppression (résultats)
+                    // Action par ligne selon la table : édition (FR et EN) ou suppression (résultats)
                     $row_action = null;
-                    if ($current_view === 'questions' && in_array('id', $columns)) {
+                    $action_lang_qs = (substr($current_view, -3) === '_en') ? '&qlang=en' : '';
+                    if (($current_view === 'questions' || $current_view === 'questions_en') && in_array('id', $columns)) {
                         $row_action = 'edit_question';
-                    } elseif ($current_view === 'texts') {
+                    } elseif ($current_view === 'texts' || $current_view === 'texts_en') {
                         $row_action = 'edit_level';
                     } elseif ($current_view === 'results' && in_array('id', $columns)) {
                         $row_action = 'delete_response';
@@ -891,9 +939,9 @@ if (admin_is_logged_in()) {
                                 }
                             }
                             if ($row_action === 'edit_question') {
-                                echo "<td class='col-actions'><a class='btn-small' href='?page=questions&action=edit&id=" . urlencode($row['id']) . "'>Modifier</a></td>";
+                                echo "<td class='col-actions'><a class='btn-small' href='?page=questions&action=edit&id=" . urlencode($row['id']) . $action_lang_qs . "'>Modifier</a></td>";
                             } elseif ($row_action === 'edit_level') {
-                                echo "<td class='col-actions'><a class='btn-small' href='?page=levels&action=edit&id=" . urlencode($row['level']) . "'>Modifier</a></td>";
+                                echo "<td class='col-actions'><a class='btn-small' href='?page=levels&action=edit&id=" . urlencode($row['level']) . $action_lang_qs . "'>Modifier</a></td>";
                             } elseif ($row_action === 'delete_response') {
                                 echo "<td class='col-actions'><form action='?page=database' method='POST' style='margin:0;' onsubmit=\"return confirm('Supprimer cette réponse ? Cette action est irréversible.');\">"
                                    . csrf_input()
