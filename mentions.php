@@ -85,7 +85,9 @@
         <li><strong>Journal technique des connexions par clé d'accès</strong> (adresse IP, navigateur, date) —
             à des fins de sécurité et de gestion des accès (intérêt légitime, art. 6-1-f du RGPD).</li>
         <li><strong>Cookie de session</strong> — strictement nécessaire au fonctionnement du questionnaire
-            (exempté de consentement, délibération CNIL). Aucun cookie publicitaire ni traceur tiers n'est utilisé.</li>
+            (exempté de consentement, délibération CNIL). Si vous cochez « se souvenir de la clé sur cet
+            appareil », un cookie fonctionnel conserve votre clé d'accès pendant 30 jours (supprimable à tout
+            moment via les réglages de votre navigateur). Aucun cookie publicitaire ni traceur tiers n'est utilisé.</li>
     </ul>
 
     <h3>3. Durées de conservation</h3>
@@ -95,6 +97,7 @@
         <tr><td>Adresse e-mail</td><td>Durée de la session uniquement (jamais enregistrée en base)</td></tr>
         <tr><td>Journal des connexions par clé (IP)</td><td>12 mois, puis suppression automatique</td></tr>
         <tr><td>Cookie de session</td><td>Supprimé à la fermeture du navigateur</td></tr>
+        <tr><td>Cookie « se souvenir de la clé » (optionnel)</td><td>30 jours</td></tr>
     </table>
 
     <h3>4. Destinataires des données</h3>
