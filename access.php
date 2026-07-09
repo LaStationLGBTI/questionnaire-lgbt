@@ -55,6 +55,70 @@ function access_ensure_table($pdo) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
 }
 
+/** Crée la table du journal des connexions par clé si absente. */
+function access_ensure_log_table($pdo) {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS access_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        access_key VARCHAR(32) NOT NULL,
+        ip VARCHAR(45) NOT NULL,
+        user_agent VARCHAR(255) NOT NULL DEFAULT '',
+        created_at DATETIME NOT NULL,
+        KEY idx_key (access_key),
+        KEY idx_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+}
+
+// Durées de conservation (politique de confidentialité, mentions.php) :
+// journal IP 12 mois, réponses aux questionnaires 3 ans.
+const ACCESS_LOG_RETENTION_MONTHS = 12;
+const RESPONSES_RETENTION_YEARS   = 3;
+
+/**
+ * Journalise une entrée réussie par clé (IP + user-agent). Jamais bloquant.
+ * NB : derrière un reverse-proxy, REMOTE_ADDR est l'IP du proxy ; on garde
+ * REMOTE_ADDR car X-Forwarded-For est falsifiable par le client.
+ */
+function access_log_entry($key) {
+    try {
+        $pdo = access_pdo();
+        access_ensure_log_table($pdo);
+        $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+        $ua = isset($_SERVER['HTTP_USER_AGENT']) ? substr($_SERVER['HTTP_USER_AGENT'], 0, 255) : '';
+        $stmt = $pdo->prepare("INSERT INTO access_log (access_key, ip, user_agent, created_at) VALUES (?, ?, ?, NOW())");
+        $stmt->execute([access_normalize_key($key), $ip, $ua]);
+        access_retention_purge($pdo);
+    } catch (PDOException $e) {
+        error_log('[access] log error: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Applique les durées de conservation RGPD (déclenchée à chaque entrée par clé ;
+ * requêtes indexées sur created_at, chaque étape est non bloquante) :
+ *  - journal IP : purge après ACCESS_LOG_RETENTION_MONTHS ;
+ *  - réponses : purge après RESPONSES_RETENTION_YEARS (les lignes historiques sans
+ *    created_at, antérieures à la colonne, sont conservées : date inconnue) ;
+ *  - repmail : vidage des e-mails historiques (les nouveaux ne sont plus stockés).
+ */
+function access_retention_purge($pdo) {
+    try {
+        $pdo->exec("DELETE FROM access_log WHERE created_at < DATE_SUB(NOW(), INTERVAL " . ACCESS_LOG_RETENTION_MONTHS . " MONTH)");
+    } catch (PDOException $e) {
+        error_log('[access] purge access_log : ' . $e->getMessage());
+    }
+    try {
+        // La colonne created_at n'existe qu'après sa migration (console d'admin, onglet Base de données)
+        $pdo->exec("DELETE FROM GSDatabaseR WHERE created_at IS NOT NULL AND created_at < DATE_SUB(NOW(), INTERVAL " . RESPONSES_RETENTION_YEARS . " YEAR)");
+    } catch (PDOException $e) {
+        error_log('[access] purge GSDatabaseR : ' . $e->getMessage());
+    }
+    try {
+        $pdo->exec("UPDATE GSDatabaseR SET repmail = '' WHERE repmail <> ''");
+    } catch (PDOException $e) {
+        error_log('[access] purge repmail : ' . $e->getMessage());
+    }
+}
+
 // ---------------------------------------------------------------------------
 //  Clés : normalisation, génération, vérification
 // ---------------------------------------------------------------------------
@@ -230,6 +294,7 @@ function access_handle_post() {
         access_throttle_clear();
         session_regenerate_id(true);
         access_grant($key);
+        access_log_entry($key); // journal des connexions (IP), consultable dans le panneau d'admin
         header('Location: ' . basename($_SERVER['SCRIPT_NAME']));
         exit();
     }
