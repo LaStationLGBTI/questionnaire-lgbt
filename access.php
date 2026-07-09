@@ -239,6 +239,50 @@ function access_throttle_clear() {
 /** Intervalle (secondes) entre deux revérifications en base de la clé en session. */
 const ACCESS_RECHECK_SECONDS = 180;
 
+// « Se souvenir de la clé » : cookie fonctionnel optionnel (case cochée sur le gate).
+// httponly + SameSite=Lax ; durée alignée sur mentions.php (politique de confidentialité).
+const ACCESS_REMEMBER_COOKIE = 'station_access_key';
+const ACCESS_REMEMBER_DAYS   = 30;
+
+function access_remember_cookie_set($key) {
+    setcookie(ACCESS_REMEMBER_COOKIE, access_normalize_key($key), [
+        'expires'  => time() + ACCESS_REMEMBER_DAYS * 86400,
+        'path'     => '/',
+        'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+function access_remember_cookie_clear() {
+    setcookie(ACCESS_REMEMBER_COOKIE, '', [
+        'expires'  => time() - 3600,
+        'path'     => '/',
+        'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+/**
+ * Reconnexion silencieuse depuis le cookie « se souvenir » : si la session n'a pas
+ * de clé mais que le cookie en contient une encore valide, on la remet en session.
+ * Un cookie devenu invalide (clé expirée/révoquée/supprimée) est effacé.
+ */
+function access_try_cookie() {
+    if (empty($_COOKIE[ACCESS_REMEMBER_COOKIE])) return false;
+    $key = access_normalize_key($_COOKIE[ACCESS_REMEMBER_COOKIE]);
+    $status = access_key_status($key);
+    if ($status === 'ok') {
+        access_grant($key);
+        return true;
+    }
+    if ($status !== 'error') { // erreur DB ponctuelle : on garde le cookie, on retentera
+        access_remember_cookie_clear();
+    }
+    return false;
+}
+
 /** Une clé a-t-elle déjà été acceptée dans cette session (sans garantir sa validité actuelle) ? */
 function access_session_granted() {
     return !empty($_SESSION['access_key']);
@@ -250,7 +294,10 @@ function access_session_granted() {
  * En cas d'erreur de base ponctuelle, on conserve le dernier verdict connu (pas de blocage injuste).
  */
 function access_session_valid($force = false) {
-    if (empty($_SESSION['access_key'])) return false;
+    if (empty($_SESSION['access_key'])) {
+        // Pas de clé en session : tentative de reconnexion via le cookie « se souvenir »
+        return access_try_cookie();
+    }
     $now = time();
     $checkedAt = isset($_SESSION['access_checked_at']) ? (int) $_SESSION['access_checked_at'] : 0;
     $lastOk    = !empty($_SESSION['access_checked_ok']);
@@ -316,6 +363,9 @@ function access_handle_post() {
         access_throttle_clear();
         session_regenerate_id(true);
         access_grant($key);
+        if (!empty($_POST['remember_key'])) {
+            access_remember_cookie_set($key); // « se souvenir sur cet appareil » (30 jours)
+        }
         access_log_entry($key); // journal des connexions (IP), consultable dans le panneau d'admin
         header('Location: ' . basename($_SERVER['SCRIPT_NAME']));
         exit();
@@ -356,6 +406,8 @@ function access_texts($lang) {
             'pin_intro'     => 'Vous avez un code PIN affiché par l\'animateur·rice ? Entrez-le ici, sans clé d\'accès.',
             'pin_submit'    => 'Rejoindre la partie',
             'pin_invalid'   => 'Aucune partie en cours avec ce PIN.',
+            'remember'      => 'Se souvenir de la clé sur cet appareil (30 jours)',
+            'show_key'      => 'Afficher / masquer la clé',
         ],
         'de' => [
             'title'         => 'Geschützter Zugang',
@@ -375,6 +427,8 @@ function access_texts($lang) {
             'pin_intro'     => 'Sie haben eine PIN, die vom Spielleiter angezeigt wird? Geben Sie sie hier ein — ohne Zugangsschlüssel.',
             'pin_submit'    => 'Dem Spiel beitreten',
             'pin_invalid'   => 'Kein laufendes Spiel mit dieser PIN.',
+            'remember'      => 'Schlüssel auf diesem Gerät merken (30 Tage)',
+            'show_key'      => 'Schlüssel anzeigen / verbergen',
         ],
         'en' => [
             'title'         => 'Protected access',
@@ -394,6 +448,8 @@ function access_texts($lang) {
             'pin_intro'     => 'Got a PIN shown by the host? Enter it here — no access key needed.',
             'pin_submit'    => 'Join the game',
             'pin_invalid'   => 'No ongoing game with this PIN.',
+            'remember'      => 'Remember the key on this device (30 days)',
+            'show_key'      => 'Show / hide the key',
         ],
     ];
     return isset($all[$lang]) ? $all[$lang] : $all['fr'];
@@ -432,10 +488,17 @@ function access_render_gate($lang, $error = null) {
     .gate h1 { font-size:22px; margin:10px 0 8px; color:#4a3a86; }
     .gate .lock { font-size:38px; }
     .gate p.intro { font-size:14.5px; line-height:1.5; color:#555; margin:0 0 18px; }
-    .gate input[type=text] { width:100%; box-sizing:border-box; padding:13px; font-size:19px;
+    .gate input[type=text], .gate input[type=password] { width:100%; box-sizing:border-box; padding:13px; font-size:19px;
             letter-spacing:2px; text-align:center; text-transform:uppercase;
             border:2px solid #d8cff7; border-radius:10px; outline:none; }
-    .gate input[type=text]:focus { border-color:#8a7bf4; }
+    .gate input[type=text]:focus, .gate input[type=password]:focus { border-color:#8a7bf4; }
+    .gate .key-wrap { position:relative; }
+    .gate .key-wrap input { padding-right:48px; }
+    .gate .key-wrap .eye { position:absolute; right:8px; top:50%; transform:translateY(-50%);
+            background:none; border:none; font-size:20px; cursor:pointer; padding:4px; line-height:1; }
+    .gate label.remember { display:flex; gap:8px; align-items:flex-start; margin-top:12px;
+            font-size:13px; color:#666; text-align:left; cursor:pointer; }
+    .gate label.remember input { margin-top:2px; }
     .gate button { margin-top:14px; width:100%; padding:13px; border:none; border-radius:10px;
             font-size:16px; font-weight:800; color:#fff; background:#8a7bf4; cursor:pointer; }
     .gate button:hover { background:#7867e6; }
@@ -459,9 +522,22 @@ function access_render_gate($lang, $error = null) {
         <h1><?php echo htmlspecialchars($t['title']); ?></h1>
         <p class="intro"><?php echo htmlspecialchars($t['intro']); ?></p>
         <?php if ($error): ?><p class="error"><?php echo htmlspecialchars($error); ?></p><?php endif; ?>
-        <form method="POST" action="" autocomplete="off">
-            <input type="text" name="access_key" maxlength="20" placeholder="<?php echo htmlspecialchars($t['placeholder']); ?>"
-                   <?php echo $throttle['blocked'] ? 'disabled' : 'required autofocus'; ?>>
+        <form method="POST" action="" autocomplete="on">
+            <!-- Champ « identifiant » masqué : permet aux gestionnaires de mots de passe
+                 d'enregistrer la clé (type=password + current-password) sous un nom stable. -->
+            <input type="text" name="access_user" value="cle-questionnaire" autocomplete="username"
+                   readonly tabindex="-1" aria-hidden="true" style="display:none;">
+            <div class="key-wrap">
+                <input type="password" id="access-key-input" name="access_key" maxlength="20"
+                       autocomplete="current-password" placeholder="<?php echo htmlspecialchars($t['placeholder']); ?>"
+                       <?php echo $throttle['blocked'] ? 'disabled' : 'required autofocus'; ?>>
+                <button type="button" class="eye" title="<?php echo htmlspecialchars($t['show_key']); ?>"
+                        onclick="var k=document.getElementById('access-key-input');k.type=(k.type==='password')?'text':'password';">👁</button>
+            </div>
+            <label class="remember">
+                <input type="checkbox" name="remember_key" value="1" checked <?php echo $throttle['blocked'] ? 'disabled' : ''; ?>>
+                <span><?php echo htmlspecialchars($t['remember']); ?></span>
+            </label>
             <button type="submit" name="access_key_submit" value="1" <?php echo $throttle['blocked'] ? 'disabled' : ''; ?>>
                 <?php echo htmlspecialchars($t['submit']); ?>
             </button>
