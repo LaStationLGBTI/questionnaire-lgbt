@@ -274,15 +274,37 @@ function access_grant($key) {
 }
 
 /**
- * Traite la soumission du formulaire de clé (POST access_key_submit).
+ * Une partie « Mode Jeu » existe-t-elle pour ce PIN ?
+ * Même convention que game.php : un fichier <pin>.json dans le dossier temporaire.
+ */
+function access_game_pin_exists($pin) {
+    if (!preg_match('/^\d{6}$/', (string) $pin)) return false;
+    return is_file(sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lgbt_kahoot' . DIRECTORY_SEPARATOR . $pin . '.json');
+}
+
+/**
+ * Traite la soumission du formulaire de clé (POST access_key_submit)
+ * ou du formulaire PIN « Mode Jeu » (POST game_pin_submit).
  * Renvoie un message d'erreur (string) ou null. Redirige (PRG) en cas de succès.
  */
 function access_handle_post() {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['access_key_submit'])) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !(isset($_POST['access_key_submit']) || isset($_POST['game_pin_submit']))) {
         return null;
     }
     $lang = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
     $t = access_texts($lang);
+
+    // --- Entrée par PIN de partie (joueurs du Mode Jeu, sans clé) ---
+    // Volontairement hors anti-force-brute des clés : un PIN erroné ne doit pas
+    // bloquer la saisie de clé, et rejoindre une partie n'ouvre aucun accès privilégié.
+    if (isset($_POST['game_pin_submit'])) {
+        $pin = preg_replace('/\D/', '', isset($_POST['game_pin']) ? $_POST['game_pin'] : '');
+        if (access_game_pin_exists($pin)) {
+            header('Location: play.php?pin=' . $pin);
+            exit();
+        }
+        return $t['pin_invalid'];
+    }
 
     $throttle = access_throttled();
     if ($throttle['blocked']) {
@@ -329,6 +351,11 @@ function access_texts($lang) {
             'db_error'      => 'Erreur technique, veuillez réessayer plus tard.',
             'note_players'  => 'Les joueurs qui rejoignent une partie avec un PIN / QR code n\'ont pas besoin de clé.',
             'banner_expired'=> 'Votre clé d\'accès a expiré : vous pouvez terminer le questionnaire en cours, mais pas en choisir un nouveau.',
+            'pin_or'        => 'ou',
+            'pin_title'     => 'Rejoindre une partie (Mode Jeu)',
+            'pin_intro'     => 'Vous avez un code PIN affiché par l\'animateur·rice ? Entrez-le ici, sans clé d\'accès.',
+            'pin_submit'    => 'Rejoindre la partie',
+            'pin_invalid'   => 'Aucune partie en cours avec ce PIN.',
         ],
         'de' => [
             'title'         => 'Geschützter Zugang',
@@ -343,6 +370,11 @@ function access_texts($lang) {
             'db_error'      => 'Technischer Fehler, bitte versuchen Sie es später erneut.',
             'note_players'  => 'Spieler, die mit PIN / QR-Code einem Spiel beitreten, brauchen keinen Schlüssel.',
             'banner_expired'=> 'Ihr Zugangsschlüssel ist abgelaufen: Sie können den laufenden Fragebogen beenden, aber keinen neuen wählen.',
+            'pin_or'        => 'oder',
+            'pin_title'     => 'Einem Spiel beitreten (Spielmodus)',
+            'pin_intro'     => 'Sie haben eine PIN, die vom Spielleiter angezeigt wird? Geben Sie sie hier ein — ohne Zugangsschlüssel.',
+            'pin_submit'    => 'Dem Spiel beitreten',
+            'pin_invalid'   => 'Kein laufendes Spiel mit dieser PIN.',
         ],
         'en' => [
             'title'         => 'Protected access',
@@ -357,6 +389,11 @@ function access_texts($lang) {
             'db_error'      => 'Technical error, please try again later.',
             'note_players'  => 'Players joining a game with a PIN / QR code do not need a key.',
             'banner_expired'=> 'Your access key has expired: you can finish the current questionnaire, but not choose a new one.',
+            'pin_or'        => 'or',
+            'pin_title'     => 'Join a game (Game Mode)',
+            'pin_intro'     => 'Got a PIN shown by the host? Enter it here — no access key needed.',
+            'pin_submit'    => 'Join the game',
+            'pin_invalid'   => 'No ongoing game with this PIN.',
         ],
     ];
     return isset($all[$lang]) ? $all[$lang] : $all['fr'];
@@ -406,6 +443,14 @@ function access_render_gate($lang, $error = null) {
     .gate .error { margin:0 0 14px; padding:10px 12px; border-radius:10px; font-size:14px;
             background:#fdecec; border:1px solid #f3b0b0; color:#a33; }
     .gate .note { margin-top:18px; font-size:12.5px; color:#8a7f9a; line-height:1.45; }
+    .gate .sep { display:flex; align-items:center; gap:12px; margin:22px 0 16px;
+            color:#8a7f9a; font-size:13px; text-transform:uppercase; letter-spacing:.08em; }
+    .gate .sep::before, .gate .sep::after { content:""; flex:1; height:1px; background:#e5dcf3; }
+    .gate h2.pin-title { font-size:16px; margin:0 0 6px; color:#4a3a86; }
+    .gate p.pin-intro { font-size:13px; color:#666; margin:0 0 12px; line-height:1.45; }
+    .gate input.pin { letter-spacing:6px; }
+    .gate button.pin-btn { background:#5cb37a; }
+    .gate button.pin-btn:hover { background:#4da26b; }
 </style>
 </head>
 <body>
@@ -421,7 +466,18 @@ function access_render_gate($lang, $error = null) {
                 <?php echo htmlspecialchars($t['submit']); ?>
             </button>
         </form>
-        <p class="note">🎮 <?php echo htmlspecialchars($t['note_players']); ?></p>
+        <!-- Entrée par PIN de partie : les joueurs du Mode Jeu n'ont pas de clé.
+             Disponible même pendant un blocage anti-force-brute des clés (flux distinct). -->
+        <div class="sep"><?php echo htmlspecialchars($t['pin_or']); ?></div>
+        <h2 class="pin-title">🎮 <?php echo htmlspecialchars($t['pin_title']); ?></h2>
+        <p class="pin-intro"><?php echo htmlspecialchars($t['pin_intro']); ?></p>
+        <form method="POST" action="" autocomplete="off">
+            <input type="text" class="pin" name="game_pin" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                   placeholder="123456" required>
+            <button type="submit" class="pin-btn" name="game_pin_submit" value="1">
+                <?php echo htmlspecialchars($t['pin_submit']); ?>
+            </button>
+        </form>
     </div>
 </body>
 </html>
