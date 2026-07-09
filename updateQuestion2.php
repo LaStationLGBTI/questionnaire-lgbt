@@ -98,7 +98,10 @@ if(!isset($_SESSION["emailr"]))
 {
 	$_SESSION["emailr"] = "null";
 }
-$conn->prepare("INSERT INTO GSDatabaseR (ip, genre, orientation, reponse, repmail, lang) VALUES (?,?,?,?,?,?)")->execute([$_SERVER['REMOTE_ADDR'], $_SESSION["genre"], $_SESSION["orient"], $_SESSION['reponses'], $_SESSION["emailr"], $_SESSION["language"]]);
+// Minimisation RGPD : ni l'IP du répondant ni son e-mail ne sont stockés avec les réponses
+// (l'IP de sécurité est déjà journalisée à l'entrée par clé dans access_log ; l'e-mail ne sert
+// qu'à l'envoi des résultats depuis la session).
+$conn->prepare("INSERT INTO GSDatabaseR (ip, genre, orientation, reponse, repmail, lang) VALUES (?,?,?,?,?,?)")->execute(['', $_SESSION["genre"], $_SESSION["orient"], $_SESSION['reponses'], '', $_SESSION["language"]]);
 	$_SESSION["id_user"] = $conn->lastInsertId();
 }
 	$_SESSION["LastQuestion"] += 1;
