@@ -4,6 +4,7 @@
 // Fusion de gestion_gsdatabase.php + add_level.php + import.php + db_viewer.php.
 // Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
 require_once 'auth.php';
+require_once __DIR__ . '/i18n.php';
 $login_error = admin_handle_auth(basename($_SERVER['SCRIPT_NAME']), basename($_SERVER['SCRIPT_NAME']));
 
 // Fallback si l'extension mbstring est absente du conteneur (troncature UTF-8 approximative,
@@ -14,7 +15,7 @@ if (!function_exists('mb_strlen')) {
 }
 
 $page = $_GET['page'] ?? 'questions';
-if (!in_array($page, ['questions', 'levels', 'import', 'database'], true)) { $page = 'questions'; }
+if (!in_array($page, ['questions', 'levels', 'import', 'database', 'languages'], true)) { $page = 'questions'; }
 
 $message = '';        // Messages pour les onglets Questions / Niveaux
 $import_message = ''; // Messages pour l'onglet Import
@@ -22,13 +23,16 @@ $action = $_GET['action'] ?? 'menu';
 $id = $_REQUEST['id'] ?? null;
 $pdo = null;
 
-// Langue du contenu édité : fr (GSDatabase / GSDatabaseT) ou en (GSDatabase_en / GSDatabaseT_en).
-// Permet de modifier / supprimer aussi le contenu anglais depuis les onglets Questions et Niveaux.
-$qlang       = (isset($_REQUEST['qlang']) && $_REQUEST['qlang'] === 'en') ? 'en' : 'fr';
-$q_table     = ($qlang === 'en') ? 'GSDatabase_en'  : 'GSDatabase';
-$t_table     = ($qlang === 'en') ? 'GSDatabaseT_en' : 'GSDatabaseT';
-$lang_suffix = ($qlang === 'en') ? ' (EN)' : '';
-$lang_qs     = ($qlang === 'en') ? '&qlang=en' : '';
+// Langue du contenu édité : fr = tables de base (GSDatabase / GSDatabaseT),
+// tout autre code activé = tables i18n (GSDatabase_i18n / GSDatabaseT_i18n).
+// La validation dynamique contre la table `languages` est faite plus bas, une
+// fois la connexion PDO établie et i18n_boot() exécuté. Valeurs par défaut ici.
+$qlang       = 'fr';
+$q_table     = 'GSDatabase';
+$t_table     = 'GSDatabaseT';
+$lang_suffix = '';
+$lang_qs     = '';
+$lang_label  = 'Français'; // libellé de la langue courante (pour l'affichage)
 
 if (admin_is_logged_in()) {
     try {
@@ -39,14 +43,31 @@ if (admin_is_logged_in()) {
         die("<p style='padding: 20px; max-width: 800px; margin: auto;'>Erreur de connexion à la base de données.</p>");
     }
 
+    // Tables i18n (languages, GSDatabase_i18n, GSDatabaseT_i18n) + migration des _en.
+    i18n_boot($pdo);
+
+    // Résolution dynamique de la langue de contenu éditée. fr = base ; tout autre
+    // code activé cible les tables i18n (schéma réduit : pas de level/answer/qtype).
+    $qlang = i18n_valid_lang($pdo, $_REQUEST['qlang'] ?? '', 'fr');
+    if ($qlang !== 'fr') {
+        $q_table = 'GSDatabase_i18n';
+        $t_table = 'GSDatabaseT_i18n';
+        // Libellé de la langue depuis la table `languages`.
+        foreach (i18n_languages($pdo) as $__l) {
+            if ($__l['code'] === $qlang) { $lang_label = $__l['label']; break; }
+        }
+        $lang_suffix = ' (' . strtoupper($qlang) . ')';
+        $lang_qs     = '&qlang=' . urlencode($qlang);
+    }
+
     // ==================== ONGLET QUESTIONS (GSDatabase) ====================
     try {
         // Création d'une nouvelle question (français uniquement : une question EN doit être
         // créée via l'import, qui la relie à sa question française par fr_id)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_question'])) {
             admin_require_csrf();
-            if ($qlang === 'en') {
-                $message = "<div class='error'>La création d'une question anglaise se fait via l'onglet Import CSV (liaison fr_id obligatoire).</div>";
+            if ($qlang !== 'fr') {
+                $message = "<div class='error'>La création d'une question traduite (" . htmlspecialchars($lang_label) . ") se fait via l'onglet Import CSV (liaison fr_id obligatoire).</div>";
             } else {
                 $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
                 $sql = "INSERT INTO GSDatabase (level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, expliq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -60,29 +81,52 @@ if (admin_is_logged_in()) {
             }
         }
 
-        // Mise à jour d'une question (FR ou EN selon qlang ; fr_id des questions EN jamais modifié)
+        // Mise à jour d'une question (FR = tables de base ; traduction = tables i18n,
+        // schéma réduit : seuls question / rep1..5 / expliq sont modifiables.
+        // level / answer / qtype / fr_id appartiennent à la ligne française.)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_question'])) {
             admin_require_csrf();
-            $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
-            $sql = "UPDATE `$q_table` SET level=?, question=?, rep1=?, rep2=?, rep3=?, rep4=?, rep5=?, answer=?, qtype=?, expliq=? WHERE id=?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                $_POST['level'], $_POST['question'], $_POST['rep1'], $_POST['rep2'],
-                $_POST['rep3'], $_POST['rep4'], $_POST['rep5'], $answer,
-                $_POST['qtype'], $_POST['expliq'], $_POST['id']
-            ]);
+            if ($qlang === 'fr') {
+                $answer = ($_POST['qtype'] === 'qcm') ? $_POST['answer'] : 0;
+                $sql = "UPDATE GSDatabase SET level=?, question=?, rep1=?, rep2=?, rep3=?, rep4=?, rep5=?, answer=?, qtype=?, expliq=? WHERE id=?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    $_POST['level'], $_POST['question'], $_POST['rep1'], $_POST['rep2'],
+                    $_POST['rep3'], $_POST['rep4'], $_POST['rep5'], $answer,
+                    $_POST['qtype'], $_POST['expliq'], $_POST['id']
+                ]);
+            } else {
+                $sql = "UPDATE GSDatabase_i18n SET question=?, rep1=?, rep2=?, rep3=?, rep4=?, rep5=?, expliq=? WHERE id=? AND lang=?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    $_POST['question'], $_POST['rep1'], $_POST['rep2'], $_POST['rep3'],
+                    $_POST['rep4'], $_POST['rep5'], $_POST['expliq'], $_POST['id'], $qlang
+                ]);
+            }
             $message = "<div class='message success'>Question" . $lang_suffix . " mise à jour avec succès !</div>";
         }
 
-        // Suppression d'une question (FR ou EN selon qlang)
+        // Suppression d'une question (FR = table de base ; traduction = table i18n)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_question'])) {
             admin_require_csrf();
-            $stmt = $pdo->prepare("DELETE FROM `$q_table` WHERE id = ?");
-            $stmt->execute([$_POST['id']]);
+            if ($qlang === 'fr') {
+                // Supprimer aussi les traductions liées (fr_id) pour éviter les
+                // lignes i18n orphelines au fr_id pendant.
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("DELETE FROM GSDatabase_i18n WHERE fr_id = ?");
+                $stmt->execute([$_POST['id']]);
+                $stmt = $pdo->prepare("DELETE FROM GSDatabase WHERE id = ?");
+                $stmt->execute([$_POST['id']]);
+                $pdo->commit();
+            } else {
+                $stmt = $pdo->prepare("DELETE FROM GSDatabase_i18n WHERE id = ? AND lang = ?");
+                $stmt->execute([$_POST['id'], $qlang]);
+            }
             header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=questions&deleted=true' . $lang_qs);
             exit();
         }
     } catch (PDOException $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
         error_log('[admin/questions] ' . $e->getMessage());
         $message = "<div class='error'>Erreur de base de données.</div>";
     }
@@ -137,8 +181,13 @@ if (admin_is_logged_in()) {
 
         if ($level_id && !empty($titre)) {
             try {
-                $stmt = $pdo->prepare("UPDATE `$t_table` SET titre = ?, text = ? WHERE level = ?");
-                $stmt->execute([$titre, $text, $level_id]);
+                if ($qlang === 'fr') {
+                    $stmt = $pdo->prepare("UPDATE GSDatabaseT SET titre = ?, text = ? WHERE level = ?");
+                    $stmt->execute([$titre, $text, $level_id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE GSDatabaseT_i18n SET titre = ?, text = ? WHERE level = ? AND lang = ?");
+                    $stmt->execute([$titre, $text, $level_id, $qlang]);
+                }
                 header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=levels&action=menu&updated=true' . $lang_qs);
                 exit();
             } catch (PDOException $e) {
@@ -158,10 +207,26 @@ if (admin_is_logged_in()) {
         if ($level_id) {
             try {
                 $pdo->beginTransaction();
-                $stmt_q = $pdo->prepare("DELETE FROM `$q_table` WHERE level = ?");
-                $stmt_q->execute([$level_id]);
-                $stmt_t = $pdo->prepare("DELETE FROM `$t_table` WHERE level = ?");
-                $stmt_t->execute([$level_id]);
+                if ($qlang === 'fr') {
+                    // Nettoyage des traductions (TOUTES langues) AVANT de supprimer les
+                    // QCM français, sinon la jointure sur fr_id ne résout plus rien et
+                    // les lignes i18n resteraient orphelines (et bloqueraient un ré-import).
+                    $stmt_i = $pdo->prepare("DELETE i FROM GSDatabase_i18n i JOIN GSDatabase f ON f.id = i.fr_id WHERE f.level = ?");
+                    $stmt_i->execute([$level_id]);
+                    $stmt_ti = $pdo->prepare("DELETE FROM GSDatabaseT_i18n WHERE level = ?");
+                    $stmt_ti->execute([$level_id]);
+                    $stmt_q = $pdo->prepare("DELETE FROM GSDatabase WHERE level = ?");
+                    $stmt_q->execute([$level_id]);
+                    $stmt_t = $pdo->prepare("DELETE FROM GSDatabaseT WHERE level = ?");
+                    $stmt_t->execute([$level_id]);
+                } else {
+                    // Les questions traduites n'ont pas de colonne level : on les retrouve
+                    // via la jointure sur la question française (fr_id -> GSDatabase.level).
+                    $stmt_q = $pdo->prepare("DELETE i FROM GSDatabase_i18n i JOIN GSDatabase f ON f.id = i.fr_id WHERE f.level = ? AND i.lang = ?");
+                    $stmt_q->execute([$level_id, $qlang]);
+                    $stmt_t = $pdo->prepare("DELETE FROM GSDatabaseT_i18n WHERE level = ? AND lang = ?");
+                    $stmt_t->execute([$level_id, $qlang]);
+                }
                 $pdo->commit();
                 header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?page=levels&action=menu&deleted=true' . $lang_qs);
                 exit();
@@ -182,10 +247,21 @@ if (admin_is_logged_in()) {
                 $import_message = "<p class='error'>Erreur : Veuillez sélectionner un fichier au format CSV.</p>";
             } else {
                 try {
-                    // Langue cible de l'import : 'fr' (par défaut) ou 'en'.
-                    // En mode 'en', les QCM sont insérés dans GSDatabase_en et reliés
-                    // aux QCM français (GSDatabase.id) via la colonne fr_id, pour les statistiques.
-                    $lang = (isset($_POST['lang']) && $_POST['lang'] === 'en') ? 'en' : 'fr';
+                    // Langue cible de l'import : 'fr' (par défaut, tables de base) ou toute
+                    // langue activée. Pour une traduction, les QCM sont insérés dans
+                    // GSDatabase_i18n et reliés aux QCM français (GSDatabase.id) via fr_id.
+                    // Une langue postée mais NON résolue à l'identique = code inconnu ou
+                    // désactivé : i18n_valid_lang() retomberait silencieusement sur 'fr' et
+                    // écrirait dans les tables de base. On refuse explicitement l'import.
+                    $posted_lang = is_string($_POST['lang'] ?? null) ? trim($_POST['lang']) : '';
+                    $import_lang = i18n_valid_lang($pdo, $posted_lang, 'fr');
+                    if ($posted_lang !== '' && $posted_lang !== $import_lang) {
+                        throw new Exception("Langue inconnue ou désactivée : « " . htmlspecialchars($posted_lang) . " ». Activez-la d'abord dans l'onglet Langues.");
+                    }
+                    $import_label = $import_lang;
+                    foreach (i18n_languages($pdo) as $__l) {
+                        if ($__l['code'] === $import_lang) { $import_label = $__l['label']; break; }
+                    }
 
                     ini_set('auto_detect_line_endings', TRUE);
                     $handle = fopen($file_tmp_path, 'r');
@@ -228,24 +304,10 @@ if (admin_is_logged_in()) {
                     $titre = ($csv_titre !== null && $csv_titre !== '') ? $csv_titre : (isset($_POST['titre']) ? trim($_POST['titre']) : '');
                     $text  = ($csv_text  !== null && $csv_text  !== '') ? $csv_text  : (isset($_POST['text'])  ? trim($_POST['text'])  : '');
 
-                    if ($lang === 'en') {
-                        // ================== IMPORT ANGLAIS (lié au français) ==================
-
-                        // 0. Création des tables anglaises si absentes (sans FK pour éviter
-                        //    tout échec lié à un moteur/charset différent ; voir sql_english_tables.sql
-                        //    pour la version avec clé étrangère).
-                        $pdo->exec("CREATE TABLE IF NOT EXISTS GSDatabase_en (
-                            id INT AUTO_INCREMENT PRIMARY KEY,
-                            fr_id INT NOT NULL,
-                            level INT NOT NULL,
-                            question TEXT, rep1 TEXT, rep2 TEXT, rep3 TEXT, rep4 TEXT, rep5 TEXT,
-                            answer VARCHAR(20), qtype VARCHAR(20), expliq TEXT,
-                            UNIQUE KEY uq_fr_id (fr_id), KEY idx_level (level)
-                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
-                        $pdo->exec("CREATE TABLE IF NOT EXISTS GSDatabaseT_en (
-                            level INT NOT NULL PRIMARY KEY,
-                            titre VARCHAR(255), text TEXT
-                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+                    if ($import_lang !== 'fr') {
+                        // ============ IMPORT TRADUCTION (lié au français, tables i18n) ============
+                        // Les tables GSDatabase_i18n / GSDatabaseT_i18n sont créées par i18n_boot().
+                        $lang_html = htmlspecialchars($import_label);
 
                         // 1. Le module français doit déjà exister : on récupère ses ids
                         //    dans l'ordre d'insertion (= ordre du CSV) pour faire la liaison.
@@ -257,52 +319,51 @@ if (admin_is_logged_in()) {
                             throw new Exception("Le module français du niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> n'existe pas dans GSDatabase. Importez d'abord le module français : le lien vers les QCM français est nécessaire pour les statistiques.");
                         }
                         if (count($fr_ids) !== count($all_rows)) {
-                            throw new Exception("Liaison impossible : le module français du niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> contient <strong>" . count($fr_ids) . "</strong> questions, mais le CSV anglais en contient <strong>" . count($all_rows) . "</strong>. Les deux fichiers doivent avoir le même nombre de questions, dans le même ordre.");
+                            throw new Exception("Liaison impossible : le module français du niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> contient <strong>" . count($fr_ids) . "</strong> questions, mais le CSV " . $lang_html . " en contient <strong>" . count($all_rows) . "</strong>. Les deux fichiers doivent avoir le même nombre de questions, dans le même ordre.");
                         }
 
-                        // 2. Refus de ré-import du même niveau anglais
-                        $stmt = $pdo->prepare("SELECT COUNT(*) FROM GSDatabase_en WHERE level = ?");
-                        $stmt->execute([$level_to_check]);
+                        // 2. Refus de ré-import du même niveau pour cette langue
+                        $stmt = $pdo->prepare("SELECT COUNT(*) FROM GSDatabase_i18n i JOIN GSDatabase f ON f.id = i.fr_id WHERE f.level = ? AND i.lang = ?");
+                        $stmt->execute([$level_to_check, $import_lang]);
                         if ($stmt->fetchColumn() > 0) {
-                            throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà dans GSDatabase_en (version anglaise).");
+                            throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà en <strong>" . $lang_html . "</strong> (GSDatabase_i18n).");
                         }
 
                         $pdo->beginTransaction();
 
-                        // 3. Titre + description anglais (optionnel) dans GSDatabaseT_en
+                        // 3. Titre + description traduits (optionnel) dans GSDatabaseT_i18n
                         if ($titre !== '') {
-                            $stmt_t = $pdo->prepare("SELECT COUNT(*) FROM GSDatabaseT_en WHERE level = ?");
-                            $stmt_t->execute([$level_to_check]);
+                            $stmt_t = $pdo->prepare("SELECT COUNT(*) FROM GSDatabaseT_i18n WHERE level = ? AND lang = ?");
+                            $stmt_t->execute([$level_to_check, $import_lang]);
                             if ($stmt_t->fetchColumn() > 0) {
-                                throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> existe déjà dans GSDatabaseT_en (titre/description anglais). Supprimez-le d'abord ou laissez le titre vide.");
+                                throw new Exception("Le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong> a déjà un titre/description en <strong>" . $lang_html . "</strong> (GSDatabaseT_i18n). Supprimez-le d'abord ou laissez le titre vide.");
                             }
-                            $stmt_t = $pdo->prepare("INSERT INTO GSDatabaseT_en (level, titre, text) VALUES (?, ?, ?)");
-                            $stmt_t->execute([$level_to_check, $titre, $text]);
+                            $stmt_t = $pdo->prepare("INSERT INTO GSDatabaseT_i18n (level, lang, titre, text) VALUES (?, ?, ?, ?)");
+                            $stmt_t->execute([$level_to_check, $import_lang, $titre, $text]);
                         }
 
-                        // 4. Questions anglaises, chacune reliée à son équivalent français (fr_id)
-                        $sql = "INSERT INTO GSDatabase_en (fr_id, level, question, rep1, rep2, rep3, rep4, rep5, answer, qtype, expliq)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        // 4. Questions traduites, chacune reliée à son équivalent français (fr_id).
+                        //    level / answer / qtype ne sont PAS stockés : ils viennent de la ligne FR.
+                        $sql = "INSERT INTO GSDatabase_i18n (fr_id, lang, question, rep1, rep2, rep3, rep4, rep5, expliq)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                         $stmt = $pdo->prepare($sql);
                         foreach ($all_rows as $i => $row) {
                             $stmt->execute([
                                 $fr_ids[$i],                            // fr_id : lien vers la question FR
-                                trim($row[0]) ?? null,                  // level
+                                $import_lang,                           // lang
                                 trim($row[1]) ?? null,                  // question
                                 trim($row[2]) ?? null,                  // rep1
                                 trim($row[3]) ?? null,                  // rep2
                                 trim($row[4]) ?? null,                  // rep3
                                 trim($row[5]) ?? 'null',                // rep4
                                 trim($row[6]) ?? 'null',                // rep5
-                                trim($row[7]) ?? null,                  // answer
-                                trim($row[8]) ?? null,                  // qtype
                                 isset($row[9]) ? trim($row[9]) : null   // expliq
                             ]);
                         }
 
                         $pdo->commit();
-                        $level_msg = ($titre !== '') ? " Le titre et la description anglais ont également été créés dans GSDatabaseT_en." : "";
-                        $import_message = "<p class='success'>Importation anglaise réussie. <strong>" . count($all_rows) . "</strong> questions ajoutées dans GSDatabase_en pour le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>, reliées aux QCM français." . $level_msg . "</p>";
+                        $level_msg = ($titre !== '') ? " Le titre et la description (" . $lang_html . ") ont également été créés dans GSDatabaseT_i18n." : "";
+                        $import_message = "<p class='success'>Importation " . $lang_html . " réussie. <strong>" . count($all_rows) . "</strong> questions ajoutées dans GSDatabase_i18n pour le niveau <strong>" . htmlspecialchars($level_to_check) . "</strong>, reliées aux QCM français." . $level_msg . "</p>";
 
                         // =====================================================================
                     } else {
@@ -383,6 +444,96 @@ if (admin_is_logged_in()) {
         }
         header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?' . http_build_query($back));
         exit();
+    }
+
+    // ==================== ONGLET LANGUES (table languages) ====================
+    // Ajout d'une langue
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_language'])) {
+        admin_require_csrf();
+        $code  = strtolower(trim($_POST['code'] ?? ''));
+        $label = trim($_POST['label'] ?? '');
+        $flag  = trim($_POST['flag_file'] ?? '');
+        $rtl   = (isset($_POST['is_rtl']) && $_POST['is_rtl'] == '1') ? 1 : 0;
+        $sort  = ($_POST['sort'] ?? '') === '' ? null : (int) $_POST['sort'];
+        try {
+            if (!preg_match('/^[a-z]{2,5}$/', $code)) {
+                $message = "<div class='error'>Code de langue invalide : 2 à 5 lettres minuscules (ex : fr, en, de, ar).</div>";
+            } elseif ($label === '') {
+                $message = "<div class='error'>Le libellé de la langue est obligatoire.</div>";
+            } else {
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM languages WHERE code = ?");
+                $stmt->execute([$code]);
+                if ($stmt->fetchColumn() > 0) {
+                    $message = "<div class='error'>La langue <strong>" . htmlspecialchars($code) . "</strong> existe déjà.</div>";
+                } else {
+                    if ($sort === null) {
+                        $sort = (int) $pdo->query("SELECT COALESCE(MAX(sort), -1) + 1 FROM languages")->fetchColumn();
+                    }
+                    $stmt = $pdo->prepare("INSERT INTO languages (code, label, flag_file, is_rtl, enabled, sort) VALUES (?, ?, ?, ?, 1, ?)");
+                    $stmt->execute([$code, $label, $flag, $rtl, $sort]);
+                    $warn = ($flag !== '' && !is_file(__DIR__ . '/images/' . $flag))
+                        ? " Attention : le fichier drapeau <code>images/" . htmlspecialchars($flag) . "</code> est introuvable (langue enregistrée quand même)."
+                        : "";
+                    $message = "<div class='message success'>Langue <strong>" . htmlspecialchars($code) . "</strong> ajoutée." . $warn
+                        . " Pensez à créer <code>lang/" . htmlspecialchars($code) . ".php</code> (copie traduite de fr.php) et à importer le CSV des questions pour cette langue.</div>";
+                }
+            }
+        } catch (PDOException $e) {
+            error_log('[admin/languages] ' . $e->getMessage());
+            $message = "<div class='error'>Erreur de base de données lors de l'ajout de la langue.</div>";
+        }
+    }
+
+    // Modification d'une langue (libellé, drapeau, RTL, ordre, activation)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_language'])) {
+        admin_require_csrf();
+        $code  = strtolower(trim($_POST['code'] ?? ''));
+        $label = trim($_POST['label'] ?? '');
+        $flag  = trim($_POST['flag_file'] ?? '');
+        $rtl   = (isset($_POST['is_rtl']) && $_POST['is_rtl'] == '1') ? 1 : 0;
+        $sort  = (int) ($_POST['sort'] ?? 0);
+        // fr est la langue de base : toujours activée, jamais RTL désactivable via ce chemin.
+        $enabled = ($code === 'fr') ? 1 : ((isset($_POST['enabled']) && $_POST['enabled'] == '1') ? 1 : 0);
+        try {
+            if ($label === '') {
+                $message = "<div class='error'>Le libellé de la langue est obligatoire.</div>";
+            } else {
+                $stmt = $pdo->prepare("UPDATE languages SET label = ?, flag_file = ?, is_rtl = ?, enabled = ?, sort = ? WHERE code = ?");
+                $stmt->execute([$label, $flag, $rtl, $enabled, $sort, $code]);
+                $warn = ($flag !== '' && !is_file(__DIR__ . '/images/' . $flag))
+                    ? " Attention : le fichier drapeau <code>images/" . htmlspecialchars($flag) . "</code> est introuvable."
+                    : "";
+                $message = "<div class='message success'>Langue <strong>" . htmlspecialchars($code) . "</strong> mise à jour." . $warn . "</div>";
+            }
+        } catch (PDOException $e) {
+            error_log('[admin/languages] ' . $e->getMessage());
+            $message = "<div class='error'>Erreur de base de données lors de la mise à jour.</div>";
+        }
+    }
+
+    // Suppression d'une langue (fr interdit) + purge de ses traductions
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_language'])) {
+        admin_require_csrf();
+        $code = strtolower(trim($_POST['code'] ?? ''));
+        if ($code === 'fr' || $code === '') {
+            $message = "<div class='error'>La langue de base (fr) ne peut pas être supprimée.</div>";
+        } else {
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("DELETE FROM GSDatabase_i18n WHERE lang = ?");
+                $stmt->execute([$code]);
+                $stmt = $pdo->prepare("DELETE FROM GSDatabaseT_i18n WHERE lang = ?");
+                $stmt->execute([$code]);
+                $stmt = $pdo->prepare("DELETE FROM languages WHERE code = ?");
+                $stmt->execute([$code]);
+                $pdo->commit();
+                $message = "<div class='message success'>Langue <strong>" . htmlspecialchars($code) . "</strong> et ses traductions supprimées.</div>";
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                error_log('[admin/languages] ' . $e->getMessage());
+                $message = "<div class='error'>Erreur de base de données lors de la suppression.</div>";
+            }
+        }
     }
 }
 ?>
@@ -473,6 +624,7 @@ if (admin_is_logged_in()) {
             <a href="?page=questions" class="<?php echo $page === 'questions' ? 'active' : ''; ?>">Questions</a>
             <a href="?page=levels" class="<?php echo $page === 'levels' ? 'active' : ''; ?>">Niveaux</a>
             <a href="?page=import" class="<?php echo $page === 'import' ? 'active' : ''; ?>">Import CSV</a>
+            <a href="?page=languages" class="<?php echo $page === 'languages' ? 'active' : ''; ?>">Langues</a>
             <a href="?page=database" class="<?php echo $page === 'database' ? 'active' : ''; ?>">Base de données</a>
         </div>
 
@@ -495,8 +647,11 @@ if (admin_is_logged_in()) {
                     <div class="form-group">
                         <label for="qlang">Langue :</label>
                         <select id="qlang" name="qlang">
-                            <option value="fr" <?php echo $qlang === 'fr' ? 'selected' : ''; ?>>Français (GSDatabase)</option>
-                            <option value="en" <?php echo $qlang === 'en' ? 'selected' : ''; ?>>English (GSDatabase_en)</option>
+                            <?php foreach (i18n_languages($pdo) as $__l): ?>
+                                <option value="<?php echo htmlspecialchars($__l['code']); ?>" <?php echo $qlang === $__l['code'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($__l['label']); ?><?php echo $__l['code'] === 'fr' ? ' (GSDatabase)' : ' (GSDatabase_i18n)'; ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="form-group">
@@ -510,11 +665,23 @@ if (admin_is_logged_in()) {
                 $question_data = null;
                 $is_edit_mode = false;
                 $question_found = true;
+                $fr_ctx = null; // ligne française de référence (contexte lecture seule) pour les traductions
                 if ($action === 'edit' && $id) {
                     $is_edit_mode = true;
-                    $stmt = $pdo->prepare("SELECT * FROM `$q_table` WHERE id = ?");
-                    $stmt->execute([$id]);
-                    $question_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($qlang === 'fr') {
+                        $stmt = $pdo->prepare("SELECT * FROM GSDatabase WHERE id = ?");
+                        $stmt->execute([$id]);
+                        $question_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                    } else {
+                        $stmt = $pdo->prepare("SELECT * FROM GSDatabase_i18n WHERE id = ? AND lang = ?");
+                        $stmt->execute([$id, $qlang]);
+                        $question_data = $stmt->fetch(PDO::FETCH_ASSOC);
+                        if ($question_data) {
+                            $stmt_fr = $pdo->prepare("SELECT * FROM GSDatabase WHERE id = ?");
+                            $stmt_fr->execute([$question_data['fr_id']]);
+                            $fr_ctx = $stmt_fr->fetch(PDO::FETCH_ASSOC) ?: null;
+                        }
+                    }
                     if (!$question_data) { $question_found = false; }
                 }
             ?>
@@ -525,68 +692,107 @@ if (admin_is_logged_in()) {
                     <a href="?page=questions" class="back-link">&larr; Retour au menu</a>
                     <h2><?php echo $is_edit_mode ? 'Modifier la question' . $lang_suffix : 'Créer une nouvelle question'; ?></h2>
 
-                    <form action="?page=questions" method="POST" id="question-form">
+                    <form action="?page=questions<?php echo $lang_qs; ?>" method="POST" id="question-form">
                         <?php echo csrf_input(); ?>
-                        <input type="hidden" name="qlang" value="<?php echo $qlang; ?>">
+                        <input type="hidden" name="qlang" value="<?php echo htmlspecialchars($qlang); ?>">
                         <?php if ($is_edit_mode): ?>
                             <input type="hidden" name="id" value="<?php echo htmlspecialchars($question_data['id']); ?>">
                         <?php endif; ?>
-                        <?php if ($qlang === 'en' && isset($question_data['fr_id'])): ?>
+
+                        <?php if ($qlang !== 'fr'): // ===== FORMULAIRE TRADUCTION (schéma i18n réduit) ===== ?>
                             <div class="form-group">
                                 <label>Question française liée (fr_id) :</label>
-                                <input type="number" value="<?php echo htmlspecialchars($question_data['fr_id']); ?>" readonly>
-                                <small class="hint">La liaison fr_id (statistiques FR+EN) n'est pas modifiable ici — <a href="?page=questions&action=edit&id=<?php echo urlencode($question_data['fr_id']); ?>">voir la question française</a>.</small>
+                                <input type="number" value="<?php echo htmlspecialchars($question_data['fr_id'] ?? ''); ?>" readonly>
+                                <small class="hint">La liaison fr_id, le module (level), le type et la bonne réponse appartiennent à la question française et ne sont pas modifiables ici — <a href="?page=questions&action=edit&id=<?php echo urlencode($question_data['fr_id'] ?? ''); ?>">voir la question française</a>. Seuls les textes traduits ci-dessous sont éditables.</small>
+                            </div>
+                            <?php if ($fr_ctx): ?>
+                                <div class="form-group" style="background:#f8f9fa; border:1px solid #e9ecef; border-radius:5px; padding:0.8rem;">
+                                    <label>Original français (lecture seule) :</label>
+                                    <p style="margin:0.3rem 0; font-size:0.9rem;"><strong>Module :</strong> <?php echo htmlspecialchars((string) $fr_ctx['level']); ?> — <strong>Type :</strong> <?php echo htmlspecialchars((string) $fr_ctx['qtype']); ?><?php echo ($fr_ctx['qtype'] === 'qcm') ? ' — <strong>Bonne réponse :</strong> ' . htmlspecialchars((string) $fr_ctx['answer']) : ''; ?></p>
+                                    <p style="margin:0.3rem 0; font-size:0.9rem;"><strong>Question :</strong> <?php echo htmlspecialchars((string) $fr_ctx['question']); ?></p>
+                                    <p style="margin:0.3rem 0; font-size:0.85rem; color:#666;"><?php echo htmlspecialchars((string) $fr_ctx['rep1']); ?> · <?php echo htmlspecialchars((string) $fr_ctx['rep2']); ?> · <?php echo htmlspecialchars((string) $fr_ctx['rep3']); ?> · <?php echo htmlspecialchars((string) $fr_ctx['rep4']); ?><?php echo ($fr_ctx['rep5'] !== null && $fr_ctx['rep5'] !== '' && strtolower((string) $fr_ctx['rep5']) !== 'null') ? ' · ' . htmlspecialchars((string) $fr_ctx['rep5']) : ''; ?></p>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="form-group">
+                                <label for="question">Question (<?php echo htmlspecialchars($lang_label); ?>) :</label>
+                                <textarea id="question" name="question" required><?php echo htmlspecialchars($question_data['question'] ?? ''); ?></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="rep1">Réponse 1 :</label>
+                                <input type="text" id="rep1" name="rep1" value="<?php echo htmlspecialchars($question_data['rep1'] ?? ''); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rep2">Réponse 2 :</label>
+                                <input type="text" id="rep2" name="rep2" value="<?php echo htmlspecialchars($question_data['rep2'] ?? ''); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rep3">Réponse 3 :</label>
+                                <input type="text" id="rep3" name="rep3" value="<?php echo htmlspecialchars($question_data['rep3'] ?? ''); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rep4">Réponse 4 :</label>
+                                <input type="text" id="rep4" name="rep4" value="<?php echo htmlspecialchars($question_data['rep4'] ?? ''); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rep5">Réponse 5 (si échelle) :</label>
+                                <input type="text" id="rep5" name="rep5" value="<?php echo htmlspecialchars($question_data['rep5'] ?? ''); ?>">
+                            </div>
+                            <div class="form-group">
+                                <label for="expliq">Explication de la réponse :</label>
+                                <textarea id="expliq" name="expliq"><?php echo htmlspecialchars($question_data['expliq'] ?? ''); ?></textarea>
+                            </div>
+
+                        <?php else: // ===== FORMULAIRE FRANÇAIS (schéma complet, inchangé) ===== ?>
+                            <div class="form-group">
+                                <label for="level">Module (level) :</label>
+                                <input type="text" id="level" name="level" value="<?php echo htmlspecialchars($question_data['level'] ?? ''); ?>" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="question">Question :</label>
+                                <textarea id="question" name="question" required><?php echo htmlspecialchars($question_data['question'] ?? ''); ?></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Type de question (qtype) :</label>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="qtype" value="qcm" <?php echo ($question_data['qtype'] ?? 'qcm') === 'qcm' ? 'checked' : ''; ?>> QCM</label>
+                                    <label><input type="radio" name="qtype" value="echelle" <?php echo ($question_data['qtype'] ?? '') === 'echelle' ? 'checked' : ''; ?>> Échelle</label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="rep1">Réponse 1 :</label>
+                                <input type="text" id="rep1" name="rep1" value="<?php echo htmlspecialchars($question_data['rep1'] ?? ''); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rep2">Réponse 2 :</label>
+                                <input type="text" id="rep2" name="rep2" value="<?php echo htmlspecialchars($question_data['rep2'] ?? ''); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rep3">Réponse 3 :</label>
+                                <input type="text" id="rep3" name="rep3" value="<?php echo htmlspecialchars($question_data['rep3'] ?? ''); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="rep4">Réponse 4 :</label>
+                                <input type="text" id="rep4" name="rep4" value="<?php echo htmlspecialchars($question_data['rep4'] ?? ''); ?>" required>
+                            </div>
+                            <div id="rep5-group" class="form-group hidden">
+                                <label for="rep5">Réponse 5 :</label>
+                                <input type="text" id="rep5" name="rep5" value="<?php echo htmlspecialchars($question_data['rep5'] ?? ''); ?>">
+                            </div>
+
+                            <div id="answer-group" class="form-group hidden">
+                                <label for="answer">Numéro de la bonne réponse (pour QCM) :</label>
+                                <input type="number" id="answer" name="answer" min="1" max="4" value="<?php echo htmlspecialchars($question_data['answer'] ?? '1'); ?>">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="expliq">Explication de la réponse :</label>
+                                <textarea id="expliq" name="expliq"><?php echo htmlspecialchars($question_data['expliq'] ?? ''); ?></textarea>
                             </div>
                         <?php endif; ?>
-
-                        <div class="form-group">
-                            <label for="level">Module (level) :</label>
-                            <input type="text" id="level" name="level" value="<?php echo htmlspecialchars($question_data['level'] ?? ''); ?>" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="question">Question :</label>
-                            <textarea id="question" name="question" required><?php echo htmlspecialchars($question_data['question'] ?? ''); ?></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Type de question (qtype) :</label>
-                            <div class="radio-group">
-                                <label><input type="radio" name="qtype" value="qcm" <?php echo ($question_data['qtype'] ?? 'qcm') === 'qcm' ? 'checked' : ''; ?>> QCM</label>
-                                <label><input type="radio" name="qtype" value="echelle" <?php echo ($question_data['qtype'] ?? '') === 'echelle' ? 'checked' : ''; ?>> Échelle</label>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="rep1">Réponse 1 :</label>
-                            <input type="text" id="rep1" name="rep1" value="<?php echo htmlspecialchars($question_data['rep1'] ?? ''); ?>" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="rep2">Réponse 2 :</label>
-                            <input type="text" id="rep2" name="rep2" value="<?php echo htmlspecialchars($question_data['rep2'] ?? ''); ?>" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="rep3">Réponse 3 :</label>
-                            <input type="text" id="rep3" name="rep3" value="<?php echo htmlspecialchars($question_data['rep3'] ?? ''); ?>" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="rep4">Réponse 4 :</label>
-                            <input type="text" id="rep4" name="rep4" value="<?php echo htmlspecialchars($question_data['rep4'] ?? ''); ?>" required>
-                        </div>
-                        <div id="rep5-group" class="form-group hidden">
-                            <label for="rep5">Réponse 5 :</label>
-                            <input type="text" id="rep5" name="rep5" value="<?php echo htmlspecialchars($question_data['rep5'] ?? ''); ?>">
-                        </div>
-
-                        <div id="answer-group" class="form-group hidden">
-                            <label for="answer">Numéro de la bonne réponse (pour QCM) :</label>
-                            <input type="number" id="answer" name="answer" min="1" max="4" value="<?php echo htmlspecialchars($question_data['answer'] ?? '1'); ?>">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="expliq">Explication de la réponse :</label>
-                            <textarea id="expliq" name="expliq"><?php echo htmlspecialchars($question_data['expliq'] ?? ''); ?></textarea>
-                        </div>
 
                         <div class="form-actions">
                             <?php if ($is_edit_mode): ?>
@@ -635,16 +841,23 @@ if (admin_is_logged_in()) {
                 <h2>Étape 1 : Choisir un niveau à Modifier/Supprimer<?php echo $lang_suffix; ?></h2>
                 <p style="text-align:center; font-size:0.9rem;">
                     Langue :
-                    <a href="?page=levels&action=edit" <?php echo $qlang === 'fr' ? 'style="font-weight:bold;"' : ''; ?>>Français</a> |
-                    <a href="?page=levels&action=edit&qlang=en" <?php echo $qlang === 'en' ? 'style="font-weight:bold;"' : ''; ?>>English</a>
+                    <?php $__langs = i18n_languages($pdo); $__i = 0; foreach ($__langs as $__l): $__i++; ?>
+                        <a href="?page=levels&action=edit<?php echo $__l['code'] === 'fr' ? '' : '&qlang=' . urlencode($__l['code']); ?>" <?php echo $qlang === $__l['code'] ? 'style="font-weight:bold;"' : ''; ?>><?php echo htmlspecialchars($__l['label']); ?></a><?php echo $__i < count($__langs) ? ' | ' : ''; ?>
+                    <?php endforeach; ?>
                 </p>
                 <?php
                     $existing_levels = [];
                     try {
-                        $stmt_levels = $pdo->query("SELECT level, titre FROM `$t_table` ORDER BY level ASC");
-                        $existing_levels = $stmt_levels->fetchAll(PDO::FETCH_ASSOC);
+                        if ($qlang === 'fr') {
+                            $stmt_levels = $pdo->query("SELECT level, titre FROM GSDatabaseT ORDER BY level ASC");
+                            $existing_levels = $stmt_levels->fetchAll(PDO::FETCH_ASSOC);
+                        } else {
+                            $stmt_levels = $pdo->prepare("SELECT level, titre FROM GSDatabaseT_i18n WHERE lang = ? ORDER BY level ASC");
+                            $stmt_levels->execute([$qlang]);
+                            $existing_levels = $stmt_levels->fetchAll(PDO::FETCH_ASSOC);
+                        }
                     } catch (PDOException $e) {
-                        echo "<p class='error'>Impossible de charger la liste des niveaux existants" . ($qlang === 'en' ? " (la table anglaise n'existe qu'après le premier import EN)" : "") . ".</p>";
+                        echo "<p class='error'>Impossible de charger la liste des niveaux existants.</p>";
                     }
                 ?>
                 <form action="" method="GET">
@@ -669,8 +882,13 @@ if (admin_is_logged_in()) {
                 $level_data = null;
                 if ($pdo) {
                     try {
-                        $stmt = $pdo->prepare("SELECT * FROM `$t_table` WHERE level = ?");
-                        $stmt->execute([$id]);
+                        if ($qlang === 'fr') {
+                            $stmt = $pdo->prepare("SELECT * FROM GSDatabaseT WHERE level = ?");
+                            $stmt->execute([$id]);
+                        } else {
+                            $stmt = $pdo->prepare("SELECT * FROM GSDatabaseT_i18n WHERE level = ? AND lang = ?");
+                            $stmt->execute([$id, $qlang]);
+                        }
                         $level_data = $stmt->fetch(PDO::FETCH_ASSOC);
                     } catch (PDOException $e) {
                         error_log('[admin/levels] ' . $e->getMessage());
@@ -704,7 +922,7 @@ if (admin_is_logged_in()) {
                     <div class="form-actions">
                         <button type="submit" name="update_level">Mettre à jour</button>
                         <button type="submit" name="delete_level"
-                                onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce niveau ?\n\nATTENTION : Toutes les questions <?php echo $qlang === 'en' ? 'ANGLAISES (GSDatabase_en)' : 'associées (GSDatabase)'; ?> de ce niveau seront également supprimées de façon irréversible.');">
+                                onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce niveau ?\n\nATTENTION : Toutes les questions <?php echo $qlang === 'fr' ? 'associées (GSDatabase)' : 'traduites (' . htmlspecialchars($lang_label) . ', GSDatabase_i18n)'; ?> de ce niveau seront également supprimées de façon irréversible.');">
                             Supprimer le niveau
                         </button>
                     </div>
@@ -722,10 +940,15 @@ if (admin_is_logged_in()) {
                 <div class="form-group">
                     <label for="lang">Langue du questionnaire :</label>
                     <select id="lang" name="lang">
-                        <option value="fr" selected>Français (GSDatabase / GSDatabaseT)</option>
-                        <option value="en">English — lié au français (GSDatabase_en / GSDatabaseT_en)</option>
+                        <?php foreach (i18n_languages($pdo) as $__l):
+                            if ($__l['code'] === 'fr'): ?>
+                                <option value="fr" selected>Français — base (GSDatabase / GSDatabaseT)</option>
+                            <?php else: ?>
+                                <option value="<?php echo htmlspecialchars($__l['code']); ?>"><?php echo htmlspecialchars($__l['label']); ?> — traduction liée au français (GSDatabase_i18n / GSDatabaseT_i18n)</option>
+                            <?php endif;
+                        endforeach; ?>
                     </select>
-                    <small class="hint">L'import anglais relie chaque QCM à son équivalent français (pour les statistiques). Le module français du même niveau doit déjà être importé.</small>
+                    <small class="hint">Un import de traduction relie chaque QCM à son équivalent français (pour les statistiques). Le module français du même niveau doit déjà être importé.</small>
                 </div>
                 <div class="form-group">
                     <label for="titre">Titre du module (optionnel — crée le niveau dans GSDatabaseT) :</label>
@@ -741,6 +964,103 @@ if (admin_is_logged_in()) {
                     <input type="file" id="questionnaire_file" name="questionnaire_file" accept=".csv" required>
                 </div>
                 <button type="submit" name="upload">Importer le fichier</button>
+            </form>
+
+        <?php elseif ($page === 'languages') : ?>
+            <h2>Gestion des langues</h2>
+            <?php echo $message; ?>
+            <p style="font-size:0.9rem; color:#666;">
+                <strong>fr</strong> est la langue de base : elle ne peut être ni désactivée, ni supprimée.
+                Après avoir ajouté une langue, pensez à : (a) créer <code>lang/&lt;code&gt;.php</code>
+                (copie traduite de <code>lang/fr.php</code>) pour les textes d'interface, puis
+                (b) importer le CSV des questions de cette langue via l'onglet <em>Import CSV</em>.
+            </p>
+            <?php
+                $languages_all = [];
+                try {
+                    $languages_all = $pdo->query("SELECT * FROM languages ORDER BY sort ASC, code ASC")->fetchAll(PDO::FETCH_ASSOC);
+                } catch (PDOException $e) {
+                    error_log('[admin/languages] ' . $e->getMessage());
+                    echo "<p class='error'>Impossible de charger la liste des langues.</p>";
+                }
+            ?>
+            <table class="db-table">
+                <thead><tr>
+                    <th>Code</th><th>Libellé</th><th>Drapeau</th><th>RTL</th><th>Activée</th><th>Ordre</th><th class="col-actions">Actions</th>
+                </tr></thead>
+                <tbody>
+                <?php foreach ($languages_all as $lg):
+                    $is_fr = ($lg['code'] === 'fr');
+                    $flag_ok = ($lg['flag_file'] !== '' && is_file(__DIR__ . '/images/' . $lg['flag_file']));
+                ?>
+                    <?php $lg_form = 'lang-form-' . htmlspecialchars($lg['code']); ?>
+                        <tr>
+                            <td><strong><?php echo htmlspecialchars($lg['code']); ?></strong></td>
+                            <td><input type="text" name="label" form="<?php echo $lg_form; ?>" value="<?php echo htmlspecialchars($lg['label']); ?>" required style="padding:0.4rem;"></td>
+                            <td>
+                                <input type="text" name="flag_file" form="<?php echo $lg_form; ?>" value="<?php echo htmlspecialchars($lg['flag_file']); ?>" style="padding:0.4rem;" placeholder="ex : france.svg">
+                                <?php if ($lg['flag_file'] !== '' && !$flag_ok): ?>
+                                    <span class="hint" style="color:#dc3545;">Fichier introuvable dans images/</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="text-align:center;"><input type="checkbox" name="is_rtl" form="<?php echo $lg_form; ?>" value="1" <?php echo ((int) $lg['is_rtl'] === 1) ? 'checked' : ''; ?>></td>
+                            <td style="text-align:center;">
+                                <?php if ($is_fr): ?>
+                                    <input type="hidden" name="enabled" form="<?php echo $lg_form; ?>" value="1"> Oui (base)
+                                <?php else: ?>
+                                    <input type="checkbox" name="enabled" form="<?php echo $lg_form; ?>" value="1" <?php echo ((int) $lg['enabled'] === 1) ? 'checked' : ''; ?>>
+                                <?php endif; ?>
+                            </td>
+                            <td><input type="number" name="sort" form="<?php echo $lg_form; ?>" value="<?php echo htmlspecialchars($lg['sort']); ?>" style="width:70px; padding:0.4rem;"></td>
+                            <td class="col-actions">
+                                <form id="<?php echo $lg_form; ?>" action="?page=languages" method="post">
+                                    <?php echo csrf_input(); ?>
+                                    <input type="hidden" name="code" value="<?php echo htmlspecialchars($lg['code']); ?>">
+                                    <button type="submit" name="update_language" class="btn-small">Enregistrer</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php if (!$is_fr): ?>
+                        <tr>
+                            <td colspan="7" style="text-align:right; border-top:none; padding-top:0;">
+                                <form action="?page=languages" method="post" style="display:inline;"
+                                      onsubmit="return confirm('Supprimer la langue « <?php echo htmlspecialchars($lg['code']); ?> » ET toutes ses traductions (questions et modules) ? Cette action est irréversible.');">
+                                    <?php echo csrf_input(); ?>
+                                    <input type="hidden" name="code" value="<?php echo htmlspecialchars($lg['code']); ?>">
+                                    <button type="submit" name="delete_language" class="btn-small btn-danger">Supprimer cette langue</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <h2 style="font-size:1.1rem; margin-top:2rem;">Ajouter une langue</h2>
+            <form action="?page=languages" method="post">
+                <?php echo csrf_input(); ?>
+                <div class="form-group">
+                    <label for="new_code">Code (2 à 5 lettres minuscules, ex : es, it, ar) :</label>
+                    <input type="text" id="new_code" name="code" pattern="[a-z]{2,5}" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_label">Libellé (ex : Español) :</label>
+                    <input type="text" id="new_label" name="label" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_flag">Fichier drapeau dans <code>images/</code> (optionnel, ex : spain.svg) :</label>
+                    <input type="text" id="new_flag" name="flag_file">
+                </div>
+                <div class="form-group">
+                    <label class="radio-group" style="font-weight:normal;">
+                        <input type="checkbox" name="is_rtl" value="1"> Écriture de droite à gauche (RTL)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="new_sort">Ordre d'affichage (laisser vide = à la fin) :</label>
+                    <input type="number" id="new_sort" name="sort">
+                </div>
+                <button type="submit" name="add_language">Ajouter la langue</button>
             </form>
 
         <?php elseif ($page === 'database') : ?>
@@ -759,6 +1079,11 @@ if (admin_is_logged_in()) {
                 'Contenu anglais' => [
                     'questions_en' => ['table' => 'GSDatabase_en',  'label' => 'Questions EN'],
                     'texts_en'     => ['table' => 'GSDatabaseT_en', 'label' => 'Modules EN'],
+                ],
+                'Traductions (i18n)' => [
+                    'languages'      => ['table' => 'languages',        'label' => 'Langues'],
+                    'questions_i18n' => ['table' => 'GSDatabase_i18n',  'label' => 'Questions traduites'],
+                    'texts_i18n'     => ['table' => 'GSDatabaseT_i18n', 'label' => 'Modules traduits'],
                 ],
                 'Accès par clé' => [
                     'keys'       => ['table' => 'access_keys', 'label' => 'Clés d\'accès'],
