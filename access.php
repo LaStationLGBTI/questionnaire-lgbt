@@ -22,6 +22,7 @@
  */
 
 require_once __DIR__ . '/conf.php';
+require_once __DIR__ . '/i18n.php';
 
 // Session : démarrée par la page appelante en général ; on la démarre si accès direct (AJAX).
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -339,7 +340,7 @@ function access_handle_post() {
         return null;
     }
     $lang = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
-    $t = access_texts($lang);
+    i18n_use($lang);
 
     // --- Entrée par PIN de partie (joueurs du Mode Jeu, sans clé) ---
     // Volontairement hors anti-force-brute des clés : un PIN erroné ne doit pas
@@ -350,12 +351,12 @@ function access_handle_post() {
             header('Location: play.php?pin=' . $pin);
             exit();
         }
-        return $t['pin_invalid'];
+        return t('access_pin_invalid');
     }
 
     $throttle = access_throttled();
     if ($throttle['blocked']) {
-        return str_replace('{min}', (string) ceil($throttle['remaining'] / 60), $t['blocked']);
+        return t('access_blocked', ['min' => ceil($throttle['remaining'] / 60)]);
     }
     $key = access_normalize_key(isset($_POST['access_key']) ? $_POST['access_key'] : '');
     $status = access_key_status($key);
@@ -371,88 +372,15 @@ function access_handle_post() {
         exit();
     }
     if ($status === 'error') {
-        return $t['db_error'];
+        return t('access_db_error');
     }
     access_register_failure();
     $throttle = access_throttled();
     if ($throttle['blocked']) {
-        return str_replace('{min}', (string) ceil($throttle['remaining'] / 60), $t['blocked']);
+        return t('access_blocked', ['min' => ceil($throttle['remaining'] / 60)]);
     }
-    $msg = ($status === 'expired') ? $t['expired'] : (($status === 'revoked') ? $t['revoked'] : $t['invalid']);
-    return $msg . ' ' . str_replace('{n}', (string) $throttle['attempts_left'], $t['attempts_left']);
-}
-
-// ---------------------------------------------------------------------------
-//  Textes (fr / de / en)
-// ---------------------------------------------------------------------------
-
-function access_texts($lang) {
-    $all = [
-        'fr' => [
-            'title'         => 'Accès protégé',
-            'intro'         => 'L\'accès aux questionnaires nécessite une clé d\'accès. Saisissez la clé qui vous a été fournie.',
-            'placeholder'   => 'XXXX-XXXX-XXXX',
-            'submit'        => 'Valider la clé',
-            'invalid'       => 'Clé inconnue.',
-            'expired'       => 'Cette clé a expiré.',
-            'revoked'       => 'Cette clé a été désactivée.',
-            'attempts_left' => 'Il vous reste {n} tentative(s).',
-            'blocked'       => 'Trop de tentatives. Réessayez dans environ {min} minute(s).',
-            'db_error'      => 'Erreur technique, veuillez réessayer plus tard.',
-            'note_players'  => 'Les joueurs qui rejoignent une partie avec un PIN / QR code n\'ont pas besoin de clé.',
-            'banner_expired'=> 'Votre clé d\'accès a expiré : vous pouvez terminer le questionnaire en cours, mais pas en choisir un nouveau.',
-            'pin_or'        => 'ou',
-            'pin_title'     => 'Rejoindre une partie (Mode Jeu)',
-            'pin_intro'     => 'Vous avez un code PIN affiché par l\'animateur·rice ? Entrez-le ici, sans clé d\'accès.',
-            'pin_submit'    => 'Rejoindre la partie',
-            'pin_invalid'   => 'Aucune partie en cours avec ce PIN.',
-            'remember'      => 'Se souvenir de la clé sur cet appareil (30 jours)',
-            'show_key'      => 'Afficher / masquer la clé',
-        ],
-        'de' => [
-            'title'         => 'Geschützter Zugang',
-            'intro'         => 'Der Zugang zu den Fragebögen erfordert einen Zugangsschlüssel. Geben Sie den Ihnen mitgeteilten Schlüssel ein.',
-            'placeholder'   => 'XXXX-XXXX-XXXX',
-            'submit'        => 'Schlüssel bestätigen',
-            'invalid'       => 'Unbekannter Schlüssel.',
-            'expired'       => 'Dieser Schlüssel ist abgelaufen.',
-            'revoked'       => 'Dieser Schlüssel wurde deaktiviert.',
-            'attempts_left' => 'Es verbleiben {n} Versuch(e).',
-            'blocked'       => 'Zu viele Versuche. Versuchen Sie es in etwa {min} Minute(n) erneut.',
-            'db_error'      => 'Technischer Fehler, bitte versuchen Sie es später erneut.',
-            'note_players'  => 'Spieler, die mit PIN / QR-Code einem Spiel beitreten, brauchen keinen Schlüssel.',
-            'banner_expired'=> 'Ihr Zugangsschlüssel ist abgelaufen: Sie können den laufenden Fragebogen beenden, aber keinen neuen wählen.',
-            'pin_or'        => 'oder',
-            'pin_title'     => 'Einem Spiel beitreten (Spielmodus)',
-            'pin_intro'     => 'Sie haben eine PIN, die vom Spielleiter angezeigt wird? Geben Sie sie hier ein — ohne Zugangsschlüssel.',
-            'pin_submit'    => 'Dem Spiel beitreten',
-            'pin_invalid'   => 'Kein laufendes Spiel mit dieser PIN.',
-            'remember'      => 'Schlüssel auf diesem Gerät merken (30 Tage)',
-            'show_key'      => 'Schlüssel anzeigen / verbergen',
-        ],
-        'en' => [
-            'title'         => 'Protected access',
-            'intro'         => 'Access to the questionnaires requires an access key. Enter the key you were given.',
-            'placeholder'   => 'XXXX-XXXX-XXXX',
-            'submit'        => 'Validate the key',
-            'invalid'       => 'Unknown key.',
-            'expired'       => 'This key has expired.',
-            'revoked'       => 'This key has been deactivated.',
-            'attempts_left' => 'You have {n} attempt(s) left.',
-            'blocked'       => 'Too many attempts. Try again in about {min} minute(s).',
-            'db_error'      => 'Technical error, please try again later.',
-            'note_players'  => 'Players joining a game with a PIN / QR code do not need a key.',
-            'banner_expired'=> 'Your access key has expired: you can finish the current questionnaire, but not choose a new one.',
-            'pin_or'        => 'or',
-            'pin_title'     => 'Join a game (Game Mode)',
-            'pin_intro'     => 'Got a PIN shown by the host? Enter it here — no access key needed.',
-            'pin_submit'    => 'Join the game',
-            'pin_invalid'   => 'No ongoing game with this PIN.',
-            'remember'      => 'Remember the key on this device (30 days)',
-            'show_key'      => 'Show / hide the key',
-        ],
-    ];
-    return isset($all[$lang]) ? $all[$lang] : $all['fr'];
+    $msg = ($status === 'expired') ? t('access_expired') : (($status === 'revoked') ? t('access_revoked') : t('access_invalid'));
+    return $msg . ' ' . t('access_attempts_left', ['n' => $throttle['attempts_left']]);
 }
 
 // ---------------------------------------------------------------------------
@@ -463,10 +391,10 @@ function access_render_gate($lang, $error = null) {
     // index.php émet « <!DOCTYPE html> » avant le PHP : on vide le tampon de sortie
     // pour que l'écran de saisie soit une page propre (et que les en-têtes passent).
     if (ob_get_level() > 0 && ob_get_length()) { @ob_clean(); }
-    $t = access_texts($lang);
+    i18n_use($lang);
     $throttle = access_throttled();
     if ($error === null && $throttle['blocked']) {
-        $error = str_replace('{min}', (string) ceil($throttle['remaining'] / 60), $t['blocked']);
+        $error = t('access_blocked', ['min' => ceil($throttle['remaining'] / 60)]);
     }
     header('Content-Type: text/html; charset=UTF-8');
     ?>
@@ -475,7 +403,7 @@ function access_render_gate($lang, $error = null) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?php echo htmlspecialchars($t['title']); ?></title>
+<title><?php echo htmlspecialchars(t('access_title')); ?></title>
 <style>
     body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
            font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -519,8 +447,8 @@ function access_render_gate($lang, $error = null) {
 <body>
     <div class="gate">
         <div class="lock">🔐</div>
-        <h1><?php echo htmlspecialchars($t['title']); ?></h1>
-        <p class="intro"><?php echo htmlspecialchars($t['intro']); ?></p>
+        <h1><?php echo htmlspecialchars(t('access_title')); ?></h1>
+        <p class="intro"><?php echo htmlspecialchars(t('access_intro')); ?></p>
         <?php if ($error): ?><p class="error"><?php echo htmlspecialchars($error); ?></p><?php endif; ?>
         <form method="POST" action="" autocomplete="on">
             <!-- Champ « identifiant » masqué : permet aux gestionnaires de mots de passe
@@ -529,29 +457,29 @@ function access_render_gate($lang, $error = null) {
                    readonly tabindex="-1" aria-hidden="true" style="display:none;">
             <div class="key-wrap">
                 <input type="password" id="access-key-input" name="access_key" maxlength="20"
-                       autocomplete="current-password" placeholder="<?php echo htmlspecialchars($t['placeholder']); ?>"
+                       autocomplete="current-password" placeholder="<?php echo htmlspecialchars(t('access_placeholder')); ?>"
                        <?php echo $throttle['blocked'] ? 'disabled' : 'required autofocus'; ?>>
-                <button type="button" class="eye" title="<?php echo htmlspecialchars($t['show_key']); ?>"
+                <button type="button" class="eye" title="<?php echo htmlspecialchars(t('access_show_key')); ?>"
                         onclick="var k=document.getElementById('access-key-input');k.type=(k.type==='password')?'text':'password';">👁</button>
             </div>
             <label class="remember">
                 <input type="checkbox" name="remember_key" value="1" checked <?php echo $throttle['blocked'] ? 'disabled' : ''; ?>>
-                <span><?php echo htmlspecialchars($t['remember']); ?></span>
+                <span><?php echo htmlspecialchars(t('access_remember')); ?></span>
             </label>
             <button type="submit" name="access_key_submit" value="1" <?php echo $throttle['blocked'] ? 'disabled' : ''; ?>>
-                <?php echo htmlspecialchars($t['submit']); ?>
+                <?php echo htmlspecialchars(t('access_submit')); ?>
             </button>
         </form>
         <!-- Entrée par PIN de partie : les joueurs du Mode Jeu n'ont pas de clé.
              Disponible même pendant un blocage anti-force-brute des clés (flux distinct). -->
-        <div class="sep"><?php echo htmlspecialchars($t['pin_or']); ?></div>
-        <h2 class="pin-title">🎮 <?php echo htmlspecialchars($t['pin_title']); ?></h2>
-        <p class="pin-intro"><?php echo htmlspecialchars($t['pin_intro']); ?></p>
+        <div class="sep"><?php echo htmlspecialchars(t('access_pin_or')); ?></div>
+        <h2 class="pin-title">🎮 <?php echo htmlspecialchars(t('access_pin_title')); ?></h2>
+        <p class="pin-intro"><?php echo htmlspecialchars(t('access_pin_intro')); ?></p>
         <form method="POST" action="" autocomplete="off">
             <input type="text" class="pin" name="game_pin" inputmode="numeric" pattern="\d{6}" maxlength="6"
                    placeholder="123456" required>
             <button type="submit" class="pin-btn" name="game_pin_submit" value="1">
-                <?php echo htmlspecialchars($t['pin_submit']); ?>
+                <?php echo htmlspecialchars(t('access_pin_submit')); ?>
             </button>
         </form>
     </div>
