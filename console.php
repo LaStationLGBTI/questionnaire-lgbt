@@ -60,6 +60,67 @@ if (admin_is_logged_in()) {
         $lang_qs     = '&qlang=' . urlencode($qlang);
     }
 
+    // ==================== EXPORT CSV COMPLET (Base de données) ====================
+    // Export non tronqué d'une table (ex : GSDatabase pour la traduction), déclenché par
+    // ?page=database&export=1&table=<nom>. Doit s'exécuter avant toute sortie HTML.
+    // Sécurité : la liste blanche ci-dessous EST la protection, car un nom de table ne
+    // peut pas être un paramètre lié (bind) dans une requête préparée.
+    if ($page === 'database' && isset($_GET['export'])) {
+        $export_whitelist = [
+            'GSDatabase', 'GSDatabaseT', 'GSDatabase_i18n', 'GSDatabaseT_i18n',
+            'languages', 'GSDatabase_en', 'GSDatabaseT_en',
+        ];
+        $export_table = $_GET['table'] ?? '';
+        if (!in_array($export_table, $export_whitelist, true)) {
+            die('Export refusé : table inconnue.');
+        }
+        try {
+            switch ($export_table) {
+                case 'GSDatabase':
+                case 'GSDatabase_i18n':
+                    $export_order = 'id ASC';
+                    break;
+                case 'GSDatabaseT':
+                case 'GSDatabaseT_i18n':
+                    $export_order = 'level ASC';
+                    break;
+                case 'languages':
+                    $export_order = 'sort ASC';
+                    break;
+                default:
+                    $export_order = '1 ASC';
+            }
+            $stmt_export = $pdo->query("SELECT * FROM `$export_table` ORDER BY $export_order");
+
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $export_table . '_export.csv"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM UTF-8 pour un affichage correct des accents dans Excel
+
+            $export_header_written = false;
+            while ($export_row = $stmt_export->fetch(PDO::FETCH_ASSOC)) {
+                if (!$export_header_written) {
+                    fputcsv($out, array_keys($export_row), ';');
+                    $export_header_written = true;
+                }
+                fputcsv($out, $export_row, ';');
+            }
+            if (!$export_header_written) {
+                // Table vide : on écrit quand même les colonnes (DESCRIBE) pour un fichier utilisable.
+                $export_cols = $pdo->query("DESCRIBE `$export_table`")->fetchAll(PDO::FETCH_COLUMN);
+                fputcsv($out, $export_cols, ';');
+            }
+            fclose($out);
+        } catch (PDOException $e) {
+            error_log('[admin/export] ' . $e->getMessage());
+            die('Erreur lors de l\'export de la table.');
+        }
+        exit;
+    }
+
     // ==================== ONGLET QUESTIONS (GSDatabase) ====================
     try {
         // Création d'une nouvelle question (français uniquement : une question EN doit être
@@ -1139,6 +1200,16 @@ if (admin_is_logged_in()) {
                 echo '</div>';
 
                 echo "<h2 style='font-size:1.1rem;'>Table : <code>" . htmlspecialchars($view) . "</code></h2>";
+
+                // Export CSV complet (non tronqué) : uniquement pour les tables de la liste blanche.
+                $export_whitelist_ui = [
+                    'GSDatabase', 'GSDatabaseT', 'GSDatabase_i18n', 'GSDatabaseT_i18n',
+                    'languages', 'GSDatabase_en', 'GSDatabaseT_en',
+                ];
+                if (in_array($view, $export_whitelist_ui, true)) {
+                    echo '<p><a href="?page=database&export=1&table=' . urlencode($view) . '" class="back-link" style="margin:0;">'
+                       . 'Exporter en CSV (complet)</a></p>';
+                }
 
                 if ($db_counts[$current_view] === null) {
                     echo "<p>La table `" . htmlspecialchars($view) . "` n'existe pas encore. Elle sera créée automatiquement à la première utilisation (import anglais pour les tables EN, première connexion par clé pour le journal).</p>";
