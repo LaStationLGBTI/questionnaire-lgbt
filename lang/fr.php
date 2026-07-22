@@ -33,7 +33,7 @@ return [
     'thank_you' => 'Merci !',
     'popup_title' => 'Définition',
     'popup_prompt' => 'Choisissez une option dans la liste :',
-    'popup_close' => 'Close',
+    'popup_close' => 'Fermer',
     'corrections' => 'Corrections :',
     'none' => 'Aucun',
     'question_choise' => 'CHOISIR',
