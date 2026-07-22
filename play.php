@@ -1,7 +1,61 @@
 <?php
 // play.php — interface joueur (téléphone) du « Mode Jeu ».
 // Page autonome et légère (pas de nicepage). Toute la logique passe par game.php.
+require_once __DIR__ . '/conf.php';
+require_once __DIR__ . '/i18n.php';
+
 $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_GET['pin'] : '';
+
+// --- Dictionnaire JS "T" construit depuis le catalogue lang/*.php pour CHAQUE ---
+// langue activée (fr/en/de aujourd'hui, toute langue ajoutée plus tard sans retoucher
+// ce fichier). En cas d'échec DB, on retombe sur fr/en/de en dur (dégradation gracieuse).
+$playKeyMap = [
+    'pinSub'    => 'play_pin_sub',
+    'nameH1'    => 'play_name_h1',
+    'nameSub'   => 'play_name_sub',
+    'lobbyH1'   => 'play_lobby_h1',
+    'lobbySub'  => 'play_lobby_sub',
+    'waitTitle' => 'play_wait_title',
+    'waitSub'   => 'play_wait_sub',
+    'correct'   => 'play_correct',
+    'wrong'     => 'play_wrong',
+    'noAnswer'  => 'play_no_answer',
+    'endH1'     => 'play_end_h1',
+    'rank'      => 'play_rank',
+    'first'     => 'play_first',
+    'score'     => 'play_score',
+    'badPin'    => 'play_bad_pin',
+    'emptyName' => 'play_empty_name',
+    'ended'     => 'play_ended',
+    'cancelled' => 'play_cancelled',
+    'nameSubmit'   => 'play_name_submit',
+    'questionWord' => 'play_question_word',
+];
+
+$play_languages = [];
+try {
+    $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    i18n_boot($pdo);
+    $play_languages = i18n_enabled_codes($pdo);
+} catch (Throwable $e) {
+    error_log('play.php: i18n DB init failed, falling back to fr/en/de: ' . $e->getMessage());
+    $play_languages = ['fr', 'en', 'de'];
+}
+if (empty($play_languages)) {
+    $play_languages = ['fr'];
+}
+
+$play_T = [];
+foreach ($play_languages as $code) {
+    i18n_use($code);
+    $dict = [];
+    foreach ($playKeyMap as $jsKey => $catKey) {
+        $dict[$jsKey] = t($catKey);
+    }
+    $play_T[$code] = $dict;
+}
+i18n_use('fr');
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -84,7 +138,7 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
         <p class="sub" id="t-name-sub">Comment veux-tu apparaître ?</p>
         <input id="name-input" maxlength="24" placeholder="Alex">
         <div class="err" id="name-err"></div>
-        <button class="main" id="name-go">C'est parti</button>
+        <button class="main" id="name-go"></button>
     </div>
 
     <!-- 3. Lobby (en attente) -->
@@ -129,22 +183,12 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
         { c: "#7a1fa2", s: "★" }  // violet ★ (5e réponse éventuelle)
     ];
 
-    var T = {
-        fr: { pinSub:"Entre le code PIN affiché à l'écran", nameH1:"Ton pseudo", nameSub:"Comment veux-tu apparaître ?",
-              lobbyH1:"Tu es dans la partie !", lobbySub:"En attente du démarrage", waitTitle:"Réponse envoyée",
-              waitSub:"En attente des autres", correct:"Correct ! +100", wrong:"Raté", noAnswer:"Pas de réponse",
-              endH1:"Partie terminée !", rank:"e place", first:"1re place", score:"points",
-              badPin:"Partie introuvable", emptyName:"Entre un pseudo", ended:"La partie est terminée",
-              cancelled:"Partie annulée par l'hôte" }
-    };
-    T.en = { pinSub:"Enter the PIN shown on screen", nameH1:"Your nickname", nameSub:"How should you appear?",
-             lobbyH1:"You're in!", lobbySub:"Waiting for the host", waitTitle:"Answer sent",
-             waitSub:"Waiting for others", correct:"Correct! +100", wrong:"Wrong", noAnswer:"No answer",
-             endH1:"Game over!", rank:"th place", first:"1st place", score:"points",
-             badPin:"Game not found", emptyName:"Enter a nickname", ended:"The game has ended",
-             cancelled:"Game cancelled by the host" };
+    // Dictionnaire émis par PHP depuis le catalogue lang/*.php (une entrée par langue
+    // activée). Voir i18n.php / lang/fr.php,en.php,de.php pour les clés "play_*".
+    var T = <?php echo json_encode($play_T, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;
+    var DEFAULT_LANG = T.fr ? "fr" : Object.keys(T)[0];
 
-    var lang = "fr", t = T.fr;
+    var lang = DEFAULT_LANG, t = T[DEFAULT_LANG];
     var pin = "", pid = "", myName = "";
     var pollTimer = null, lastStatus = "", lastQNumber = -1, answeredThisQ = false;
 
@@ -155,11 +199,13 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
     }
     function applyLang(l) {
         if (l && T[l]) { lang = l; t = T[l]; }
+        // Code inconnu/absent : on garde la langue courante (comportement d'origine).
         $("t-pin-sub").textContent = t.pinSub;
         $("t-name-h1").textContent = t.nameH1; $("t-name-sub").textContent = t.nameSub;
         $("t-lobby-h1").textContent = t.lobbyH1; $("t-lobby-sub").textContent = t.lobbySub;
         $("wait-title").textContent = t.waitTitle; $("wait-sub").textContent = t.waitSub;
         $("t-end-h1").textContent = t.endH1;
+        $("name-go").textContent = t.nameSubmit;
     }
 
     function api(params) {
@@ -213,7 +259,7 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
     function renderQuestion(q) {
         var box = $("answers");
         box.innerHTML = "";
-        $("q-progress").textContent = "Question " + q.qNumber + (q.totalQ ? " / " + q.totalQ : "");
+        $("q-progress").textContent = t.questionWord + " " + q.qNumber + (q.totalQ ? " / " + q.totalQ : "");
         q.answers.forEach(function (a, i) {
             var pal = PALETTE[i % PALETTE.length];
             var btn = document.createElement("button");
@@ -312,7 +358,7 @@ $prefillPin = isset($_GET['pin']) && preg_match('/^\d{6}$/', $_GET['pin']) ? $_G
     }
 
     // Init : reprise de session si possible, sinon PIN (ou pseudo si PIN pré-rempli via QR).
-    applyLang("fr");
+    applyLang(DEFAULT_LANG);
     var pre = $("pin-input").value.replace(/\D/g, "");
     var saved = loadSession();
 
