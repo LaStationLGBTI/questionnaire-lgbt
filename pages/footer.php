@@ -1,15 +1,9 @@
 <?php
-$flang = isset($_GET['lang']) && in_array($_GET['lang'], ['fr', 'de', 'en']) ? $_GET['lang'] : 'fr';
-if ($flang === 'en') {
-    $footer_credit = 'Page design: R. (Hex); writing: Gérald Schlemminger, Christian Bergemann and queer activists (c) 2025 La STATION.';
-    $footer_legal  = 'Legal notice & privacy policy';
-} elseif ($flang === 'de') {
-    $footer_credit = 'Seitengestaltung: R. (Hex); Redaktion: Gérald Schlemminger, Christian Bergemann und queere Aktivist·innen (c) 2025 La STATION.';
-    $footer_legal  = 'Impressum & Datenschutz';
-} else {
-    $footer_credit = 'Conception de la page : R. (Hex) ; rédaction : Gérald Schlemminger, Christian Bergemann et des militant·es queer (c) 2025 La STATION.';
-    $footer_legal  = 'Mentions légales & confidentialité';
-}
+require_once __DIR__ . '/../i18n.php';
+$flang = isset($_GET['lang']) && preg_match('/^[a-z]{2,5}$/', $_GET['lang']) && file_exists(__DIR__ . "/../lang/{$_GET['lang']}.php") ? $_GET['lang'] : 'fr';
+i18n_use($flang);
+$footer_credit = t('footer_credit');
+$footer_legal  = t('footer_legal');
 ?>
 <footer class="u-align-center u-clearfix u-container-align-center" id="sec-33ba" >
   <div class="u-container-style u-expanded-width u-grey-70 u-group" style="background-color:##7d63a4;">
