@@ -200,6 +200,26 @@ function public_state($game, $pid = null) {
             }
         }
     }
+    // Panneau "bonnes réponses" — RÉSERVÉ À L'HÔTE (jamais envoyé aux joueurs).
+    // Calculé côté serveur à partir du vrai correctIndex, y compris pendant la phase 'question'
+    // (mise à jour en direct pour l'hôte), sans jamais révéler la bonne réponse aux joueurs.
+    $isHost = (session_id() === (isset($game['hostSid']) ? $game['hostSid'] : ''));
+    if ($isHost) {
+        $ci = (isset($game['question']) && isset($game['question']['correctIndex']))
+            ? (int)$game['question']['correctIndex'] : null;
+        $correctCount = 0;
+        $correctPlayers = [];
+        if ($ci !== null) {
+            foreach ($game['players'] as $p) {
+                if (!empty($p['answered']) && isset($p['lastChoice']) && (int)$p['lastChoice'] === $ci) {
+                    $correctCount++;
+                    $correctPlayers[] = $p['name'];
+                }
+            }
+        }
+        $out['correctCount'] = $correctCount;
+        $out['correctPlayers'] = $correctPlayers;
+    }
     // Vue personnelle du joueur (son propre choix / score).
     if ($pid !== null && isset($game['players'][$pid])) {
         $me = $game['players'][$pid];
