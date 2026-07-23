@@ -1322,6 +1322,20 @@ if (!isset($_SESSION["start"])) {
         padding:12px 18px; background:#2b2b3a; color:#fff; box-shadow:0 -4px 14px rgba(0,0,0,.2); }
     .kh-bar.show { display:flex; }
     .kh-bar .info { font-size:18px; font-weight:800; }
+    /* Panneau "bonnes réponses" côté hôte (visible seulement pour l'hôte). */
+    #kh-correct-panel { position:fixed; left:12px; top:120px; z-index:8000; display:none;
+        width:230px; max-height:70vh; overflow:auto; padding:14px 16px;
+        background:rgba(43,43,58,.92); color:#fff; border-radius:16px;
+        box-shadow:0 10px 30px rgba(0,0,0,.35); font-weight:700; }
+    #kh-correct-panel.show { display:block; }
+    #kh-correct-panel .kh-cp-title { font-size:15px; letter-spacing:.04em; text-transform:uppercase;
+        color:#a9e5bd; margin-bottom:4px; }
+    #kh-correct-panel .kh-cp-count { font-size:26px; font-weight:900; margin-bottom:10px; }
+    #kh-correct-toggle { border:none; border-radius:30px; padding:7px 14px; font-size:13px;
+        font-weight:800; color:#fff; background:#6a5cf0; cursor:pointer; margin-bottom:10px; }
+    #kh-correct-list { list-style:none; margin:0; padding:0; }
+    #kh-correct-list li { background:#cdeccd; color:#1c6b1c; border-radius:20px;
+        padding:5px 12px; margin:5px 0; font-size:15px; word-break:break-word; }
     .kh-lead-row { display:flex; justify-content:space-between; align-items:center;
         padding:12px 18px; border-radius:12px; margin-top:10px; font-weight:800; font-size:18px;
         background:#f0ecfb; color:#3a2a66; }
@@ -1362,6 +1376,14 @@ if (!isset($_SESSION["start"])) {
         </div>
         <div id="kh-lobby-err" style="color:#d23; margin-top:10px; min-height:18px;"></div>
     </div>
+</div>
+
+<!-- Panneau "bonnes réponses" (hôte uniquement) : compteur + noms en direct -->
+<div id="kh-correct-panel">
+    <div class="kh-cp-title">Bonnes réponses</div>
+    <div class="kh-cp-count"><span id="kh-correct-count">0</span> / <span id="kh-correct-total">0</span></div>
+    <button type="button" id="kh-correct-toggle">Masquer la liste</button>
+    <ul id="kh-correct-list"></ul>
 </div>
 
 <!-- Barre de contrôle hôte (pendant les questions) -->
@@ -1462,6 +1484,8 @@ if (!isset($_SESSION["start"])) {
         el("kh-action").textContent = KH.reveal;
         el("kh-action").disabled = false;
         clearHostHighlight();
+        khResetCorrectPanel();
+        khShowCorrectPanel();
         gameApi({ action: "setq", pin: GAME_PIN }).then(function (res) {
             if (res.ok && res.question) { el("kh-total").textContent = res.count; }
         });
@@ -1474,8 +1498,42 @@ if (!isset($_SESSION["start"])) {
             if (!res.ok) return;
             el("kh-answered").textContent = res.answeredCount;
             el("kh-total").textContent = res.count;
+            khUpdateCorrectPanel(res);
         }).catch(function () {});
     }
+
+    // --- Panneau "bonnes réponses" (hôte) : compteur + noms, mis à jour en direct ---
+    // Les clés correctCount / correctPlayers ne sont renvoyées qu'à l'hôte par game.php.
+    function khUpdateCorrectPanel(res) {
+        if (typeof res.correctCount === "undefined") return; // pas hôte / pas de données
+        el("kh-correct-count").textContent = res.correctCount;
+        el("kh-correct-total").textContent = res.count;
+        var list = el("kh-correct-list");
+        list.innerHTML = "";
+        var names = res.correctPlayers || [];
+        for (var i = 0; i < names.length; i++) {
+            var li = document.createElement("li");
+            li.textContent = names[i];
+            list.appendChild(li);
+        }
+    }
+    function khShowCorrectPanel() { el("kh-correct-panel").classList.add("show"); }
+    function khHideCorrectPanel() { el("kh-correct-panel").classList.remove("show"); }
+    function khResetCorrectPanel() {
+        el("kh-correct-count").textContent = "0";
+        el("kh-correct-list").innerHTML = "";
+    }
+    // Bascule : masque/affiche UNIQUEMENT la liste des noms, le compteur reste visible.
+    el("kh-correct-toggle").addEventListener("click", function () {
+        var list = el("kh-correct-list");
+        if (list.style.display === "none") {
+            list.style.display = "";
+            this.textContent = "Masquer la liste";
+        } else {
+            list.style.display = "none";
+            this.textContent = "Afficher la liste";
+        }
+    });
 
     function clearHostHighlight() {
         var blocks = document.querySelectorAll('div[id^="reponse_"]');
@@ -1497,6 +1555,7 @@ if (!isset($_SESSION["start"])) {
             el("kh-action").disabled = true;
             gameApi({ action: "reveal", pin: GAME_PIN }).then(function (res) {
                 if (res.ok && res.correctIndex) highlightCorrectHost(res.correctIndex);
+                if (res.ok) khUpdateCorrectPanel(res); // fige le compteur/liste final au reveal
                 // Même fenêtre d'info que le mode normal : bonne réponse + explication.
                 if (res.ok && typeof showAnswerPopup === "function") {
                     showAnswerPopup(res.correctText || "", res.expliq || "", true, false);
@@ -1530,6 +1589,7 @@ if (!isset($_SESSION["start"])) {
     window.gameEnd = function () {
         if (ansTimer) { clearInterval(ansTimer); ansTimer = null; }
         khRemovePopup();
+        khHideCorrectPanel();
         el("kh-bar").classList.remove("show");
         gameApi({ action: "end", pin: GAME_PIN }).then(function (res) {
             renderLeaderboard(res.ok ? res.players : []);
