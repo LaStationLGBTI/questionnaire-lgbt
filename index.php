@@ -1235,7 +1235,7 @@ if (!isset($_SESSION["start"])) {
                 &larr; <?php echo t('leave_change_module'); ?>
             </a>
             <b>
-                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background:linear-gradient(135deg,#e9d9f2 0%,#dcd4f3 50%,#cfe3f2 100%); border-left:6px solid #8a7bf4;">
+                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background:linear-gradient(135deg,#e9d9f2 0%,#dcd4f3 50%,#cfe3f2 100%); border-left:6px solid #8a7bf4; font-size:clamp(28px, 3.4vw, 44px); line-height:1.25;">
                     <?php echo $currentQuestion; ?>
                 </p>
             </b>
@@ -1322,10 +1322,11 @@ if (!isset($_SESSION["start"])) {
         padding:12px 18px; background:#2b2b3a; color:#fff; box-shadow:0 -4px 14px rgba(0,0,0,.2); }
     .kh-bar.show { display:flex; }
     .kh-bar .info { font-size:18px; font-weight:800; }
+    body.kh-playing { padding-bottom: 96px; }
     /* Panneau "bonnes réponses" côté hôte (visible seulement pour l'hôte). */
     #kh-correct-panel { position:fixed; left:12px; top:120px; z-index:8000; display:none;
-        width:230px; max-height:70vh; overflow:auto; padding:14px 16px;
-        background:rgba(43,43,58,.92); color:#fff; border-radius:16px;
+        width:180px; max-height:60vh; overflow:auto; padding:14px 16px;
+        background:rgba(43,43,58,.85); color:#fff; border-radius:16px;
         box-shadow:0 10px 30px rgba(0,0,0,.35); font-weight:700; }
     #kh-correct-panel.show { display:block; }
     #kh-correct-panel .kh-cp-title { font-size:15px; letter-spacing:.04em; text-transform:uppercase;
@@ -1337,9 +1338,11 @@ if (!isset($_SESSION["start"])) {
     #kh-correct-list li { background:#cdeccd; color:#1c6b1c; border-radius:20px;
         padding:5px 12px; margin:5px 0; font-size:15px; word-break:break-word; }
     .kh-lead-row { display:flex; justify-content:space-between; align-items:center;
-        padding:12px 18px; border-radius:12px; margin-top:10px; font-weight:800; font-size:18px;
+        padding:12px 18px; border-radius:12px; font-weight:800; font-size:18px;
         background:#f0ecfb; color:#3a2a66; }
     .kh-lead-row.top { background:linear-gradient(90deg,#ffd54a,#ffb300); color:#5a3a00; }
+    #kh-leader-list { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:10px; max-height:70vh; overflow:auto; }
+    #kh-leader .kh-card { max-width: min(1100px, 92vw); }
     .kh-correct-host {
         position:relative; z-index:2; border-radius:14px;
         outline:6px solid #26ff7a; outline-offset:4px;
@@ -1468,6 +1471,7 @@ if (!isset($_SESSION["start"])) {
         var qcm = document.getElementById("qcm");
         if (qcm) qcm.style.display = "";
         el("kh-bar").classList.add("show");
+        document.body.classList.add("kh-playing");
         startQuestion(); // rend la 1re question ; gameAfterRender() est appelé ensuite
     });
 
@@ -1591,6 +1595,7 @@ if (!isset($_SESSION["start"])) {
         khRemovePopup();
         khHideCorrectPanel();
         el("kh-bar").classList.remove("show");
+        document.body.classList.remove("kh-playing");
         gameApi({ action: "end", pin: GAME_PIN }).then(function (res) {
             renderLeaderboard(res.ok ? res.players : []);
             el("kh-leader").classList.remove("kh-hidden");
@@ -1601,10 +1606,17 @@ if (!isset($_SESSION["start"])) {
         if (!players.length) {
             list.innerHTML = "<p><?php echo t('no_players'); ?></p>"; return;
         }
+        var prevScore = null, rank = 0;
         players.forEach(function (p, i) {
+            if (i > 0 && p.score === prevScore) {
+                // rank unchanged (tie)
+            } else {
+                rank = i + 1;
+            }
+            prevScore = p.score;
             var row = document.createElement("div");
-            row.className = "kh-lead-row" + (i === 0 ? " top" : "");
-            var medal = i === 0 ? "🥇 " : (i === 1 ? "🥈 " : (i === 2 ? "🥉 " : (i + 1) + ". "));
+            row.className = "kh-lead-row" + (rank === 1 ? " top" : "");
+            var medal = rank === 1 ? "🥇 " : (rank === 2 ? "🥈 " : (rank === 3 ? "🥉 " : rank + ". "));
             row.innerHTML = "<span>" + medal + p.name + "</span><span>" + p.score + " " + KH.pts + "</span>";
             list.appendChild(row);
         });
