@@ -267,6 +267,18 @@ switch ($action) {
         jexit(['ok' => true, 'pin' => $pin]);
     }
 
+    case 'resume': {
+        // Rechargement de la page hôte : reconnexion à la MÊME partie (même PIN, QR,
+        // joueurs, scores) au lieu d'en créer une nouvelle et vide.
+        $pin = isset($_SESSION['game_pin']) ? $_SESSION['game_pin'] : null;
+        if (empty($pin)) jerr('no_game');
+        $game = load_game($GAME_DIR, $pin);
+        if (!$game) { unset($_SESSION['game_pin']); jerr('no_game'); }
+        if (!isset($game['hostSid']) || $game['hostSid'] !== session_id()) jerr('not_host');
+        if ((isset($game['status']) ? $game['status'] : '') === 'ended') jerr('ended');
+        jexit(['ok' => true, 'pin' => $pin, 'status' => $game['status']]);
+    }
+
     case 'setq': {
         $pin = isset($_REQUEST['pin']) ? $_REQUEST['pin'] : (isset($_SESSION['game_pin']) ? $_SESSION['game_pin'] : '');
         // La question courante est lue dans la session de l'hôte (hors verrou : pas d'accès fichier).
