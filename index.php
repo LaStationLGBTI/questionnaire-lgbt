@@ -1361,6 +1361,8 @@ if (!isset($_SESSION["start"])) {
     }
     @keyframes khPop { 0% { transform:scale(0); } 70% { transform:scale(1.25); } 100% { transform:scale(1); } }
     .kh-dim { opacity:.35; filter:grayscale(.4); transition:opacity .3s ease, filter .3s ease; }
+    /* En mode jeu, remonte le bouton "rouvrir" au-dessus de la barre fixe (kh-bar). */
+    body.kh-playing #answer-reopen-btn { bottom: 116px !important; }
 </style>
 
 <!-- Lobby hôte -->
@@ -1394,8 +1396,20 @@ if (!isset($_SESSION["start"])) {
     <span class="info"><span id="kh-answered">0</span> / <span id="kh-total">0</span> <?php echo t('answered_count'); ?></span>
     <span style="display:flex; gap:10px;">
         <button class="kh-btn danger kh-cancel" type="button"><?php echo t('cancel'); ?></button>
+        <button class="kh-btn alt" id="kh-showqr" type="button">QR / PIN</button>
         <button class="kh-btn alt" id="kh-action"><?php echo t('reveal_answers'); ?></button>
     </span>
+</div>
+
+<!-- Fenêtre QR/PIN à la demande (pendant le jeu) — n'affecte pas le lobby ni le bouton Démarrer -->
+<div id="kh-qr-modal" class="kh-overlay kh-hidden">
+    <div class="kh-card">
+        <div class="kh-pin-label"><?php echo t('join_with_pin'); ?></div>
+        <div class="kh-pin" id="kh-qrm-pin">······</div>
+        <div id="kh-qrm-qr"></div>
+        <div class="kh-url" id="kh-qrm-url"></div>
+        <button class="kh-btn alt" id="kh-qrm-close" type="button" style="margin-top:14px;"><?php echo t('popup_close'); ?></button>
+    </div>
 </div>
 
 <!-- Classement final -->
@@ -1441,18 +1455,27 @@ if (!isset($_SESSION["start"])) {
         var bn = document.getElementById("button_next"); if (bn) bn.style.display = "none";
         var quit = document.getElementById("quit-to-modules"); if (quit) quit.style.display = "none";
         el("kh-lobby").classList.remove("kh-hidden");
-        gameApi({ action: "create" }).then(function (res) {
-            if (!res.ok) { el("kh-lobby-err").textContent = KH.err; return; }
-            GAME_PIN = res.pin;
-            el("kh-pin").textContent = res.pin;
-            var url = playUrl(res.pin);
-            el("kh-url").textContent = url;
-            el("kh-qr").innerHTML = "";
-            try { new QRCode(el("kh-qr"), { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
-            lobbyTimer = setInterval(lobbyPoll, 1500);
-            lobbyPoll();
+        // Reconnexion à une partie existante (rechargement de page) avant d'en créer une neuve :
+        // conserve PIN, QR, joueurs déjà connectés et leurs scores.
+        gameApi({ action: "resume" }).then(function (res) {
+            if (res.ok) { khEnterLobby(res.pin); return; }
+            gameApi({ action: "create" }).then(function (res2) {
+                if (!res2.ok) { el("kh-lobby-err").textContent = KH.err; return; }
+                khEnterLobby(res2.pin);
+            });
         });
     };
+    // Remplit le lobby (PIN / URL / QR) et démarre le polling — partagé par create et resume.
+    function khEnterLobby(pin) {
+        GAME_PIN = pin;
+        el("kh-pin").textContent = pin;
+        var url = playUrl(pin);
+        el("kh-url").textContent = url;
+        el("kh-qr").innerHTML = "";
+        try { new QRCode(el("kh-qr"), { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
+        lobbyTimer = setInterval(lobbyPoll, 1500);
+        lobbyPoll();
+    }
     function lobbyPoll() {
         gameApi({ action: "state", pin: GAME_PIN }).then(function (res) {
             if (!res.ok) return;
@@ -1588,6 +1611,25 @@ if (!isset($_SESSION["start"])) {
     Array.prototype.forEach.call(document.querySelectorAll(".kh-cancel"), function (b) {
         b.addEventListener("click", khAbort);
     });
+
+    // --- Bouton "QR / PIN" (barre) : réaffiche PIN + QR sans relancer le lobby ni Démarrer ---
+    (function () {
+        var btn = el("kh-showqr"), modal = el("kh-qr-modal"), closeBtn = el("kh-qrm-close");
+        if (btn && modal) {
+            btn.addEventListener("click", function () {
+                if (!GAME_PIN) { return; }
+                el("kh-qrm-pin").textContent = GAME_PIN;
+                var url = playUrl(GAME_PIN);
+                el("kh-qrm-url").textContent = url;
+                var qc = el("kh-qrm-qr"); qc.innerHTML = "";
+                try { new QRCode(qc, { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
+                modal.classList.remove("kh-hidden");
+            });
+        }
+        if (closeBtn && modal) {
+            closeBtn.addEventListener("click", function () { modal.classList.add("kh-hidden"); });
+        }
+    })();
 
     // --- Fin de partie : classement ---
     window.gameEnd = function () {
