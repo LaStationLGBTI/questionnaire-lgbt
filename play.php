@@ -96,7 +96,7 @@ i18n_use('fr');
     .q-head { font-size: 15px; font-weight: 800; opacity: .95; flex: 0 0 auto;
         background: rgba(255,255,255,.18); padding: 8px 14px; border-radius: 30px; align-self: center; }
     .answers { flex: 1 1 auto; display: grid; grid-template-columns: 1fr 1fr;
-        grid-auto-rows: 1fr; gap: 10px; width: 100%; min-height: 0; }
+        grid-auto-rows: minmax(0, 1fr); gap: 10px; width: 100%; min-height: 0; max-height: 62vh; align-content: center; }
     .answers.single { grid-template-columns: 1fr; }
     .ans {
         border: none; border-radius: 16px; color: #fff; font-weight: 800;
