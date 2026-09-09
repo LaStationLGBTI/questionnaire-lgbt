@@ -1235,7 +1235,7 @@ if (!isset($_SESSION["start"])) {
                 &larr; <?php echo t('leave_change_module'); ?>
             </a>
             <b>
-                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background:linear-gradient(135deg,#e9d9f2 0%,#dcd4f3 50%,#cfe3f2 100%); border-left:6px solid #8a7bf4; font-size:clamp(28px, 3.4vw, 44px); line-height:1.25;">
+                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background:linear-gradient(135deg,#e9d9f2 0%,#dcd4f3 50%,#cfe3f2 100%); border-left:6px solid #8a7bf4; font-size:clamp(24px, 3.4vw, 30px); line-height:1.25;">
                     <?php echo $currentQuestion; ?>
                 </p>
             </b>
