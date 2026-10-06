@@ -8,7 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mentions légales &amp; Politique de confidentialité — La Station LGBTQIA+</title>
+    <title>Mentions légales &amp; Politique de confidentialité - La Station LGBTQIA+</title>
     <style>
         body { margin: 0; padding: 30px 20px 60px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                background: #f7f4fb; color: #2b2b2b; line-height: 1.65; }
@@ -44,8 +44,8 @@
         La Station LGBTQIA+, association de droit local alsacien-mosellan, inscrite au registre des
         associations du tribunal judiciaire de Strasbourg.<br>
         Siège social : 7 Rue des Écrivains, 67000 Strasbourg<br>
-        SIREN : 530 888 536 — SIRET : 530 888 536 00022 — Code NAF : 88.99B<br>
-        Téléphone : +33 9 50 51 13 29 — Contact : <a href="mailto:contact@lastation-lgbti.eu">contact@lastation-lgbti.eu</a>
+        SIREN : 530 888 536 - SIRET : 530 888 536 00022 - Code NAF : 88.99B<br>
+        Téléphone : +33 9 50 51 13 29 - Contact : <a href="mailto:contact@lastation-lgbti.eu">contact@lastation-lgbti.eu</a>
     </p>
 
     <h3>Directeur / directrice de la publication</h3>
@@ -54,13 +54,13 @@
     <h3>Hébergeur</h3>
     <p>
         Le site est hébergé au sein même de l'association : La Station LGBTQIA+<br>
-        7 Rue des Écrivains, 67000 Strasbourg (France) — Téléphone : +33 9 50 51 13 29
+        7 Rue des Écrivains, 67000 Strasbourg (France) - Téléphone : +33 9 50 51 13 29
     </p>
 
     <h3>Propriété intellectuelle</h3>
     <p>
         Conception de la page : R. (Hex) ; rédaction : Gérald Schlemminger, Christian Bergemann et des militant·es
-        queer — &copy; 2025 La STATION. Toute reproduction ou réutilisation des contenus sans autorisation
+        queer - &copy; 2025 La STATION. Toute reproduction ou réutilisation des contenus sans autorisation
         préalable est interdite.
     </p>
 
@@ -74,23 +74,23 @@
 
     <h3>2. Données collectées et finalités</h3>
     <ul>
-        <li><strong>Vos réponses aux questionnaires</strong> — collectées pour établir des statistiques agrégées
+        <li><strong>Vos réponses aux questionnaires</strong> - collectées pour établir des statistiques agrégées
             et améliorer les formations de l'association. Elles ne sont pas associées à votre nom. La clé d'accès
             utilisée pour répondre est conservée avec la réponse afin de regrouper les statistiques par groupe
             (ex. session de formation) ; c'est un code de groupe, pas une donnée personnelle identifiante.</li>
-        <li><strong>Identité de genre et orientation sexuelle</strong> (questions finales) — données dites
+        <li><strong>Identité de genre et orientation sexuelle</strong> (questions finales) - données dites
             « sensibles » au sens de l'article 9 du RGPD. Elles ne sont traitées qu'avec votre
             <strong>consentement explicite</strong> (case à cocher), la réponse
             « Je ne souhaite pas répondre » est toujours proposée et n'a aucune incidence sur votre participation.</li>
-        <li><strong>Adresse e-mail</strong> (facultative) — utilisée <strong>uniquement</strong> pour vous envoyer
+        <li><strong>Adresse e-mail</strong> (facultative) - utilisée <strong>uniquement</strong> pour vous envoyer
             vos résultats, le temps de votre session. Elle n'est <strong>pas conservée</strong> en base de données.</li>
-        <li><strong>Journal technique des connexions par clé d'accès</strong> (adresse IP, navigateur, date) —
+        <li><strong>Journal technique des connexions par clé d'accès</strong> (adresse IP, navigateur, date) -
             à des fins de sécurité et de gestion des accès (intérêt légitime, art. 6-1-f du RGPD).</li>
-        <li><strong>Cookie de session</strong> — strictement nécessaire au fonctionnement du questionnaire
+        <li><strong>Cookie de session</strong> - strictement nécessaire au fonctionnement du questionnaire
             (exempté de consentement, délibération CNIL). Si vous cochez « se souvenir de la clé sur cet
             appareil », un cookie fonctionnel conserve votre clé d'accès pendant 30 jours (supprimable à tout
             moment via les réglages de votre navigateur). Aucun cookie publicitaire ni traceur tiers n'est utilisé.</li>
-        <li><strong>Mode Jeu (quiz en direct)</strong> — le pseudo que vous choisissez (un prénom ou un surnom
+        <li><strong>Mode Jeu (quiz en direct)</strong> - le pseudo que vous choisissez (un prénom ou un surnom
             suffit, inutile de donner votre nom complet), vos réponses et votre score sont conservés dans un fichier
             temporaire sur le serveur, uniquement pour afficher la partie et le classement. Ces données ne sont
             <strong>pas enregistrées</strong> en base de données ni dans les statistiques, et sont supprimées
