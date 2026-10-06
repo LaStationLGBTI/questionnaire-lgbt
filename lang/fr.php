@@ -145,6 +145,8 @@ return [
     'play_cancelled' => 'Partie annulée par l\'hôte',
     'play_name_submit' => 'C\'est parti',
     'play_question_word' => 'Question',
+    'play_reconnecting' => 'Connexion perdue — reconnexion…',
+    'play_net_error' => 'Connexion impossible, réessaie',
 
     // --- Step 5: module cards / misc ---
     'module_word' => 'Module',
@@ -157,4 +159,10 @@ return [
     'js_correct_answer' => 'Bonne réponse',
     'js_see_answer' => 'Voir la réponse',
     'js_error_alert' => 'Une erreur s\'est produite. Veuillez réessayer.',
+    'game_net_lost' => 'Connexion perdue — reconnexion… (la partie et les scores sont conservés)',
+    'game_correct_title' => 'Bonnes réponses',
+    'game_hide_list' => 'Masquer la liste',
+    'game_show_list' => 'Afficher la liste',
+    'game_not_host' => 'Cette partie n\'est plus contrôlée par cette page (autre onglet ou session). Rechargez la page.',
+    'game_next_failed' => 'Impossible de charger la question suivante — nouvel essai automatique…',
 ];
