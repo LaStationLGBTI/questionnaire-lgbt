@@ -145,6 +145,8 @@ return [
     'play_cancelled' => 'Game cancelled by the host',
     'play_name_submit' => 'Let\'s go',
     'play_question_word' => 'Question',
+    'play_reconnecting' => 'Connection lost — reconnecting…',
+    'play_net_error' => 'Cannot connect, please try again',
 
     // --- Step 5: module cards / misc ---
     'module_word' => 'Module',
@@ -157,4 +159,10 @@ return [
     'js_correct_answer' => 'Correct answer',
     'js_see_answer' => 'See the answer',
     'js_error_alert' => 'An error occurred. Please try again.',
+    'game_net_lost' => 'Connection lost — reconnecting… (the game and scores are kept)',
+    'game_correct_title' => 'Correct answers',
+    'game_hide_list' => 'Hide list',
+    'game_show_list' => 'Show list',
+    'game_not_host' => 'This page no longer controls the game (another tab or session). Please reload the page.',
+    'game_next_failed' => 'Could not load the next question — retrying automatically…',
 ];
