@@ -145,6 +145,8 @@ return [
     'play_cancelled' => 'Spiel vom Gastgeber abgebrochen',
     'play_name_submit' => 'Los geht\'s',
     'play_question_word' => 'Frage',
+    'play_reconnecting' => 'Verbindung verloren — erneuter Versuch…',
+    'play_net_error' => 'Keine Verbindung, bitte erneut versuchen',
 
     // --- Step 5: module cards / misc ---
     'module_word' => 'Modul',
@@ -157,4 +159,10 @@ return [
     'js_correct_answer' => 'Richtige Antwort',
     'js_see_answer' => 'Antwort anzeigen',
     'js_error_alert' => 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.',
+    'game_net_lost' => 'Verbindung verloren — neuer Verbindungsversuch… (Spiel und Punkte bleiben erhalten)',
+    'game_correct_title' => 'Richtige Antworten',
+    'game_hide_list' => 'Liste ausblenden',
+    'game_show_list' => 'Liste anzeigen',
+    'game_not_host' => 'Diese Seite steuert das Spiel nicht mehr (anderer Tab oder andere Sitzung). Bitte die Seite neu laden.',
+    'game_next_failed' => 'Nächste Frage konnte nicht geladen werden — automatischer neuer Versuch…',
 ];
