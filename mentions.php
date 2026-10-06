@@ -1,7 +1,7 @@
 <?php
 // Mentions légales (LCEN, loi n° 2004-575, art. 6-III) et politique de
 // confidentialité (RGPD, art. 13). Page publique, sans données ni session.
-// Les champs [À COMPLÉTER] doivent être renseignés par l'association avant mise en ligne.
+// Coordonnées reprises de https://lastation-lgbti.eu/mentions-legales/ (oct. 2026).
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -41,20 +41,20 @@
 
     <h3>Éditeur du site</h3>
     <p>
-        <span class="todo">[À COMPLÉTER : dénomination complète de l'association]</span> — « La STATION LGBTQIA+ »,
-        association loi 1901.<br>
-        Siège social : <span class="todo">[À COMPLÉTER : adresse complète]</span><br>
-        N° RNA : <span class="todo">[À COMPLÉTER]</span> — SIREN : <span class="todo">[À COMPLÉTER, le cas échéant]</span><br>
-        Contact : <span class="todo">[À COMPLÉTER : adresse e-mail de contact]</span>
+        La Station LGBTQIA+, association de droit local alsacien-mosellan, inscrite au registre des
+        associations du tribunal judiciaire de Strasbourg.<br>
+        Siège social : 7 Rue des Écrivains, 67000 Strasbourg<br>
+        SIREN : 530 888 536 — SIRET : 530 888 536 00022 — Code NAF : 88.99B<br>
+        Téléphone : +33 9 50 51 13 29 — Contact : <a href="mailto:contact@lastation-lgbti.eu">contact@lastation-lgbti.eu</a>
     </p>
 
     <h3>Directeur / directrice de la publication</h3>
-    <p><span class="todo">[À COMPLÉTER : nom et prénom, en général le/la président·e de l'association]</span></p>
+    <p>Flora GIROS et Gerald SCHLEMMINGER, co-président⋅es de l'association.</p>
 
     <h3>Hébergeur</h3>
     <p>
-        <span class="todo">[À COMPLÉTER : raison sociale de l'hébergeur]</span><br>
-        <span class="todo">[À COMPLÉTER : adresse]</span> — Téléphone : <span class="todo">[À COMPLÉTER]</span>
+        Le site est hébergé au sein même de l'association : La Station LGBTQIA+<br>
+        7 Rue des Écrivains, 67000 Strasbourg (France) — Téléphone : +33 9 50 51 13 29
     </p>
 
     <h3>Propriété intellectuelle</h3>
@@ -69,13 +69,15 @@
     <h3>1. Responsable du traitement</h3>
     <p>
         Le responsable du traitement est l'association éditrice du site (voir « Éditeur du site » ci-dessus).
-        Pour toute question relative à vos données : <span class="todo">[À COMPLÉTER : e-mail de contact données personnelles]</span>.
+        Pour toute question relative à vos données : <a href="mailto:administration@lastation-lgbti.eu">administration@lastation-lgbti.eu</a>.
     </p>
 
     <h3>2. Données collectées et finalités</h3>
     <ul>
         <li><strong>Vos réponses aux questionnaires</strong> — collectées pour établir des statistiques agrégées
-            et améliorer les formations de l'association. Elles ne sont pas associées à votre nom.</li>
+            et améliorer les formations de l'association. Elles ne sont pas associées à votre nom. La clé d'accès
+            utilisée pour répondre est conservée avec la réponse afin de regrouper les statistiques par groupe
+            (ex. session de formation) ; c'est un code de groupe, pas une donnée personnelle identifiante.</li>
         <li><strong>Identité de genre et orientation sexuelle</strong> (questions finales) — données dites
             « sensibles » au sens de l'article 9 du RGPD. Elles ne sont traitées qu'avec votre
             <strong>consentement explicite</strong> (case à cocher), la réponse
@@ -88,6 +90,15 @@
             (exempté de consentement, délibération CNIL). Si vous cochez « se souvenir de la clé sur cet
             appareil », un cookie fonctionnel conserve votre clé d'accès pendant 30 jours (supprimable à tout
             moment via les réglages de votre navigateur). Aucun cookie publicitaire ni traceur tiers n'est utilisé.</li>
+        <li><strong>Mode Jeu (quiz en direct)</strong> — le pseudo que vous choisissez (un prénom ou un surnom
+            suffit, inutile de donner votre nom complet), vos réponses et votre score sont conservés dans un fichier
+            temporaire sur le serveur, uniquement pour afficher la partie et le classement. Ces données ne sont
+            <strong>pas enregistrées</strong> en base de données ni dans les statistiques, et sont supprimées
+            automatiquement au plus tard 6 heures après la dernière activité de la partie. Sur le téléphone du joueur,
+            le stockage local du navigateur garde le code de la partie et le pseudo pour permettre de revenir dans la
+            partie en cas de coupure ; il est effacé à la fin de la partie. Pour la personne qui anime la partie, un
+            cookie technique (12 heures) permet de reprendre le contrôle de la partie après une coupure réseau.
+            Ces éléments sont strictement nécessaires au fonctionnement du jeu (exemptés de consentement).</li>
     </ul>
 
     <h3>3. Durées de conservation</h3>
@@ -98,20 +109,21 @@
         <tr><td>Journal des connexions par clé (IP)</td><td>12 mois, puis suppression automatique</td></tr>
         <tr><td>Cookie de session</td><td>Supprimé à la fermeture du navigateur</td></tr>
         <tr><td>Cookie « se souvenir de la clé » (optionnel)</td><td>30 jours</td></tr>
+        <tr><td>Mode Jeu : pseudo, réponses et score (fichier temporaire)</td><td>6 heures maximum après la dernière activité de la partie</td></tr>
+        <tr><td>Mode Jeu : stockage local du joueur (code de partie, pseudo)</td><td>Jusqu'à la fin de la partie</td></tr>
+        <tr><td>Mode Jeu : cookie de l'animateur·rice</td><td>12 heures</td></tr>
     </table>
 
     <h3>4. Destinataires des données</h3>
     <p>
-        Les données ne sont transmises à aucun tiers. Elles sont hébergées par l'hébergeur mentionné ci-dessus
-        <span class="todo">[À VÉRIFIER : hébergement au sein de l'Union européenne ; sinon, indiquer les garanties
-        de transfert]</span>. Seuls les membres habilités de l'association y ont accès.
+        Les données ne sont transmises à aucun tiers. Elles sont hébergées par l'hébergeur mentionné ci-dessus, en France (Union européenne). Seuls les membres habilités de l'association y ont accès.
     </p>
 
     <h3>5. Vos droits</h3>
     <p>
         Conformément aux articles 15 à 22 du RGPD, vous disposez des droits d'accès, de rectification,
         d'effacement, de limitation, d'opposition, ainsi que du droit de retirer votre consentement à tout moment.
-        Pour les exercer : <span class="todo">[À COMPLÉTER : e-mail de contact]</span>.
+        Pour les exercer : <a href="mailto:administration@lastation-lgbti.eu">administration@lastation-lgbti.eu</a>.
         Vous pouvez également introduire une réclamation auprès de la CNIL
         (<a href="https://www.cnil.fr" target="_blank" rel="noopener">www.cnil.fr</a>).
     </p>
