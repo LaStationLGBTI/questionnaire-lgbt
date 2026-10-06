@@ -1,4 +1,7 @@
 <?php
+// Même durée de vie de session que index.php / game.php : sinon le GC par défaut (1440 s)
+// peut supprimer une session hôte/questionnaire inactive.
+ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 require_once 'conf.php';
 // Accès au site par clé (access.php) : les statistiques exigent aussi une clé valide.
@@ -10,6 +13,7 @@ if (!access_session_valid()) {
 
 // Liste des modules (anciennement "niveaux") pour le sélecteur.
 $modules = [];
+$group_label = access_format_key($_SESSION['access_key']); // repli : clé formatée XXXX-XXXX-XXXX
 try {
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -18,9 +22,22 @@ try {
     foreach ($levels as $lvl) {
         $modules[$lvl] = isset($titles[$lvl]) ? $titles[$lvl] : '';
     }
+    // Catégorisation par groupe : libellé de la clé d'accès courante, si renseigné par l'admin.
+    $key_stmt = $pdo->prepare("SELECT label FROM access_keys WHERE access_key = ?");
+    $key_stmt->execute([$_SESSION['access_key']]);
+    $key_label = $key_stmt->fetchColumn();
+    if ($key_label !== false && $key_label !== '') {
+        $group_label = $key_label;
+    }
 } catch (PDOException $e) {
     $modules = [];
 }
+
+// Note trilingue (même convention que le reste du site : $_SESSION['language'] fr/de/en).
+$stats_lang = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
+$group_note = $stats_lang === 'en' ? 'Results for group: ' . $group_label
+    : ($stats_lang === 'de' ? 'Ergebnisse der Gruppe: ' . $group_label
+    : 'Résultats du groupe : ' . $group_label);
 // Module sélectionné par défaut : 2 s'il existe, sinon le premier disponible.
 if (isset($modules[2])) {
     $selected_module = 2;
@@ -38,7 +55,7 @@ if (isset($modules[2])) {
     <meta charset="utf-8">
     <title>Statistiques</title>
     <link rel="stylesheet" href="nicepage.css" media="screen">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/chart.umd.min.js"></script>
     <link rel="stylesheet" href="Question.css" media="screen">
     <style>
         .chart-container {
@@ -154,6 +171,9 @@ if (isset($modules[2])) {
                         </select>
                     </div>
 
+                    <div style="margin:0 0 0.6em; font-size:14px; color:#555;">
+                        <?= htmlspecialchars($group_note) ?>
+                    </div>
                     <div id="totalCount" class="count-box">
                         <span id="totalCountText">Total des réponses (Module <?= htmlspecialchars($selected_module) ?>) : 0</span>
                     </div>
