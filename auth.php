@@ -51,7 +51,22 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
         // PHP < 7.3 : SameSite passé via le paramètre "path" (astuce compatible).
         session_set_cookie_params(0, '/; samesite=Strict', '', $https, true);
     }
+    // Même durée de vie de fichier de session que index.php / game.php : le GC par défaut
+    // (1440 s) déclenché depuis l'admin supprimait aussi les sessions publiques inactives
+    // (hôte du Mode Jeu). L'expiration de l'admin est désormais explicite (ADMIN_IDLE_TIMEOUT).
+    ini_set('session.gc_maxlifetime', 31536000);
     session_start();
+}
+
+// Expiration de la connexion admin après inactivité (équivalent de l'ancien GC de 1440 s).
+// Seul le drapeau admin est retiré : le reste de la session (questionnaire) n'est pas touché.
+if (!defined('ADMIN_IDLE_TIMEOUT')) define('ADMIN_IDLE_TIMEOUT', 1440);
+if (isset($_SESSION['is_logged_in']) && $_SESSION['is_logged_in'] === true) {
+    if (isset($_SESSION['admin_last_seen']) && time() - (int) $_SESSION['admin_last_seen'] > ADMIN_IDLE_TIMEOUT) {
+        unset($_SESSION['is_logged_in'], $_SESSION['admin_last_seen']);
+    } else {
+        $_SESSION['admin_last_seen'] = time();
+    }
 }
 
 // ---------------------------------------------------------------------------
