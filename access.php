@@ -26,6 +26,9 @@ require_once __DIR__ . '/i18n.php';
 
 // Session : démarrée par la page appelante en général ; on la démarre si accès direct (AJAX).
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    // Même durée de vie que index.php / game.php : le GC par défaut (1440 s) déclenché depuis
+    // ce point d'entrée AJAX supprimait des sessions de questionnaire / d'hôte inactives.
+    ini_set('session.gc_maxlifetime', 31536000);
     session_start();
 }
 
@@ -67,6 +70,33 @@ function access_ensure_log_table($pdo) {
         KEY idx_key (access_key),
         KEY idx_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+}
+
+/**
+ * Ajoute GSDatabaseR.access_key (groupe = clé utilisée pour répondre) si absente.
+ * Migration idempotente (même principe que created_at dans console.php, onglet
+ * Base de données) : appelée avant l'INSERT dans updateQuestion2.php, jamais
+ * bloquante — si l'ALTER échoue, l'insertion se poursuit sans la colonne.
+ * Anciennes lignes = NULL (clé inconnue, pas de groupe).
+ *
+ * Renvoie un bool : la colonne existe-t-elle (après tentative de migration) ?
+ * Mis en cache pour la durée de la requête (évite un DESCRIBE répété par appelant :
+ * updateQuestion2.php, stats_getdata.php, console.php appellent tous ce helper).
+ */
+function access_ensure_responses_key_column($pdo) {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+    try {
+        $cols = $pdo->query("DESCRIBE `GSDatabaseR`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('access_key', $cols)) {
+            $pdo->exec("ALTER TABLE GSDatabaseR ADD COLUMN access_key VARCHAR(32) NULL DEFAULT NULL, ADD INDEX idx_access_key (access_key)");
+        }
+        $cache = true;
+    } catch (PDOException $e) {
+        error_log('[access] migration access_key : ' . $e->getMessage());
+        $cache = false;
+    }
+    return $cache;
 }
 
 // Durées de conservation (politique de confidentialité, mentions.php) :
@@ -322,12 +352,22 @@ function access_grant($key) {
 }
 
 /**
- * Une partie « Mode Jeu » existe-t-elle pour ce PIN ?
+ * Une partie « Mode Jeu » existe-t-elle (et est-elle encore rejoignable) pour ce PIN ?
  * Même convention que game.php : un fichier <pin>.json dans le dossier temporaire.
+ * Lecture tolérante, SANS verrou (simple gate d'entrée, pas d'écriture concurrente ici) :
+ * un JSON illisible/incomplet (écriture en cours côté game.php) est considéré comme une
+ * partie active (fail-open) plutôt que de bloquer un PIN valide ; seul un statut
+ * explicite ended/cancelled est rejeté.
  */
 function access_game_pin_exists($pin) {
     if (!preg_match('/^\d{6}$/', (string) $pin)) return false;
-    return is_file(sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lgbt_kahoot' . DIRECTORY_SEPARATOR . $pin . '.json');
+    $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lgbt_kahoot' . DIRECTORY_SEPARATOR . $pin . '.json';
+    if (!is_file($path)) return false;
+    $raw = @file_get_contents($path);
+    if ($raw === false || $raw === '') return true; // busy : fail-open
+    $data = json_decode($raw, true);
+    if (!is_array($data) || !isset($data['status'])) return true; // busy : fail-open
+    return $data['status'] !== 'ended' && $data['status'] !== 'cancelled';
 }
 
 /**
