@@ -2,6 +2,9 @@
 require_once 'conf.php';
 header('Content-Type: application/json');
 // Accès au site par clé (access.php) : refuse les données si aucune clé valide en session.
+// Même durée de vie de session que index.php / game.php (sinon le GC par défaut 1440 s
+// peut supprimer une session hôte/questionnaire inactive).
+ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 require_once __DIR__ . '/access.php';
 if (!access_session_valid()) {
@@ -30,8 +33,18 @@ try {
     $stmt->execute([$level]);
     $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    $stmt = $pdo->query("SELECT * FROM GSDatabaseR");
-    $all_reponses_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Catégorisation par groupe : par défaut, seules les réponses enregistrées avec la
+    // clé d'accès du visiteur courant sont prises en compte (groupes non mélangés).
+    // Échec FERMÉ : si la colonne access_key est absente (migration indisponible, p. ex.
+    // droits DB insuffisants), on ne retombe JAMAIS sur un SELECT * non filtré (un groupe
+    // verrait les réponses de tous les autres) — on renvoie une réponse vide, même forme JSON.
+    if (access_ensure_responses_key_column($pdo)) {
+        $stmt = $pdo->prepare("SELECT * FROM GSDatabaseR WHERE access_key = ?");
+        $stmt->execute([$_SESSION['access_key']]);
+        $all_reponses_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $all_reponses_db = [];
+    }
 
     $QuestionsR = [];
     $submissions_with_level2_answers = [];
