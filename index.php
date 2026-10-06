@@ -77,9 +77,16 @@ if (isset($_POST['reset_session'])) {
     session_unset();
     session_destroy();
 }
+// Mode Jeu : fonctions de game.php (sans exécuter le contrôleur) pour annuler l'ancienne
+// partie quand l'hôte quitte le module / en choisit un autre / relance un questionnaire.
+define('GAME_LIB_ONLY', true);
+require_once __DIR__ . '/game.php';
 // Retour au choix du module : on efface uniquement la sélection et l'état du
 // questionnaire, en conservant la langue (pas de session_destroy / unset global).
 if (isset($_GET['back'])) {
+    // Quitter le module sans « Terminer » annule la partie (téléphones : « annulée ») et
+    // oublie le cookie hôte : relancer le même module crée alors une NOUVELLE partie.
+    game_cancel_host_game($GAME_DIR);
     foreach (['level', 'start', 'LastQuestion', 'TotalQuestions', 'QuestionToUse',
               'Rep1', 'Rep2', 'Rep3', 'Rep4', 'Rep5', 'IdInUse', 'answer', 'qtype',
               'expliqs', 'reponses', 'id_user', 'finish', 'acc', 'genre', 'orient', 'emailr',
@@ -90,6 +97,7 @@ if (isset($_GET['back'])) {
     exit();
 }
 if (isset($_GET['level']) && !isset($_SESSION['level'])) {
+    game_cancel_host_game($GAME_DIR); // choix d'un module : l'éventuelle ancienne partie est close
     $new_level = $_GET['level'];
     $lang_to_preserve = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
     // session_unset() effacerait aussi la clé d'accès (access.php) : on la préserve comme la langue.
@@ -112,6 +120,10 @@ if (!isset($_SESSION['language'])) {
     $_SESSION['language'] = (isset($_POST['language']) && $lang_installed($_POST['language'])) ? $_POST['language'] : 'fr';
 }
 if (isset($_GET['level'])) {
+    // Autre module choisi alors qu'un questionnaire était sélectionné : on clôt la partie.
+    if (isset($_SESSION['level']) && (string)$_SESSION['level'] !== (string)$_GET['level']) {
+        game_cancel_host_game($GAME_DIR);
+    }
     $_SESSION['level'] = $_GET['level'];
 }
 if (isset($_POST['language']) && $lang_installed($_POST['language'])) {
@@ -403,6 +415,10 @@ $lang = $_SESSION['language'];
 	// --- Mode Jeu (Kahoot) ---
 	var GAME_MODE = <?php echo $game_mode ? 'true' : 'false'; ?>;
 	var GAME_PIN = "";
+	// Numéro de la question affichée (envoyé à updateQuestion2.php comme « expect ») : si une
+	// réponse précédente a été perdue (coupure) alors que le serveur avait déjà avancé, le
+	// nouvel essai renvoie la question courante au lieu d'en sauter une.
+	var UQ_QNUM = 0;
 	// Palette Kahoot (couleur + symbole), identique à play.php, indexée par position de réponse.
 	var GAME_PALETTE = [
 		{ c: "#e21b3c", s: "▲" }, // rouge  ▲
@@ -496,6 +512,7 @@ function startQuestion() {
                 innerAnswers.innerHTML = response[index + 1];
             });
 	 document.getElementById("QuestionN").innerHTML = texts[lang]['js_question_label'] + response[6];
+	 if (parseInt(response[6], 10) > 0) UQ_QNUM = parseInt(response[6], 10);
             document.getElementById('button_next').onclick = function () {
                 updateQuestion(-1);
             };
@@ -1163,6 +1180,10 @@ if (!isset($_SESSION["start"])) {
         // Mode Jeu : mémorisé pour toute la durée de la partie (case cochée sur l'écran d'intro).
         $_SESSION["game_mode"] = isset($_POST["game_mode"]) ? 1 : 0;
         $_SESSION["LastQuestion"] = "1";
+        // Nouveau lancement (POST start) : jamais de reprise d'une ancienne partie ; une simple
+        // recharge de page en cours de partie ne repasse pas ici et reprend donc la même partie.
+        game_cancel_host_game($GAME_DIR);
+        $game_fresh = !empty($_SESSION["game_mode"]);
     } else {
         echo t('missing_level_data');
         exit();
@@ -1235,7 +1256,7 @@ if (!isset($_SESSION["start"])) {
                 &larr; <?php echo t('leave_change_module'); ?>
             </a>
             <b>
-                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background:linear-gradient(135deg,#e9d9f2 0%,#dcd4f3 50%,#cfe3f2 100%); border-left:6px solid #8a7bf4; font-size:clamp(24px, 3.4vw, 30px); line-height:1.25;">
+                <p id="Question" class="u-align-center" style="margin-top:1vh; margin-bottom:0;width:100%; padding:1em; background:linear-gradient(135deg,#e9d9f2 0%,#dcd4f3 50%,#cfe3f2 100%); border-left:6px solid #8a7bf4; font-size:clamp(28px, 3.4vw, 44px); line-height:1.25;">
                     <?php echo $currentQuestion; ?>
                 </p>
             </b>
@@ -1365,6 +1386,11 @@ if (!isset($_SESSION["start"])) {
     body.kh-playing #answer-reopen-btn { bottom: 116px !important; }
 </style>
 
+<!-- Bandeau « reconnexion… » (hôte) : coupure passagère, la partie est conservée -->
+<div id="kh-net" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9500; padding:8px 12px; background:#ffd54a; color:#5a3a00; font-weight:800; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.2);"><?php echo t('game_net_lost'); ?></div>
+<!-- Message d'erreur hôte (contrôle perdu, partie close ailleurs…) : au-dessus de tous les overlays -->
+<div id="kh-msg" style="display:none; position:fixed; top:40px; left:50%; transform:translateX(-50%); z-index:9600; max-width:92vw; padding:10px 16px; background:#d23; color:#fff; font-weight:800; text-align:center; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.3);"></div>
+
 <!-- Lobby hôte -->
 <div id="kh-lobby" class="kh-overlay kh-hidden">
     <div class="kh-card">
@@ -1385,9 +1411,9 @@ if (!isset($_SESSION["start"])) {
 
 <!-- Panneau "bonnes réponses" (hôte uniquement) : compteur + noms en direct -->
 <div id="kh-correct-panel">
-    <div class="kh-cp-title">Bonnes réponses</div>
+    <div class="kh-cp-title"><?php echo t('game_correct_title'); ?></div>
     <div class="kh-cp-count"><span id="kh-correct-count">0</span> / <span id="kh-correct-total">0</span></div>
-    <button type="button" id="kh-correct-toggle">Masquer la liste</button>
+    <button type="button" id="kh-correct-toggle"><?php echo t('game_hide_list'); ?></button>
     <ul id="kh-correct-list"></ul>
 </div>
 
@@ -1429,18 +1455,73 @@ if (!isset($_SESSION["start"])) {
         next:   "<?php echo t('next_question'); ?> →",
         finish: "<?php echo t('show_leaderboard'); ?> →",
         err:    "<?php echo t('game_error'); ?>",
-        pts:    "<?php echo t('pts'); ?>"
+        pts:    "<?php echo t('pts'); ?>",
+        hideList:   <?php echo json_encode(t('game_hide_list'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>,
+        showList:   <?php echo json_encode(t('game_show_list'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>,
+        notHost:    <?php echo json_encode(t('game_not_host'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>,
+        nextFailed: <?php echo json_encode(t('game_next_failed'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>
     };
-    var lobbyTimer = null, ansTimer = null, phase = "question", revealed = false;
+    // Lancement neuf (POST start de ce chargement) : on crée directement une partie, sans reprise.
+    var GAME_FRESH = <?php echo !empty($game_fresh) ? 'true' : 'false'; ?>;
+    var lobbyTimer = null, ansTimer = null, phase = "question", revealed = false, khNextTimer = null;
 
     function el(id) { return document.getElementById(id); }
     function gameApi(params) {
         var body = Object.keys(params).map(function (k) {
             return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
         }).join("&");
-        return fetch("game.php", { method:"POST",
+        var req = fetch("game.php", { method:"POST", credentials:"same-origin", cache:"no-store",
             headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body: body
-        }).then(function (r) { return r.json(); });
+        }).then(function (r) {
+            if (!r.ok) throw new Error("http " + r.status);
+            return r.json();
+        });
+        // Délai max : une requête bloquée (réseau coupé) ne doit pas figer l'hôte.
+        return new Promise(function (resolve, reject) {
+            var done = false;
+            var to = setTimeout(function () { if (!done) { done = true; reject(new Error("timeout")); } }, 10000);
+            req.then(function (v) { if (!done) { done = true; clearTimeout(to); khNet(true); resolve(v); } },
+                     function (e) { if (!done) { done = true; clearTimeout(to); khNet(false); reject(e); } });
+        });
+    }
+    // Indicateur réseau (affiché après 2 échecs consécutifs pour éviter le clignotement).
+    var khNetFails = 0;
+    function khNet(ok) {
+        khNetFails = ok ? 0 : khNetFails + 1;
+        var b = el("kh-net"); if (b) b.style.display = (khNetFails >= 2) ? "block" : "none";
+    }
+    // Rejoue une action hôte jusqu'au succès en cas de coupure réseau / serveur occupé.
+    function khRetry(params, onOk, onFail) {
+        gameApi(params).then(function (res) {
+            if (!res.ok && res.error === "busy") { setTimeout(function () { khRetry(params, onOk, onFail); }, 2000); return; }
+            if (res.ok) { onOk(res); } else if (onFail) { onFail(res); }
+        }, function () { setTimeout(function () { khRetry(params, onOk, onFail); }, 2000); });
+    }
+    // Message d'erreur visible pour l'hôte ("" = masquer).
+    function khMsg(text) {
+        var m = el("kh-msg"); if (!m) return;
+        m.textContent = text || ""; m.style.display = text ? "block" : "none";
+    }
+    // Refus « not_host » (session hôte perdue / autre onglet) : on se re-lie via « resume »
+    // (cookie hôte) puis on rejoue l'action une seule fois.
+    // Le PIN resté dans `params`/GAME_PIN au moment de l'appel est un instantané : si la
+    // reprise ramène une AUTRE partie (ex. cet onglet a perdu la partie qu'il croyait animer,
+    // le cookie hôte pointe ailleurs), rejouer l'action sur l'ancien PIN serait un no-op
+    // silencieux. On compare le PIN avant/après et on affiche KH.notHost si ça diverge ;
+    // sinon on met à jour GAME_PIN et params.pin avant de rejouer.
+    function khRebindThen(params, onOk, onFail) {
+        var priorPin = GAME_PIN;
+        khRetry({ action: "resume" }, function (res) {
+            if (res && res.pin && String(res.pin) !== String(priorPin)) {
+                onFail({ error: "not_host" });
+                return;
+            }
+            if (res && res.pin) {
+                GAME_PIN = res.pin;
+                if (params && params.pin !== undefined) { params.pin = res.pin; }
+            }
+            khRetry(params, onOk, onFail);
+        }, onFail);
     }
     function playUrl(pin) {
         var base = location.href.split("?")[0].replace(/[^\/]*$/, "");
@@ -1457,13 +1538,22 @@ if (!isset($_SESSION["start"])) {
         el("kh-lobby").classList.remove("kh-hidden");
         // Reconnexion à une partie existante (rechargement de page) avant d'en créer une neuve :
         // conserve PIN, QR, joueurs déjà connectés et leurs scores.
-        gameApi({ action: "resume" }).then(function (res) {
-            if (res.ok) { khEnterLobby(res.pin); return; }
-            gameApi({ action: "create" }).then(function (res2) {
-                if (!res2.ok) { el("kh-lobby-err").textContent = KH.err; return; }
-                khEnterLobby(res2.pin);
-            });
-        });
+        // Coupure réseau pendant la reprise : on réessaie (créer une partie neuve ferait perdre
+        // leurs scores aux joueurs). Seul un refus explicite du serveur mène à « create ».
+        var khCreate = function () {
+            khRetry({ action: "create" }, function (res2) { khEnterLobby(res2.pin); },
+                function () { el("kh-lobby-err").textContent = KH.err; });
+        };
+        if (GAME_FRESH) { khCreate(); return; }
+        khRetry({ action: "resume" }, function (res) {
+            if (res.status === "question" || res.status === "reveal") {
+                // Partie déjà en cours : on retourne directement à la question courante.
+                GAME_PIN = res.pin;
+                khBeginPlaying();
+            } else {
+                khEnterLobby(res.pin);
+            }
+        }, khCreate);
     };
     // Remplit le lobby (PIN / URL / QR) et démarre le polling — partagé par create et resume.
     function khEnterLobby(pin) {
@@ -1473,11 +1563,12 @@ if (!isset($_SESSION["start"])) {
         el("kh-url").textContent = url;
         el("kh-qr").innerHTML = "";
         try { new QRCode(el("kh-qr"), { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M }); } catch (e) {}
+        if (lobbyTimer) clearInterval(lobbyTimer);
         lobbyTimer = setInterval(lobbyPoll, 1500);
         lobbyPoll();
     }
     function lobbyPoll() {
-        gameApi({ action: "state", pin: GAME_PIN }).then(function (res) {
+        gameApi({ action: "state", pin: GAME_PIN, host: 1 }).then(function (res) {
             if (!res.ok) return;
             el("kh-count").textContent = res.count;
             var box = el("kh-players"); box.innerHTML = "";
@@ -1489,14 +1580,18 @@ if (!isset($_SESSION["start"])) {
     }
     el("kh-start").addEventListener("click", function () {
         if (!GAME_PIN) { return; } // la partie n'est pas encore créée (PIN en attente)
+        khBeginPlaying();
+    });
+    // Passe du lobby à l'écran de jeu (bouton Démarrer, ou reprise d'une partie en cours).
+    function khBeginPlaying() {
         if (lobbyTimer) { clearInterval(lobbyTimer); lobbyTimer = null; }
         el("kh-lobby").classList.add("kh-hidden");
         var qcm = document.getElementById("qcm");
         if (qcm) qcm.style.display = "";
         el("kh-bar").classList.add("show");
         document.body.classList.add("kh-playing");
-        startQuestion(); // rend la 1re question ; gameAfterRender() est appelé ensuite
-    });
+        startQuestion(); // rend la question courante (session) ; gameAfterRender() est appelé ensuite
+    }
 
     // Retire la fenêtre d'info (bonne réponse) si elle est encore ouverte.
     function khRemovePopup() {
@@ -1513,15 +1608,29 @@ if (!isset($_SESSION["start"])) {
         clearHostHighlight();
         khResetCorrectPanel();
         khShowCorrectPanel();
-        gameApi({ action: "setq", pin: GAME_PIN }).then(function (res) {
-            if (res.ok && res.question) { el("kh-total").textContent = res.count; }
+        if (khNextTimer) { clearTimeout(khNextTimer); khNextTimer = null; }
+        khMsg("");
+        var onSetq = function (res) {
+            khMsg("");
+            if (res.question) { el("kh-total").textContent = res.count; }
+            // Hôte rechargé après le « Révéler » de cette même question : on restaure l'état reveal.
+            if (res.status === "reveal") { khApplyReveal(res); }
+        };
+        khRetry({ action: "setq", pin: GAME_PIN }, onSetq, function (res) {
+            if (res && res.error === "not_host") {
+                khRebindThen({ action: "setq", pin: GAME_PIN }, onSetq, function (r2) {
+                    khMsg(r2 && r2.error === "not_host" ? KH.notHost : KH.err);
+                });
+            } else {
+                khMsg(KH.err); // partie terminée/annulée ailleurs, question introuvable…
+            }
         });
         if (ansTimer) clearInterval(ansTimer);
         ansTimer = setInterval(pollAnswered, 1500);
         pollAnswered();
     };
     function pollAnswered() {
-        gameApi({ action: "state", pin: GAME_PIN }).then(function (res) {
+        gameApi({ action: "state", pin: GAME_PIN, host: 1 }).then(function (res) {
             if (!res.ok) return;
             el("kh-answered").textContent = res.answeredCount;
             el("kh-total").textContent = res.count;
@@ -1555,10 +1664,10 @@ if (!isset($_SESSION["start"])) {
         var list = el("kh-correct-list");
         if (list.style.display === "none") {
             list.style.display = "";
-            this.textContent = "Masquer la liste";
+            this.textContent = KH.hideList;
         } else {
             list.style.display = "none";
-            this.textContent = "Afficher la liste";
+            this.textContent = KH.showList;
         }
     });
 
@@ -1581,32 +1690,62 @@ if (!isset($_SESSION["start"])) {
             // Révéler : on fige les réponses, on montre la bonne sur l'écran et sur les téléphones.
             el("kh-action").disabled = true;
             gameApi({ action: "reveal", pin: GAME_PIN }).then(function (res) {
-                if (res.ok && res.correctIndex) highlightCorrectHost(res.correctIndex);
-                if (res.ok) khUpdateCorrectPanel(res); // fige le compteur/liste final au reveal
-                // Même fenêtre d'info que le mode normal : bonne réponse + explication.
-                if (res.ok && typeof showAnswerPopup === "function") {
-                    showAnswerPopup(res.correctText || "", res.expliq || "", true, false);
-                }
-                revealed = true; phase = "reveal";
-                el("kh-action").textContent = KH.next;
-                el("kh-action").disabled = false;
-                if (ansTimer) { clearInterval(ansTimer); ansTimer = null; }
+                if (res.ok) { khApplyReveal(res); } else { el("kh-action").disabled = false; }
             }).catch(function () { el("kh-action").disabled = false; }); // ne pas bloquer en cas d'échec réseau
         } else {
             // Question suivante (ou fin) : updateQuestion(-1) enchaîne via le flux existant.
-            el("kh-action").disabled = true;
-            updateQuestion(-1);
+            khNextQuestion();
         }
     });
+    function khNextQuestion() {
+        if (khNextTimer) { clearTimeout(khNextTimer); khNextTimer = null; }
+        el("kh-action").disabled = true;
+        updateQuestion(-1);
+    }
+    // Échec / délai dépassé de « Question suivante » (updateQuestion2.php) : bandeau, bouton
+    // réactivé et nouvel essai automatique. Sans danger : la requête porte le numéro de la
+    // question affichée (expect) et le serveur ne ré-avance pas s'il a déjà avancé.
+    window.gameNextFailed = function () {
+        khNetFails = Math.max(khNetFails, 1); khNet(false); // force le bandeau réseau
+        khMsg(KH.nextFailed);
+        el("kh-action").disabled = false;
+        if (khNextTimer) clearTimeout(khNextTimer);
+        khNextTimer = setTimeout(function () {
+            khNextTimer = null;
+            if (phase === "reveal") khNextQuestion();
+        }, 3000);
+    };
+
+    function khApplyReveal(res) {
+        if (res.correctIndex) highlightCorrectHost(res.correctIndex);
+        khUpdateCorrectPanel(res); // fige le compteur/liste final au reveal
+        // Même fenêtre d'info que le mode normal : bonne réponse + explication.
+        if (typeof showAnswerPopup === "function" && !document.getElementById("answer-info-popup")) {
+            showAnswerPopup(res.correctText || "", res.expliq || "", true, false);
+        }
+        revealed = true; phase = "reveal";
+        el("kh-action").textContent = KH.next;
+        el("kh-action").disabled = false;
+        if (ansTimer) { clearInterval(ansTimer); ansTimer = null; }
+    }
 
     // --- Annuler la partie (lobby ou en cours) : supprime la partie et déconnecte les joueurs ---
     function khAbort() {
         var msg = <?php echo json_encode(t('cancel_game_confirm')); ?>;
         if (!window.confirm(msg)) return;
+        if (khNextTimer) { clearTimeout(khNextTimer); khNextTimer = null; }
         if (lobbyTimer) { clearInterval(lobbyTimer); lobbyTimer = null; }
         if (ansTimer) { clearInterval(ansTimer); ansTimer = null; }
         var done = function () { window.location.href = "index.php?back=1"; };
-        gameApi({ action: "abort", pin: GAME_PIN }).then(done).catch(done);
+        // 'busy' : quelques nouveaux essais ; de toute façon index.php?back=1 annule aussi la partie.
+        var tries = 0;
+        var go = function () {
+            gameApi({ action: "abort", pin: GAME_PIN }).then(function (res) {
+                if (res && !res.ok && res.error === "busy" && ++tries < 3) { setTimeout(go, 800); return; }
+                done();
+            }).catch(done);
+        };
+        go();
     }
     Array.prototype.forEach.call(document.querySelectorAll(".kh-cancel"), function (b) {
         b.addEventListener("click", khAbort);
@@ -1638,9 +1777,28 @@ if (!isset($_SESSION["start"])) {
         khHideCorrectPanel();
         el("kh-bar").classList.remove("show");
         document.body.classList.remove("kh-playing");
-        gameApi({ action: "end", pin: GAME_PIN }).then(function (res) {
-            renderLeaderboard(res.ok ? res.players : []);
+        if (khNextTimer) { clearTimeout(khNextTimer); khNextTimer = null; }
+        khMsg("");
+        var showBoard = function (res) {
+            renderLeaderboard((res && res.players) || []);
             el("kh-leader").classList.remove("kh-hidden");
+        };
+        // Repli : classement lu dans l'état (fin non appliquée côté serveur).
+        var boardFromState = function () {
+            gameApi({ action: "state", pin: GAME_PIN, host: 1 }).then(function (r) { showBoard(r && r.ok ? r : null); },
+                function () { showBoard(null); });
+        };
+        khRetry({ action: "end", pin: GAME_PIN }, function (res) { khMsg(""); showBoard(res); }, function (res) {
+            if (res && res.error === "not_host") {
+                // Session hôte perdue : on se re-lie (cookie) puis on termine, sinon les
+                // téléphones resteraient bloqués sur le dernier « reveal ».
+                khRebindThen({ action: "end", pin: GAME_PIN }, function (r2) { khMsg(""); showBoard(r2); }, function (r2) {
+                    khMsg(KH.notHost);
+                    boardFromState();
+                });
+            } else {
+                boardFromState(); // partie déjà terminée / annulée
+            }
         });
     };
     function renderLeaderboard(players) {
@@ -2114,10 +2272,14 @@ if(isset($_SESSION['reponses'])){
 				timeout = true;
 				xhr.open("POST", "updateQuestion2.php", true);
 				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+				// Délai max : une requête bloquée (coupure réseau) ne doit pas figer la page.
+				xhr.timeout = 15000;
 				xhr.onreadystatechange = function () {
 					if (xhr.readyState == 4 && xhr.status == 200) {
 
 						var response = xhr.responseText.split("__");
+						// Le serveur a avancé : mémorise le numéro de la nouvelle question.
+						if (response[0] != "fin" && parseInt(response[6], 10) > 0) UQ_QNUM = parseInt(response[6], 10);
 						var answersarray = findAllBlocks();
 						if (response[0] == "fin") {
 							timeout = true;
@@ -2608,19 +2770,21 @@ if(isset($_SESSION['reponses'])){
 						}
 					}
 					else if (xhr.readyState == 4) {
-						// Si la requête s'est terminée par une erreur, nous autorisons à nouveau les clics
+						// Si la requête s'est terminée par une erreur (ou délai dépassé), nous autorisons à nouveau les clics
 						timeout = false;
-						alert(texts[lang]['js_error_alert']);
+						if (GAME_MODE && typeof gameNextFailed === 'function') { gameNextFailed(); }
+						else { alert(texts[lang]['js_error_alert']); }
 					}
 				};
+				var uqExpect = UQ_QNUM > 0 ? "&expect=" + UQ_QNUM : "";
 				if (ismultiple == true) {
 					let temptext = String(localStorage.getItem('lastationlienvar'));
 					xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
 					console.log(temptext);
-					xhr.send("choise=" + encodeURIComponent(temptext));
+					xhr.send("choise=" + encodeURIComponent(temptext) + uqExpect);
 				}
 				else
-					xhr.send("choise=" + buttonIndex);
+					xhr.send("choise=" + buttonIndex + uqExpect);
 			}
 
 		}
