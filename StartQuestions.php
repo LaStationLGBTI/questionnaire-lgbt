@@ -1,5 +1,8 @@
 <?php
 header('Content-Type: application/json');
+// Même durée de vie de session que index.php / game.php (le GC par défaut, 1440 s, pouvait
+// supprimer la session d'un hôte du Mode Jeu resté inactif).
+ini_set('session.gc_maxlifetime', 31536000);
 session_start();
 // Accès par clé (access.php) : une clé doit avoir été validée dans cette session.
 // Pas de revérification "live" ici : un questionnaire déjà commencé peut être terminé.
