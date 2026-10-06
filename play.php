@@ -30,6 +30,13 @@ $playKeyMap = [
     'cancelled' => 'play_cancelled',
     'nameSubmit'   => 'play_name_submit',
     'questionWord' => 'play_question_word',
+    'reconnecting' => 'play_reconnecting',
+    'netError'     => 'play_net_error',
+];
+// Repli si une clé manque dans le catalogue d'une langue (t() renvoie alors la clé brute).
+$playFallback = [
+    'play_reconnecting' => 'Connexion perdue — reconnexion…',
+    'play_net_error'    => 'Connexion impossible, réessaie',
 ];
 
 $play_languages = [];
@@ -51,7 +58,9 @@ foreach ($play_languages as $code) {
     i18n_use($code);
     $dict = [];
     foreach ($playKeyMap as $jsKey => $catKey) {
-        $dict[$jsKey] = t($catKey);
+        $val = t($catKey);
+        if ($val === $catKey && isset($playFallback[$catKey])) $val = $playFallback[$catKey];
+        $dict[$jsKey] = $val;
     }
     $play_T[$code] = $dict;
 }
@@ -118,9 +127,14 @@ i18n_use('fr');
     .lead .row { display: flex; justify-content: space-between; padding: 8px 12px;
         background: #fff; color: #2b2b2b; border-radius: 10px; margin-top: 8px; font-weight: 700; }
     .lead .row.me { outline: 3px solid #ffd54a; }
+    /* Bandeau « reconnexion… » (coupure réseau passagère : la session est conservée). */
+    #net-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 50; padding: 8px 12px;
+        background: #ffd54a; color: #5a3a00; font-weight: 800; font-size: 14px; text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,.2); }
 </style>
 </head>
 <body>
+<div id="net-banner" class="hidden"><span id="net-text">Reconnexion…</span></div>
 <div class="wrap">
 
     <!-- 1. Saisie du PIN -->
@@ -208,15 +222,43 @@ i18n_use('fr');
         $("name-go").textContent = t.nameSubmit;
     }
 
+    // Requête vers game.php. REJETTE (= erreur réseau passagère) si pas de réponse, délai
+    // dépassé, statut HTTP non 2xx ou réponse non-JSON (portail captif, page d'erreur…).
+    // Une erreur réseau ne doit JAMAIS effacer la session du joueur.
     function api(params) {
         var body = Object.keys(params).map(function (k) {
             return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
         }).join("&");
-        return fetch("game.php", {
+        var req = fetch("game.php", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            credentials: "same-origin",
+            cache: "no-store",
             body: body
-        }).then(function (r) { return r.json(); });
+        }).then(function (r) {
+            if (!r.ok) throw new Error("http " + r.status);
+            return r.json();
+        }).then(function (res) {
+            if (!res || typeof res !== "object") throw new Error("bad json");
+            return res;
+        });
+        return new Promise(function (resolve, reject) {
+            var done = false;
+            var to = setTimeout(function () { if (!done) { done = true; reject(new Error("timeout")); } }, 8000);
+            req.then(function (v) { if (!done) { done = true; clearTimeout(to); resolve(v); } },
+                     function (e) { if (!done) { done = true; clearTimeout(to); reject(e); } });
+        });
+    }
+
+    // --- Indicateur « reconnexion… » ---
+    var netFails = 0;
+    function netOk() { netFails = 0; $("net-banner").classList.add("hidden"); }
+    function netFail() {
+        netFails++;
+        if (netFails >= 2) { // évite le clignotement sur un seul échec isolé
+            $("net-text").textContent = t.reconnecting;
+            $("net-banner").classList.remove("hidden");
+        }
     }
 
     // --- Mémorisation de la session (reconnexion après refresh / sortie accidentelle) ---
@@ -235,24 +277,33 @@ i18n_use('fr');
         if (!/^\d{6}$/.test(v)) { $("pin-err").textContent = "PIN = 6 chiffres"; return; }
         // Vérifie que la partie existe.
         api({ action: "state", pin: v }).then(function (res) {
-            if (!res.ok) { $("pin-err").textContent = t.badPin; return; }
+            if (!res.ok) { $("pin-err").textContent = res.error === "not_found" ? t.badPin : t.netError; return; }
+            if (res.status === "ended" || res.status === "cancelled") { $("pin-err").textContent = t.ended; return; }
+            $("pin-err").textContent = "";
             pin = v; applyLang(res.lang);
             show("screen-name"); $("name-input").focus();
-        });
+        }, function () { $("pin-err").textContent = t.netError; });
     });
 
     // --- Écran pseudo ---
+    // Rejoindre avec un pseudo déjà présent (insensible à la casse) = reprendre CE joueur
+    // (même pid, même score), à tout moment de la partie sauf terminée/annulée.
     $("name-go").addEventListener("click", function () {
         var nm = $("name-input").value.trim();
         if (!nm) { $("name-err").textContent = t.emptyName; return; }
         api({ action: "join", pin: pin, name: nm }).then(function (res) {
-            if (!res.ok) { $("name-err").textContent = res.error === "ended" ? t.ended : t.badPin; return; }
+            if (!res.ok) {
+                $("name-err").textContent = res.error === "ended" ? t.ended
+                    : (res.error === "not_found" ? t.badPin : (res.error === "no_name" ? t.emptyName : t.netError));
+                return;
+            }
+            $("name-err").textContent = "";
             pid = res.pid; myName = res.name;
             saveSession(); // pour pouvoir revenir au même joueur après un refresh
             $("lobby-name").textContent = myName;
             show("screen-lobby");
             startPolling();
-        });
+        }, function () { $("name-err").textContent = t.netError; });
     });
 
     // --- Rendu de la question ---
@@ -272,29 +323,80 @@ i18n_use('fr');
         box.classList.toggle("single", q.answers.length === 1);
     }
 
+    function showWaitAnswered(score) {
+        $("wait-title").textContent = t.waitTitle;
+        $("wait-sub").textContent = t.waitSub;
+        $("wait-result").textContent = "";
+        $("wait-score").textContent = (score != null) ? (score + " " + t.score) : "";
+        show("screen-wait");
+    }
+
     function sendAnswer(choice) {
         if (answeredThisQ) return;
         answeredThisQ = true;
-        $("wait-result").textContent = "";
-        $("wait-score").textContent = "";
-        show("screen-wait");
+        showWaitAnswered(null);
         api({ action: "answer", pin: pin, pid: pid, choice: choice }).then(function (res) {
+            netOk();
             if (res.ok && res.me) { $("wait-score").textContent = res.me.score + " " + t.score; }
+            // Refus réessayable (busy, joueur à re-lier…) : le prochain polling réaffiche
+            // les boutons si le serveur n'a rien enregistré. 'not_open' = trop tard.
+            else if (!res.ok && res.error !== "not_open") { answeredThisQ = false; renderedQ = ""; }
+        }, function () {
+            // Réseau coupé : on ne sait pas si la réponse est arrivée. Le polling tranchera
+            // (me.answered) et réaffichera les boutons si besoin.
+            netFail();
+            answeredThisQ = false; renderedQ = "";
         });
     }
 
     // --- Polling de l'état ---
+    var polling = false, rejoining = false, renderedQ = "";
     function startPolling() {
         if (pollTimer) clearInterval(pollTimer);
         poll();
         pollTimer = setInterval(poll, 1500);
     }
+    function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
     function poll() {
-        api({ action: "state", pin: pin, pid: pid }).then(handleState).catch(function () {});
+        if (polling || !pin || !pid) return; // une seule requête en vol (réseau lent)
+        polling = true;
+        api({ action: "state", pin: pin, pid: pid }).then(function (res) {
+            polling = false; netOk();
+            if (pid) handleState(res); // pid vidé entre-temps (retour à l'écran pseudo) : on ignore
+        }, function () {
+            // Coupure (chez le joueur OU chez l'hôte/serveur) : on garde tout et on réessaie.
+            polling = false; netFail();
+        });
     }
+    // Les navigateurs mobiles gèlent les timers en arrière-plan : on relance dès le retour.
+    document.addEventListener("visibilitychange", function () { if (!document.hidden && pollTimer) poll(); });
+    window.addEventListener("online", function () { if (pollTimer) poll(); });
+
+    // Le joueur n'existe plus sous ce pid (partie recréée…) : on se re-lie par pseudo.
+    function rejoinByName() {
+        if (rejoining) return;
+        // Pseudo inconnu (session mémorisée incomplète) : impossible de se re-lier tout seul
+        // → retour à l'écran pseudo au lieu de boucler silencieusement.
+        if (!myName) { askNameAgain(); return; }
+        rejoining = true;
+        api({ action: "join", pin: pin, name: myName }).then(function (res) {
+            rejoining = false;
+            if (res.ok) { pid = res.pid; myName = res.name; saveSession(); return; }
+            // ended / not_found : le polling affichera l'écran adéquat ; busy : on réessaiera.
+            if (res.error !== "busy" && res.error !== "ended" && res.error !== "not_found") askNameAgain();
+        }, function () { rejoining = false; netFail(); });
+    }
+    function askNameAgain() {
+        stopPolling();
+        pid = ""; clearSession();
+        if (myName) $("name-input").value = myName;
+        show("screen-name"); $("name-input").focus();
+    }
+
     function showCancelled() {
-        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        stopPolling();
         clearSession();
+        netOk();
         $("wait-title").textContent = t.cancelled;
         $("wait-sub").textContent = "";
         $("wait-result").textContent = "✕";
@@ -304,29 +406,37 @@ i18n_use('fr');
     }
     function handleState(res) {
         if (!res.ok) {
-            // La partie a été annulée/supprimée par l'hôte → on prévient le joueur.
-            if (res.error === "no_game" && pid) { showCancelled(); }
+            // SEULE une partie réellement disparue (fichier supprimé côté serveur) met fin à
+            // la session. 'busy' & co = passager : on continue simplement le polling.
+            if (res.error === "not_found" && pid) { showCancelled(); }
             return;
         }
+        if (res.status === "cancelled") { showCancelled(); return; }
+        if (pid && !res.me && res.status !== "ended") { rejoinByName(); return; }
         var me = res.me || { score: 0 };
 
         if (res.status === "lobby") {
-            lastQNumber = -1;
+            lastQNumber = -1; renderedQ = "";
             show("screen-lobby");
             return;
         }
         if (res.status === "question" && res.question) {
-            // Nouvelle question → réinitialise et affiche les boutons.
-            if (res.question.qNumber !== lastQNumber) {
-                lastQNumber = res.question.qNumber;
+            // Nouvelle question (numéro + texte : l'hôte peut avoir relancé le questionnaire).
+            var qKey = res.question.qNumber + "|" + res.question.text;
+            if (qKey !== lastQNumber) {
+                lastQNumber = qKey;
                 answeredThisQ = !!me.answered;
+                renderedQ = "";
             }
             if (answeredThisQ || me.answered) {
-                $("wait-result").textContent = "";
-                $("wait-score").textContent = me.score + " " + t.score;
-                show("screen-wait");
+                showWaitAnswered(me.score);
             } else {
-                renderQuestion(res.question);
+                // Ne reconstruit les boutons qu'une fois par question (un tap pendant un
+                // re-rendu toutes les 1,5 s pouvait être perdu).
+                if (renderedQ !== qKey || $("screen-question").classList.contains("hidden")) {
+                    renderQuestion(res.question);
+                    renderedQ = qKey;
+                }
                 show("screen-question");
             }
             return;
@@ -336,6 +446,7 @@ i18n_use('fr');
             if (me.lastChoice == null) { msg = t.noAnswer; color = "#bbb"; }
             else if (res.correctIndex && me.lastChoice === res.correctIndex) { msg = t.correct; color = "#26890c"; }
             else { msg = t.wrong; color = "#e21b3c"; }
+            $("wait-title").textContent = t.waitTitle;
             $("wait-result").textContent = msg;
             $("wait-result").style.color = color;
             $("wait-sub").textContent = "";
@@ -344,7 +455,7 @@ i18n_use('fr');
             return;
         }
         if (res.status === "ended") {
-            if (pollTimer) clearInterval(pollTimer);
+            stopPolling();
             clearSession();
             var rank = 1;
             for (var i = 0; i < res.players.length; i++) {
@@ -365,33 +476,54 @@ i18n_use('fr');
     function gotoPinOrName() {
         if (/^\d{6}$/.test(pre)) {
             api({ action: "state", pin: pre }).then(function (res) {
-                if (res.ok) {
+                if (res.ok && res.status !== "ended" && res.status !== "cancelled") {
                     pin = pre; applyLang(res.lang);
                     if (saved && saved.name) $("name-input").value = saved.name; // pré-remplit l'ancien pseudo
                     show("screen-name"); $("name-input").focus();
-                } else { show("screen-pin"); }
-            }).catch(function () { show("screen-pin"); });
+                } else {
+                    // PIN d'une partie terminée/annulée (ou introuvable) : message visible
+                    // au lieu d'un formulaire PIN silencieusement vide.
+                    $("pin-err").textContent = (res.ok && (res.status === "ended" || res.status === "cancelled")) ? t.ended
+                        : (res.error === "not_found" ? t.badPin : "");
+                    show("screen-pin");
+                }
+            }, function () { show("screen-pin"); });
         } else {
             if (saved && saved.name) $("name-input").value = saved.name;
             show("screen-pin");
         }
     }
 
-    // Si une session est mémorisée et qu'on ne vient pas d'un QR vers une AUTRE partie → on tente la reprise.
-    if (saved && /^\d{6}$/.test(String(saved.pin)) && (!/^\d{6}$/.test(pre) || pre === String(saved.pin))) {
+    // Reprise d'une session mémorisée. Erreur réseau / serveur momentanément indisponible :
+    // on GARDE la session et on réessaie (avant : la session était effacée => joueur perdu).
+    function resumeSaved() {
         api({ action: "state", pin: saved.pin, pid: saved.pid }).then(function (res) {
-            if (res.ok && res.me && res.status !== "ended") {
-                // Le joueur existe encore : on le replace directement dans la partie.
-                pin = saved.pin; pid = saved.pid; myName = res.me.name || saved.name;
+            if (res.ok && res.status !== "ended" && res.status !== "cancelled") {
+                netOk();
+                // Joueur replacé dans la partie ; si son pid est inconnu, handleState se
+                // re-lie automatiquement par pseudo (même score).
+                pin = String(saved.pin); pid = saved.pid || ""; myName = (res.me && res.me.name) || saved.name || "";
                 applyLang(res.lang);
+                if (!pid) { askNameAgain(); return; } // session mémorisée incomplète
                 $("lobby-name").textContent = myName;
                 show("screen-lobby"); // placeholder le temps du 1er polling
                 startPolling(); // handleState affichera le bon écran (lobby / question / reveal)
+            } else if (!res.ok && res.error !== "not_found") {
+                netFail(); setTimeout(resumeSaved, 2000); // passager (busy…)
             } else {
-                clearSession();
-                gotoPinOrName();
+                netOk(); clearSession(); gotoPinOrName(); // partie terminée / disparue
             }
-        }).catch(function () { clearSession(); gotoPinOrName(); });
+        }, function () {
+            netFail(); netFail();
+            $("lobby-name").textContent = saved.name || "";
+            show("screen-lobby");
+            setTimeout(resumeSaved, 2000);
+        });
+    }
+
+    // Si une session est mémorisée et qu'on ne vient pas d'un QR vers une AUTRE partie → on tente la reprise.
+    if (saved && /^\d{6}$/.test(String(saved.pin)) && (!/^\d{6}$/.test(pre) || pre === String(saved.pin))) {
+        resumeSaved();
     } else {
         gotoPinOrName();
     }
