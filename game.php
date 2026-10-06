@@ -12,16 +12,57 @@
  *   setq    (hôte)   : pousse la question courante (lue dans la session) → status=question
  *   reveal  (hôte)   : status=reveal (les téléphones voient juste/faux)
  *   end     (hôte)   : status=ended (classement final)
- *   abort   (hôte)   : supprime la partie
- *   join    (joueur) : pin + name → crée un joueur → renvoie {pid}
+ *   resume  (hôte)   : rechargement / reconnexion de l'hôte → même partie (même PIN)
+ *   abort   (hôte)   : status=cancelled (annulation explicite ; une partie « ended » le reste)
+ *   state   + host=1 : champs réservés à l'hôte (correctPlayers) seulement si host=1 ET host_auth
+ *   join    (joueur) : pin + name → crée un joueur (ou reprend celui du même pseudo) → {pid}
  *   answer  (joueur) : pin + pid + choice → enregistre, +100 si correct
  *   state   (tous)   : renvoie l'état nettoyé (correctIndex masqué hors reveal/ended)
+ *
+ * Erreurs : 'not_found' = le fichier de la partie n'existe PLUS (seul cas où un joueur
+ * oublie sa session) ; 'busy' = lecture momentanément impossible (à réessayer).
+ *
+ * Authentification de l'hôte : session_id() == hostSid OU cookie httponly
+ * `lgbt_kahoot_host` = "<pin>.<hostKey>" (survit à une perte/régénération de session PHP,
+ * p. ex. après une coupure réseau prolongée). Sur succès par cookie, hostSid est re-lié.
  */
 
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+// Même durée de vie que index.php : sinon le ramasse-miettes des sessions déclenché par
+// les nombreux appels de polling (défaut 1440 s) supprime la session de l'hôte pendant
+// une coupure réseau ou une longue explication => l'hôte perdait le contrôle de la partie.
+// Mode bibliothèque : index.php inclut ce fichier (define('GAME_LIB_ONLY', true)) pour
+// réutiliser les fonctions (annulation de l'ancienne partie) sans exécuter le contrôleur.
+if (!defined('GAME_LIB_ONLY')) {
+    ini_set('session.gc_maxlifetime', 31536000);
+    session_start();
+    header('Content-Type: application/json; charset=utf-8');
+}
 
 $GAME_DIR = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lgbt_kahoot';
+if (!defined('HOST_COOKIE')) define('HOST_COOKIE', 'lgbt_kahoot_host');
+
+/** Pose le cookie hôte (12 h). En-tête brut : compatible avec toutes les versions de PHP. */
+function host_cookie_set($pin, $key) {
+    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? '; Secure' : '';
+    header('Set-Cookie: ' . HOST_COOKIE . '=' . $pin . '.' . $key
+        . '; Max-Age=43200; Path=/; HttpOnly; SameSite=Lax' . $secure, false);
+}
+function host_cookie_clear() {
+    header('Set-Cookie: ' . HOST_COOKIE . '=deleted; Max-Age=0; Path=/; HttpOnly; SameSite=Lax', false);
+}
+/** Renvoie [pin, hostKey] lus dans le cookie hôte, ou null. */
+function host_cookie_get() {
+    if (empty($_COOKIE[HOST_COOKIE])) return null;
+    if (!preg_match('/^(\d{6})\.([0-9a-f]{16,64})$/', (string)$_COOKIE[HOST_COOKIE], $m)) return null;
+    return array($m[1], $m[2]);
+}
+/** L'appelant prouve-t-il être l'hôte de $game (session ou cookie) ? */
+function host_auth($game) {
+    if (isset($game['hostSid']) && $game['hostSid'] === session_id()) return true;
+    $c = host_cookie_get();
+    return $c && $c[0] === (string)$game['pin'] && !empty($game['hostKey'])
+        && hash_equals((string)$game['hostKey'], $c[1]);
+}
 
 function jexit($data) {
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
@@ -45,14 +86,27 @@ function game_path($dir, $pin) {
     return $dir . DIRECTORY_SEPARATOR . $pin . '.json';
 }
 
+/**
+ * Lit une partie sous verrou PARTAGÉ.
+ * Retourne : le tableau de la partie ; null si la partie n'existe pas (fichier absent) ;
+ * false si la lecture a échoué momentanément.
+ * (Avant : lecture sans verrou => pendant l'écriture d'un autre joueur (ftruncate puis
+ * fwrite) on lisait un fichier VIDE → 'no_game' → les téléphones croyaient la partie
+ * annulée et effaçaient leur session.)
+ */
 function load_game($dir, $pin) {
     if (!preg_match('/^\d{6}$/', (string)$pin)) return null;
     $path = game_path($dir, $pin);
     if (!is_file($path)) return null;
-    $raw = file_get_contents($path);
-    if ($raw === false || $raw === '') return null;
+    $fp = @fopen($path, 'r');
+    if (!$fp) return is_file($path) ? false : null;
+    flock($fp, LOCK_SH);
+    $raw = stream_get_contents($fp);
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    if ($raw === false || $raw === '') return false;
     $data = json_decode($raw, true);
-    return is_array($data) ? $data : null;
+    return is_array($data) ? $data : false;
 }
 
 function save_game($dir, $game) {
@@ -85,12 +139,15 @@ function mutate_game($dir, $pin, $cb) {
     if (!preg_match('/^\d{6}$/', (string)$pin)) return null;
     $path = game_path($dir, $pin);
     if (!is_file($path)) return null;
-    $fp = fopen($path, 'r+');
-    if (!$fp) return null;
+    $fp = @fopen($path, 'r+');
+    if (!$fp) {
+        if (!is_file($path)) return null;
+        throw new GameError('busy'); // erreur passagère : le client réessaie
+    }
     flock($fp, LOCK_EX);
     $raw  = stream_get_contents($fp);
     $game = json_decode($raw, true);
-    if (!is_array($game)) { flock($fp, LOCK_UN); fclose($fp); return null; }
+    if (!is_array($game)) { flock($fp, LOCK_UN); fclose($fp); throw new GameError('busy'); }
     try {
         $cb($game);
     } catch (GameError $e) {
@@ -107,17 +164,53 @@ function mutate_game($dir, $pin, $cb) {
     return $game;
 }
 
-/** Supprime les parties de plus de 3 heures (ménage best-effort). */
+/** Supprime les parties inactives depuis plus de 6 heures (ménage best-effort). */
 function cleanup_old($dir) {
     if (!is_dir($dir)) return;
     foreach (glob($dir . DIRECTORY_SEPARATOR . '*.json') as $f) {
-        if (@filemtime($f) < time() - 3 * 3600) { @unlink($f); }
+        if (@filemtime($f) < time() - 6 * 3600) { @unlink($f); }
     }
 }
 
-/** L'appelant est-il l'hôte de cette partie ? */
-function is_host($game) {
-    return isset($game['hostSid']) && $game['hostSid'] === session_id();
+/**
+ * Annule (status=cancelled) la partie $pin si l'appelant en est l'hôte. Une partie déjà
+ * terminée (ended) reste « ended » (classement final conservé pour les téléphones).
+ * 'busy' est réessayé brièvement côté serveur.
+ * Retourne 'ok' | 'not_found' | 'not_host' | 'busy'.
+ */
+function game_cancel($dir, $pin) {
+    for ($try = 0; $try < 5; $try++) {
+        try {
+            $g = mutate_game($dir, $pin, function (&$g) {
+                if (!host_auth($g)) throw new GameError('not_host');
+                if (isset($g['status']) && $g['status'] === 'ended') return;
+                $g['status'] = 'cancelled';
+            });
+            return $g ? 'ok' : 'not_found';
+        } catch (GameError $e) {
+            if ($e->getMessage() !== 'busy') return $e->getMessage();
+            usleep(200000);
+        }
+    }
+    return 'busy';
+}
+
+/**
+ * L'hôte quitte le module (index.php?back=1, autre module, nouveau lancement) : annule
+ * la partie liée à sa session et/ou à son cookie hôte, et oublie le PIN de la session.
+ * Sans cela, relancer le même module en Mode Jeu dans les 12 h reprenait l'ancienne partie.
+ */
+function game_cancel_host_game($dir) {
+    $pins = array();
+    if (!empty($_SESSION['game_pin'])) $pins[] = (string)$_SESSION['game_pin'];
+    $c = host_cookie_get();
+    if ($c && !in_array($c[0], $pins, true)) $pins[] = $c[0];
+    foreach ($pins as $p) { game_cancel($dir, $p); }
+    unset($_SESSION['game_pin']);
+    // Le cookie ne peut être effacé qu'avant toute sortie (index.php : ?back / ?level). Sinon il
+    // reste, mais pointe vers une partie annulée => « resume » est refusé et une partie neuve est créée.
+    if ($c && !headers_sent()) host_cookie_clear();
+    return count($pins) > 0;
 }
 
 /** Lit la question courante depuis la session de l'hôte (index.php). */
@@ -154,8 +247,13 @@ function current_question_from_session() {
     ];
 }
 
-/** État renvoyé au client (correctIndex masqué hors reveal/ended). */
-function public_state($game, $pid = null) {
+/**
+ * État renvoyé au client (correctIndex masqué hors reveal/ended).
+ * $hostView : la requête vient de la page HÔTE (index.php : actions hôte, ou state avec
+ * host=1). Un onglet play.php ouvert dans le navigateur de l'hôte est authentifié (cookie)
+ * mais ne doit PAS recevoir les champs réservés à l'hôte (correctPlayers pendant la question).
+ */
+function public_state($game, $pid = null, $hostView = false) {
     $reveal = in_array($game['status'], ['reveal', 'ended'], true);
     $players = [];
     foreach ($game['players'] as $id => $p) {
@@ -203,8 +301,7 @@ function public_state($game, $pid = null) {
     // Panneau "bonnes réponses" — RÉSERVÉ À L'HÔTE (jamais envoyé aux joueurs).
     // Calculé côté serveur à partir du vrai correctIndex, y compris pendant la phase 'question'
     // (mise à jour en direct pour l'hôte), sans jamais révéler la bonne réponse aux joueurs.
-    $isHost = (session_id() === (isset($game['hostSid']) ? $game['hostSid'] : ''));
-    if ($isHost) {
+    if ($hostView && host_auth($game)) {
         $ci = (isset($game['question']) && isset($game['question']['correctIndex']))
             ? (int)$game['question']['correctIndex'] : null;
         $correctCount = 0;
@@ -233,6 +330,8 @@ function public_state($game, $pid = null) {
     return $out;
 }
 
+if (defined('GAME_LIB_ONLY')) return; // inclus par index.php : fonctions seulement
+
 $action = isset($_REQUEST['action']) ? $_REQUEST['action'] : '';
 
 switch ($action) {
@@ -250,33 +349,63 @@ switch ($action) {
             if (!is_file(game_path($GAME_DIR, $cand))) { $pin = $cand; break; }
         }
         if ($pin === null) jerr('pin_alloc');
+        $hostKey = rand_hex(16);
         $game = [
             'pin'     => $pin,
             'level'   => $_SESSION['level'],
             'lang'    => isset($_SESSION['language']) ? $_SESSION['language'] : 'fr',
             'status'  => 'lobby',
             'hostSid' => session_id(),
+            'hostKey' => $hostKey, // secret de reprise hôte (cookie), jamais renvoyé en JSON
             'qNumber' => 0,
             'totalQ'  => isset($_SESSION['TotalQuestions']) ? (int)$_SESSION['TotalQuestions'] : 0,
             'question' => null,
             'players' => [],
             'createdAt' => time(),
         ];
-        save_game($GAME_DIR, $game);
+        if (!save_game($GAME_DIR, $game)) jerr('busy');
         $_SESSION['game_pin'] = $pin;
+        host_cookie_set($pin, $hostKey);
         jexit(['ok' => true, 'pin' => $pin]);
     }
 
     case 'resume': {
-        // Rechargement de la page hôte : reconnexion à la MÊME partie (même PIN, QR,
-        // joueurs, scores) au lieu d'en créer une nouvelle et vide.
-        $pin = isset($_SESSION['game_pin']) ? $_SESSION['game_pin'] : null;
+        // Rechargement / reconnexion de la page hôte : reprise de la MÊME partie (même PIN,
+        // QR, joueurs, scores) au lieu d'en créer une nouvelle et vide. Le PIN vient de la
+        // session, ou à défaut du cookie hôte (session PHP perdue ou régénérée).
+        $cookie = host_cookie_get();
+        $pin = !empty($_SESSION['game_pin']) ? $_SESSION['game_pin'] : ($cookie ? $cookie[0] : null);
         if (empty($pin)) jerr('no_game');
-        $game = load_game($GAME_DIR, $pin);
-        if (!$game) { unset($_SESSION['game_pin']); jerr('no_game'); }
-        if (!isset($game['hostSid']) || $game['hostSid'] !== session_id()) jerr('not_host');
-        if ((isset($game['status']) ? $game['status'] : '') === 'ended') jerr('ended');
-        jexit(['ok' => true, 'pin' => $pin, 'status' => $game['status']]);
+        $sid   = session_id();
+        $level = isset($_SESSION['level']) ? (string)$_SESSION['level'] : null;
+        try {
+            $game = mutate_game($GAME_DIR, $pin, function (&$g) use ($sid, $level) {
+                if (!host_auth($g)) throw new GameError('not_host');
+                $st = isset($g['status']) ? $g['status'] : '';
+                if ($st === 'ended' || $st === 'cancelled') throw new GameError('ended');
+                // Autre module choisi entre-temps : ne pas mélanger deux questionnaires.
+                if ($level !== null && isset($g['level']) && (string)$g['level'] !== $level) throw new GameError('other_level');
+                $g['hostSid'] = $sid; // re-lie la partie à la session courante
+            });
+        } catch (GameError $e) {
+            if ($e->getMessage() !== 'busy') { unset($_SESSION['game_pin']); }
+            jerr($e->getMessage());
+        }
+        if (!$game) { unset($_SESSION['game_pin']); host_cookie_clear(); jerr('no_game'); }
+        $_SESSION['game_pin'] = $pin;
+        if (!empty($game['hostKey'])) host_cookie_set($pin, $game['hostKey']);
+        // Session hôte repartie de zéro (questionnaire relancé) alors que la partie était
+        // plus loin : on recale la question courante si c'est bien la même question (même id).
+        $gq = isset($game['qNumber']) ? (int)$game['qNumber'] : 0;
+        if (!empty($_SESSION['start']) && in_array($game['status'], array('question', 'reveal'), true)
+            && isset($_SESSION['LastQuestion']) && (int)$_SESSION['LastQuestion'] < $gq
+            && !empty($game['question']['qid'])) {
+            $idArr = explode('__', isset($_SESSION['IdInUse']) ? $_SESSION['IdInUse'] : '');
+            if (isset($idArr[$gq]) && (string)$idArr[$gq] === (string)$game['question']['qid']) {
+                $_SESSION['LastQuestion'] = (string)$gq;
+            }
+        }
+        jexit(['ok' => true, 'pin' => $pin, 'status' => $game['status'], 'qNumber' => $gq]);
     }
 
     case 'setq': {
@@ -286,8 +415,18 @@ switch ($action) {
         $sid = session_id();
         try {
             $game = mutate_game($GAME_DIR, $pin, function (&$g) use ($cq, $sid) {
-                if (!isset($g['hostSid']) || $g['hostSid'] !== $sid) throw new GameError('not_host');
+                if (!host_auth($g)) throw new GameError('not_host');
+                // Partie terminée / annulée : on ne la rouvre jamais (requête rejouée, autre onglet…).
+                if ($g['status'] === 'ended' || $g['status'] === 'cancelled') throw new GameError('ended');
+                $g['hostSid'] = $sid;
                 if (!$cq) throw new GameError('no_question');
+                // Même question déjà en cours (hôte rechargé / reconnecté, ou setq ré-émis) :
+                // on NE remet PAS à zéro les réponses déjà données ni l'état reveal.
+                if (in_array($g['status'], array('question', 'reveal'), true) && !empty($g['question'])
+                    && (int)$g['qNumber'] === (int)$cq['qNumber']
+                    && (string)$g['question']['qid'] === (string)$cq['qid']) {
+                    return;
+                }
                 $g['question'] = array(
                     'text'         => $cq['text'],
                     'answers'      => $cq['answers'],
@@ -304,8 +443,8 @@ switch ($action) {
                 }
             });
         } catch (GameError $e) { jerr($e->getMessage()); }
-        if (!$game) jerr('no_game');
-        jexit(public_state($game));
+        if (!$game) jerr('not_found');
+        jexit(public_state($game, null, true));
     }
 
     case 'reveal':
@@ -315,20 +454,29 @@ switch ($action) {
         $sid = session_id();
         try {
             $game = mutate_game($GAME_DIR, $pin, function (&$g) use ($sid, $newStatus) {
-                if (!isset($g['hostSid']) || $g['hostSid'] !== $sid) throw new GameError('not_host');
+                if (!host_auth($g)) throw new GameError('not_host');
+                $g['hostSid'] = $sid;
+                if ($g['status'] === 'cancelled') throw new GameError('ended');
+                // 'reveal' ne doit jamais rouvrir une partie terminée (requête rejouée après coupure).
+                if ($newStatus === 'reveal' && $g['status'] === 'ended') return;
                 $g['status'] = $newStatus;
             });
         } catch (GameError $e) { jerr($e->getMessage()); }
-        if (!$game) jerr('no_game');
-        jexit(public_state($game));
+        if (!$game) jerr('not_found');
+        if ($action === 'end') { host_cookie_clear(); }
+        jexit(public_state($game, null, true));
     }
 
     case 'abort': {
+        // Annulation EXPLICITE par l'hôte : status=cancelled (les téléphones affichent
+        // « partie annulée » et oublient leur session). Le fichier est purgé par cleanup_old.
+        // Une partie déjà terminée reste « ended » ; 'busy' persistant => erreur (le client réessaie).
         $pin = isset($_REQUEST['pin']) ? $_REQUEST['pin'] : (isset($_SESSION['game_pin']) ? $_SESSION['game_pin'] : '');
-        $game = load_game($GAME_DIR, $pin);
-        if ($game && is_host($game)) { @unlink(game_path($GAME_DIR, $pin)); }
+        $r = game_cancel($GAME_DIR, $pin);
+        if ($r === 'busy') jerr('busy');
         unset($_SESSION['game_pin']);
-        jexit(['ok' => true]);
+        host_cookie_clear();
+        jexit(['ok' => true, 'result' => $r]);
     }
 
     case 'join': {
@@ -336,16 +484,23 @@ switch ($action) {
         $name = isset($_REQUEST['name']) ? trim($_REQUEST['name']) : '';
         if ($name === '') jerr('no_name');
         // Nettoyage / limite de longueur du pseudo.
-        $name = mb_substr(htmlspecialchars($name, ENT_QUOTES, 'UTF-8'), 0, 24);
+        // On décode d'abord : le téléphone peut renvoyer le pseudo déjà échappé (celui reçu
+        // du serveur, ex. « D&#039;Arc ») lors d'une reprise automatique → pas de double échappement.
+        $plain = html_entity_decode($name, ENT_QUOTES, 'UTF-8');
+        $name  = mb_substr(htmlspecialchars($plain, ENT_QUOTES, 'UTF-8'), 0, 24);
+        // Clé de comparaison = pseudo TRONQUÉ décodé (comme celui stocké), sinon un pseudo > 24 car. créerait un doublon.
+        $key   = mb_strtolower(trim(html_entity_decode($name, ENT_QUOTES, 'UTF-8')), 'UTF-8');
         $pid  = rand_hex(8);
         $reconnected = false;
         try {
-            $game = mutate_game($GAME_DIR, $pin, function (&$g) use (&$pid, $name, &$reconnected) {
-                if ($g['status'] === 'ended') throw new GameError('ended');
+            $game = mutate_game($GAME_DIR, $pin, function (&$g) use (&$pid, $name, $key, &$reconnected) {
+                // Rejoindre / revenir est possible à TOUT moment (lobby, question, reveal)
+                // tant que la partie n'est ni terminée ni annulée.
+                if ($g['status'] === 'ended' || $g['status'] === 'cancelled') throw new GameError('ended');
                 // Reconnexion : si un joueur porte déjà ce pseudo (sortie accidentelle / perte de
                 // connexion), on le réutilise tel quel => score et progression conservés.
                 foreach ($g['players'] as $existingPid => $p) {
-                    if (isset($p['name']) && mb_strtolower($p['name']) === mb_strtolower($name)) {
+                    if (isset($p['name']) && mb_strtolower(trim(html_entity_decode($p['name'], ENT_QUOTES, 'UTF-8')), 'UTF-8') === $key) {
                         $pid = $existingPid;
                         $reconnected = true;
                         return;
@@ -360,7 +515,7 @@ switch ($action) {
                 );
             });
         } catch (GameError $e) { jerr($e->getMessage()); }
-        if (!$game) jerr('no_game');
+        if (!$game) jerr('not_found');
         jexit(array(
             'ok'          => true,
             'pid'         => $pid,
@@ -387,16 +542,21 @@ switch ($action) {
                 }
             });
         } catch (GameError $e) { jerr($e->getMessage()); }
-        if (!$game) jerr('no_game');
+        if (!$game) jerr('not_found');
         jexit(public_state($game, $pid));
     }
 
     case 'state': {
         $pin = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
         $pid = isset($_REQUEST['pid']) ? $_REQUEST['pid'] : null;
+        // Lecture seule : on libère tout de suite le verrou de session (polling fréquent).
+        session_write_close();
         $game = load_game($GAME_DIR, $pin);
-        if (!$game) jerr('no_game');
-        jexit(public_state($game, $pid));
+        if ($game === null) jerr('not_found'); // la partie n'existe plus (seul cas « définitif »)
+        if ($game === false) jerr('busy');     // échec passager : le client réessaie
+        // Champs hôte uniquement si la page hôte le demande explicitement (host=1) ET s'authentifie.
+        $hostView = isset($_REQUEST['host']) && $_REQUEST['host'] === '1';
+        jexit(public_state($game, $pid, $hostView));
     }
 
     default:
