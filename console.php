@@ -5,6 +5,7 @@
 // Configuration, session durcie, anti-force-brute, CSRF : tout est dans auth.php
 require_once 'auth.php';
 require_once __DIR__ . '/i18n.php';
+require_once __DIR__ . '/access.php'; // access_format_key() / libellés des clés dans l'onglet Base de données
 $login_error = admin_handle_auth(basename($_SERVER['SCRIPT_NAME']), basename($_SERVER['SCRIPT_NAME']));
 
 // Fallback si l'extension mbstring est absente du conteneur (troncature UTF-8 approximative,
@@ -500,7 +501,7 @@ if (admin_is_logged_in()) {
         }
         // Retour à la même vue, avec les filtres et la page courante conservés
         $back = ['page' => 'database', 'view' => 'results', 'resp_deleted' => 1];
-        foreach (['level', 'q', 'p'] as $keep) {
+        foreach (['level', 'access_key', 'q', 'p'] as $keep) {
             if (isset($_POST[$keep]) && $_POST[$keep] !== '') { $back[$keep] = $_POST[$keep]; }
         }
         header('Location: ' . basename($_SERVER['SCRIPT_NAME']) . '?' . http_build_query($back));
@@ -1174,6 +1175,12 @@ if (admin_is_logged_in()) {
                     error_log('[admin/database] migration created_at : ' . $e->getMessage());
                 }
 
+                // Migration auto : ajoute GSDatabaseR.access_key (clé utilisée pour répondre), pour
+                // pouvoir catégoriser/filtrer les résultats par groupe. Lignes existantes = NULL.
+                // Réutilise le helper de access.php (déjà require_once plus haut) au lieu d'une
+                // 2e copie du DESCRIBE/ALTER ; mis en cache par requête (gratuit si déjà appelé).
+                access_ensure_responses_key_column($pdo);
+
                 // Existence + nombre de lignes de chaque table (les tables EN ne sont
                 // créées qu'au premier import anglais), pour les badges de navigation.
                 $db_counts = [];
@@ -1233,6 +1240,40 @@ if (admin_is_logged_in()) {
                         }
                     }
 
+                    // Filtre par clé d'accès (groupe de répondants) : uniquement pour GSDatabaseR.
+                    $key_filter = null;      // valeur de clé sélectionnée (normalisée)
+                    $key_filter_none = false; // "sans clé" (lignes historiques, access_key NULL)
+                    $access_key_labels = [];
+                    if (in_array('access_key', $columns)) {
+                        try {
+                            foreach ($pdo->query("SELECT access_key, label FROM access_keys") as $k_row) {
+                                $access_key_labels[$k_row['access_key']] = $k_row['label'];
+                            }
+                        } catch (PDOException $e) { /* access_keys pas encore créée : libellés vides, non bloquant */ }
+                        $present_keys = $pdo->query("SELECT DISTINCT access_key FROM `$view` WHERE access_key IS NOT NULL ORDER BY access_key ASC")->fetchAll(PDO::FETCH_COLUMN);
+                        $has_null_key = (bool) $pdo->query("SELECT 1 FROM `$view` WHERE access_key IS NULL LIMIT 1")->fetchColumn();
+                        if (isset($_GET['access_key']) && $_GET['access_key'] !== '') {
+                            if ($_GET['access_key'] === '__none__') {
+                                $key_filter_none = true;
+                                $where[] = 'access_key IS NULL';
+                            } else {
+                                // Normaliser avant la vérification en liste blanche (les clés sont
+                                // stockées normalisées) : sinon une saisie avec tirets/minuscules ne
+                                // matchait aucune clé connue et le filtre était silencieusement ignoré
+                                // (toutes les réponses de tous les groupes s'affichaient).
+                                $get_key_norm = access_normalize_key($_GET['access_key']);
+                                if (in_array($get_key_norm, $present_keys, true)) {
+                                    $key_filter = $get_key_norm;
+                                    $where[] = 'access_key = ?';
+                                    $params[] = $key_filter;
+                                } else {
+                                    // Clé inconnue : ne jamais afficher tous les groupes par défaut.
+                                    $where[] = '1 = 0';
+                                }
+                            }
+                        }
+                    }
+
                     // Recherche : LIKE sur toutes les colonnes de la table
                     $search = isset($_GET['q']) ? trim($_GET['q']) : '';
                     if ($search !== '') {
@@ -1266,6 +1307,8 @@ if (admin_is_logged_in()) {
                     // URL de base pour la pagination (filtres conservés)
                     $base_params = ['page' => 'database', 'view' => $current_view];
                     if ($level_filter !== null) { $base_params['level'] = $level_filter; }
+                    if ($key_filter !== null) { $base_params['access_key'] = $key_filter; }
+                    if ($key_filter_none) { $base_params['access_key'] = '__none__'; }
                     if ($search !== '') { $base_params['q'] = $search; }
                     $page_url = function ($p) use ($base_params) {
                         return '?' . http_build_query($base_params + ['p' => $p]);
@@ -1286,6 +1329,12 @@ if (admin_is_logged_in()) {
                     echo '<div class="db-toolbar">';
                     $info = $total_rows . ' ligne(s)';
                     if ($level_filter !== null) { $info .= ' — module ' . htmlspecialchars($level_filter); }
+                    if ($key_filter !== null) {
+                        $kf_label = isset($access_key_labels[$key_filter]) && $access_key_labels[$key_filter] !== ''
+                            ? $access_key_labels[$key_filter] : access_format_key($key_filter);
+                        $info .= ' — clé ' . htmlspecialchars($kf_label);
+                    }
+                    if ($key_filter_none) { $info .= ' — sans clé'; }
                     if ($search !== '') { $info .= ' — recherche « ' . htmlspecialchars($search) . ' »'; }
                     echo '<span class="db-info">' . $info . '</span>';
 
@@ -1302,9 +1351,25 @@ if (admin_is_logged_in()) {
                         }
                         echo '</select>';
                     }
+                    if (in_array('access_key', $columns)) {
+                        $cur_key_val = $key_filter_none ? '__none__' : (string) $key_filter;
+                        echo '<label for="access_key_filter" style="margin:0; font-size:0.9rem;">Clé :</label>';
+                        echo '<select id="access_key_filter" name="access_key">';
+                        echo '<option value="">Toutes</option>';
+                        foreach ($present_keys as $pk) {
+                            $pk_label = isset($access_key_labels[$pk]) && $access_key_labels[$pk] !== '' ? $access_key_labels[$pk] : access_format_key($pk);
+                            $sel = ($cur_key_val === (string) $pk) ? ' selected' : '';
+                            echo '<option value="' . htmlspecialchars($pk) . '"' . $sel . '>' . htmlspecialchars($pk_label) . '</option>';
+                        }
+                        if ($has_null_key) {
+                            $sel = ($cur_key_val === '__none__') ? ' selected' : '';
+                            echo '<option value="__none__"' . $sel . '>Sans clé</option>';
+                        }
+                        echo '</select>';
+                    }
                     echo '<input type="text" name="q" value="' . htmlspecialchars($search) . '" placeholder="Rechercher…" style="width:200px; padding:0.4rem 0.6rem;">';
                     echo '<button type="submit">Filtrer</button>';
-                    if ($level_filter !== null || $search !== '') {
+                    if ($level_filter !== null || $key_filter !== null || $key_filter_none || $search !== '') {
                         echo '<a href="?page=database&view=' . $current_view . '" class="back-link" style="margin:0;">Réinitialiser</a>';
                     }
                     echo '</form>';
@@ -1325,6 +1390,11 @@ if (admin_is_logged_in()) {
                             foreach ($columns as $col) {
                                 // Échappement obligatoire : données issues des réponses au questionnaire (XSS stocké).
                                 $val = (string) $row[$col];
+                                if ($col === 'access_key' && $val !== '' && isset($access_key_labels[$val]) && $access_key_labels[$val] !== '') {
+                                    $val = access_format_key($val) . ' (' . $access_key_labels[$val] . ')';
+                                } elseif ($col === 'access_key' && $val !== '') {
+                                    $val = access_format_key($val);
+                                }
                                 if (mb_strlen($val) > $truncate_at) {
                                     $short = htmlspecialchars(mb_substr($val, 0, $truncate_at), ENT_QUOTES, 'UTF-8');
                                     $full  = htmlspecialchars($val, ENT_QUOTES, 'UTF-8');
@@ -1343,6 +1413,7 @@ if (admin_is_logged_in()) {
                                    . csrf_input()
                                    . "<input type='hidden' name='id' value='" . htmlspecialchars($row['id']) . "'>"
                                    . "<input type='hidden' name='level' value='" . htmlspecialchars((string) $level_filter) . "'>"
+                                   . "<input type='hidden' name='access_key' value='" . htmlspecialchars($key_filter_none ? '__none__' : (string) $key_filter) . "'>"
                                    . "<input type='hidden' name='q' value='" . htmlspecialchars($search) . "'>"
                                    . "<input type='hidden' name='p' value='" . $cur_page . "'>"
                                    . "<button type='submit' name='delete_response' class='btn-small btn-danger'>Supprimer</button>"
