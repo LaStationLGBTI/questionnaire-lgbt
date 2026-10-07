@@ -43,6 +43,8 @@ return [
     'page_title_question' => 'Question',
     'join_game' => 'Join a game',
     'launch_game_mode' => 'Launch in game mode (PIN + QR, on-screen)',
+    'mode_choice_solo' => 'Individual mode',
+    'mode_choice_game' => 'Game mode',
     'back_to_module_selection' => 'Back to module selection',
     'missing_level_data' => 'Missing data for the chosen level. Please contact \'La STATION\'',
     'question_select_error' => 'Error while selecting the question, please contact \'La STATION\'',
