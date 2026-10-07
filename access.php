@@ -463,7 +463,8 @@ function access_render_gate($lang, $error = null) {
     .gate .key-wrap { position:relative; }
     .gate .key-wrap input { padding-right:48px; }
     .gate .key-wrap .eye { position:absolute; right:8px; top:50%; transform:translateY(-50%);
-            background:none; border:none; font-size:20px; cursor:pointer; padding:4px; line-height:1; }
+            background:none; border:none; font-size:20px; cursor:pointer; padding:4px; line-height:1;
+            width:auto; height:auto; margin:0; }
     .gate label.remember { display:flex; gap:8px; align-items:flex-start; margin-top:12px;
             font-size:13px; color:#666; text-align:left; cursor:pointer; }
     .gate label.remember input { margin-top:2px; }
