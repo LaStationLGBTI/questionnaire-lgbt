@@ -22,6 +22,7 @@
  */
 
 require_once __DIR__ . '/conf.php';
+require_once __DIR__ . '/client_ip.php';
 require_once __DIR__ . '/i18n.php';
 
 // Session : démarrée par la page appelante en général ; on la démarre si accès direct (AJAX).
@@ -106,14 +107,14 @@ const RESPONSES_RETENTION_YEARS   = 3;
 
 /**
  * Journalise une entrée réussie par clé (IP + user-agent). Jamais bloquant.
- * NB : derrière un reverse-proxy, REMOTE_ADDR est l'IP du proxy ; on garde
- * REMOTE_ADDR car X-Forwarded-For est falsifiable par le client.
+ * IP réelle via client_ip() (X-Forwarded-For seulement si la requête vient
+ * du proxy local, voir client_ip.php).
  */
 function access_log_entry($key) {
     try {
         $pdo = access_pdo();
         access_ensure_log_table($pdo);
-        $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+        $ip = client_ip();
         $ua = isset($_SERVER['HTTP_USER_AGENT']) ? substr($_SERVER['HTTP_USER_AGENT'], 0, 255) : '';
         $stmt = $pdo->prepare("INSERT INTO access_log (access_key, ip, user_agent, created_at) VALUES (?, ?, ?, NOW())");
         $stmt->execute([access_normalize_key($key), $ip, $ua]);
@@ -220,7 +221,7 @@ const ACCESS_LOCK_SECONDS   = 900;  // durée du blocage une fois le seuil attei
 function access_throttle_file() {
     $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lgbt_access_throttle';
     if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
-    $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+    $ip = client_ip();
     return $dir . DIRECTORY_SEPARATOR . sha1($ip) . '.json';
 }
 
