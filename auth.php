@@ -22,6 +22,7 @@
  */
 
 require_once __DIR__ . '/conf.php';
+require_once __DIR__ . '/client_ip.php';
 
 // --- Ne jamais exposer les erreurs PHP à l'utilisateur (les journaliser seulement) ---
 // Mettre APP_DEBUG=1 dans l'environnement du serveur pour réactiver l'affichage en dev.
@@ -84,7 +85,7 @@ function admin_throttle_dir() {
 }
 
 function admin_client_ip() {
-    return isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+    return client_ip();
 }
 
 function admin_throttle_file() {
