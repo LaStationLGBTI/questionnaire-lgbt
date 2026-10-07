@@ -1089,17 +1089,43 @@ if (!isset($_SESSION['level'])) {
                     <?php endforeach; ?>
                 </div>
 
-                <form method="POST" action="">
-                    <label style="display:inline-flex; align-items:center; gap:10px; margin:0.5em auto 0; padding:0.7em 1.1em; border:2px solid #8a7bf4; border-radius:14px; background:#f4eefb; color:#4a3a86; font-weight:700; font-size:15px; cursor:pointer;">
-                        <input type="checkbox" name="game_mode" value="1" style="width:20px; height:20px; accent-color:#8a7bf4;">
-                        🎮 <?php echo t('launch_game_mode'); ?>
-                    </label>
+                <form method="POST" action="" id="start-form">
+                    <div class="mode-choice-group" role="radiogroup" style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:1em auto 0.5em; max-width:560px;">
+                        <button type="button" class="mode-choice" data-mode="solo" aria-pressed="false" style="flex:1 1 200px; min-width:180px; padding:1em 1.2em; border:2px solid #8a7bf4; border-radius:14px; background:#f4eefb; color:#4a3a86; font-weight:700; font-size:16px; cursor:pointer; transition:background .15s,color .15s,box-shadow .15s;">
+                            🧍 <?php echo t('mode_choice_solo'); ?>
+                        </button>
+                        <button type="button" class="mode-choice" data-mode="game" aria-pressed="false" style="flex:1 1 200px; min-width:180px; padding:1em 1.2em; border:2px solid #8a7bf4; border-radius:14px; background:#f4eefb; color:#4a3a86; font-weight:700; font-size:16px; cursor:pointer; transition:background .15s,color .15s,box-shadow .15s;">
+                            🎮 <?php echo t('mode_choice_game'); ?>
+                        </button>
+                    </div>
+                    <input type="checkbox" name="game_mode" id="game-mode-hidden" value="1" style="display:none;">
+                    <style>
+                        .mode-choice.selected { background:#8a7bf4 !important; color:#fff !important; box-shadow:0 4px 14px rgba(138,123,244,0.4); }
+                        @media (max-width: 480px) { .mode-choice-group { flex-direction: column; } }
+                    </style>
+                    <script>
+                        (function () {
+                            var choices = document.querySelectorAll('.mode-choice');
+                            var hiddenCb = document.getElementById('game-mode-hidden');
+                            choices.forEach(function (btn) {
+                                btn.addEventListener('click', function () {
+                                    choices.forEach(function (b) { b.classList.remove('selected'); b.setAttribute('aria-pressed', 'false'); });
+                                    btn.classList.add('selected');
+                                    btn.setAttribute('aria-pressed', 'true');
+                                    hiddenCb.checked = (btn.getAttribute('data-mode') === 'game'); var contBtn = document.getElementById('start-continue-btn');
+                                    contBtn.disabled = false;
+                                    contBtn.style.backgroundColor = '#5cb37a';
+                                    contBtn.style.cursor = 'pointer';
+                                });
+                            });
+                        })();
+                    </script>
                     <div class="u-align-right u-form-group u-form-submit">
                         <a href="index.php?back=1"
                            style="display:inline-block; margin-top:1vh; margin-right:12px; padding:0.55em 1.3em; border-radius:50px; border:2px solid #9c5a86; color:#9c5a86; text-decoration:none; font-weight:700; font-size:14px;">
                             &larr; <?php echo t('back_to_module_selection'); ?>
                         </a>
-                        <button style="margin-top:1vh;" value="1" name="start" type="submit"
+                        <button style="margin-top:1vh; background-color:#c9c2ea; color:#fff; cursor:not-allowed;" value="1" name="start" type="submit" id="start-continue-btn" disabled
                             class="u-active-palette-2-light-1 u-border-none u-btn u-btn-round u-btn-submit u-button-style u-hover-palette-2-light-1 u-palette-2-light-2 u-radius-50 u-text-active-white u-text-hover-white u-text-palette-2-dark-2 u-btn-1">
                             <?php echo t('continue'); ?>
                         </button>
@@ -1237,7 +1263,7 @@ if (!isset($_SESSION["start"])) {
 <section style="height:auto;" class="u-align-center u-clearfix u-container-align-center u-palette-2-light-3 u-section-2" id="qcm">
     <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
         <div class="u-container-layout u-container-layout-1">
-            <h5 id="QuestionN" class="u-align-center" style="margin-top:1vh; margin-bottom:0;">
+            <h5 id="QuestionN" class="u-align-center" style="margin-top:2.5vh; margin-bottom:0; font-weight:800; font-size:1.3em; color:#4a3a86;">
                 Question <?php echo $_SESSION["LastQuestion"]; ?>
             </h5>
             <button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4" style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next" onclick="updateQuestion(-1)">
@@ -2172,7 +2198,11 @@ if(isset($_SESSION['reponses'])){
 
 			const box = document.createElement('div');
 			box.id = 'answer-info-popup';
-			box.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#f4eefb;border-radius:10px;width:420px;max-width:92%;border:solid 0.3em #c7aecb;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:10000;';
+			// Positionné à droite/bas sur desktop pour ne pas cacher la question ni les réponses ;
+			// en bas pleine largeur (avec marges) sur petit écran.
+			box.style.cssText = (window.innerWidth <= 640)
+				? 'position:fixed;left:12px;right:12px;bottom:12px;top:auto;transform:none;background:#f4eefb;border-radius:10px;width:auto;max-width:none;border:solid 0.3em #c7aecb;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:10000;'
+				: 'position:fixed;bottom:90px;right:28px;top:auto;left:auto;transform:none;background:#f4eefb;border-radius:10px;width:380px;max-width:90vw;border:solid 0.3em #c7aecb;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:10000;';
 
 			const header = document.createElement('div');
 			header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:move;background:' + (isNeutral ? '#e9d9f2' : (isCorrect ? '#d6f5d6' : '#f7d6d6')) + ';border-radius:7px 7px 0 0;user-select:none;';
