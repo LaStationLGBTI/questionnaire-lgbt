@@ -442,14 +442,17 @@ if (!function_exists('i18n_relocalize_session')) {
             return '';
         }
         $h = '<style>'
-            . '.lang-switch{position:absolute;top:8px;right:10px;z-index:9990;display:flex;gap:6px;padding:5px 8px;'
-            . 'background:#f4eefb;border:1px solid #d8cff7;border-radius:30px;box-shadow:0 2px 8px rgba(74,58,134,.12);}'
+            . '.lang-switch{position:fixed;top:12px;right:12px;z-index:9990;display:flex;gap:6px;padding:6px;'
+            . 'background:#fff;border:2px solid #8a7bf4;border-radius:30px;box-shadow:0 4px 16px rgba(74,58,134,.28);}'
             . '.lang-switch form{margin:0;display:inline;}'
-            . '.lang-switch__btn{display:block;width:30px;height:30px;padding:0;margin:0;border:2px solid transparent;'
-            . 'border-radius:50%;overflow:hidden;background:#fff;cursor:pointer;line-height:0;transition:border-color .15s;}'
-            . '.lang-switch__btn img{width:100%;height:100%;object-fit:cover;display:block;}'
-            . '.lang-switch__btn:hover{border-color:#e9c4ce;}'
-            . '.lang-switch__btn.is-current{border-color:#8a7bf4;cursor:default;}'
+            . '.lang-switch__btn{display:flex;align-items:center;gap:7px;height:40px;padding:0 14px 0 5px;margin:0;'
+            . 'border:2px solid transparent;border-radius:24px;background:#f4eefb;color:#4a3a86;cursor:pointer;'
+            . 'font:800 15px/1 sans-serif;letter-spacing:.5px;transition:background .15s,border-color .15s;}'
+            . '.lang-switch__btn img{width:30px;height:30px;border-radius:50%;object-fit:cover;display:block;box-shadow:0 0 0 1px rgba(0,0,0,.15);}'
+            . '.lang-switch__btn:hover{border-color:#8a7bf4;background:#ebe4fb;}'
+            . '.lang-switch__btn.is-current{background:#8a7bf4;color:#fff;cursor:default;}'
+            . '@media (max-width:480px){.lang-switch{top:8px;right:8px;}.lang-switch__btn{height:34px;padding:0 10px 0 4px;font-size:13px;}'
+            . '.lang-switch__btn img{width:24px;height:24px;}}'
             . '</style>';
         $h .= '<div class="lang-switch" role="group" aria-label="' . htmlspecialchars(t('lang_switch_label')) . '">';
         foreach ($langs as $L) {
@@ -462,7 +465,8 @@ if (!function_exists('i18n_relocalize_session')) {
                 . '<input type="hidden" name="uq_choice" value="">'
                 . '<button type="submit" class="lang-switch__btn' . ($cur ? ' is-current' : '') . '" title="' . $label . '"'
                 . ($cur ? ' aria-current="true" disabled' : '') . '>'
-                . '<img src="images/' . htmlspecialchars((string) $L['flag_file']) . '" alt="' . $label . '">'
+                . '<img src="images/' . htmlspecialchars((string) $L['flag_file']) . '" alt="">'
+                . '<span>' . htmlspecialchars(strtoupper($code)) . '</span>'
                 . '</button></form>';
         }
         return $h . '</div>';
