@@ -90,7 +90,7 @@ if (isset($_GET['back'])) {
     foreach (['level', 'start', 'LastQuestion', 'TotalQuestions', 'QuestionToUse',
               'Rep1', 'Rep2', 'Rep3', 'Rep4', 'Rep5', 'IdInUse', 'answer', 'qtype',
               'expliqs', 'reponses', 'id_user', 'finish', 'acc', 'genre', 'orient', 'emailr',
-              'mail_sent', 'game_mode', 'game_pin'] as $k) {
+              'mail_sent', 'game_mode', 'game_pin', 'q_lang'] as $k) {
         unset($_SESSION[$k]);
     }
     header('Location: index.php');
@@ -140,6 +140,11 @@ try {
     i18n_boot($pdo_boot);
     $lang = i18n_valid_lang($pdo_boot, $lang, 'fr');
     $_SESSION['language'] = $lang;
+    // Changement de langue en cours de questionnaire : on re-traduit les textes deja tires
+    // (memes ids FR, meme ordre, meme progression ; aucune reponse ecrite).
+    if (isset($_SESSION['start'], $_SESSION['IdInUse']) && (!isset($_SESSION['q_lang']) || $_SESSION['q_lang'] !== $lang)) {
+        if (i18n_relocalize_session($pdo_boot, $lang)) { $_SESSION['q_lang'] = $lang; }
+    }
 } catch (PDOException $e) {
     error_log('[index i18n boot] ' . $e->getMessage());
     $pdo_boot = null;
@@ -157,12 +162,18 @@ $access_error = access_handle_post();
 // Vérification "live" (sans cache) au moment critique : choix / démarrage d'un module.
 $access_valid = access_session_valid(isset($_GET['level']) || isset($_POST['start']));
 if (!$access_valid && (!access_session_granted() || !isset($_SESSION['start']))) {
-    access_render_gate($lang, $access_error); // affiche l'écran de saisie puis exit()
+    access_render_gate($lang, $access_error, $pdo_boot); // affiche l'écran de saisie puis exit()
 }
 
 // Mode Jeu (style Kahoot) : actif si déjà mémorisé en session OU si la case a été cochée
 // sur l'écran d'intro (POST). Cf. game.php / play.php pour la mécanique temps réel.
 $game_mode = (!empty($_SESSION['game_mode']) || isset($_POST['game_mode']));
+// Changement de langue juste apres une reponse (selecteur de drapeaux) : uq_review = numero
+// de la question repondue dont le popup est encore a l'ecran. On la reaffiche (lecture seule,
+// sans rien ecrire) avec sa reponse, au lieu de sauter a la suivante. Cf. i18n_review_ok().
+$uq_review = (isset($_POST['uq_review']) && ctype_digit((string)$_POST['uq_review'])) ? (int)$_POST['uq_review'] : 0;
+$uq_review_ok = !$game_mode && $uq_review > 0 && i18n_review_ok($uq_review);
+$uq_choice = (isset($_POST['uq_choice']) && preg_match('/^-?\d{1,2}$/', (string)$_POST['uq_choice'])) ? max(-1, min(5, (int)$_POST['uq_choice'])) : -1;
 
 $lang = $_SESSION['language'];
 ?>
@@ -419,6 +430,55 @@ $lang = $_SESSION['language'];
 	// réponse précédente a été perdue (coupure) alors que le serveur avait déjà avancé, le
 	// nouvel essai renvoie la question courante au lieu d'en sauter une.
 	var UQ_QNUM = 0;
+	// Question qui vient d'etre repondue (popup « bonne reponse » + bouton Continuer encore
+	// affiches) : { q: numero, choice: indice choisi }, sinon null. Transmis au changement de
+	// langue pour reafficher cette question avec sa reponse (cf. uqLangSubmit / startQuestion).
+	var UQ_ANSWERED = null;
+	// Soumission d'un drapeau du selecteur de langue (i18n_switcher_html) : rechargement de la
+	// page dans la nouvelle langue, sans perte de progression (rien n'est ecrit cote serveur).
+	function uqLangSubmit(form) {
+		// Reponse en cours d'envoi : on attend sa fin (sinon son popup serait perdu).
+		if (typeof xhr !== 'undefined' && xhr.readyState > 0 && xhr.readyState < 4) return false;
+		if (form.uq_review) form.uq_review.value = UQ_ANSWERED ? String(UQ_ANSWERED.q) : '';
+		if (form.uq_choice) form.uq_choice.value = UQ_ANSWERED ? String(UQ_ANSWERED.choice) : '';
+		return true;
+	}
+	// Bonne reponse (qcm) : vert sur la bonne, rouge sur les autres.
+	function uqHighlight(answersarray, ci) {
+		answersarray.forEach(function (item, index) {
+			item.querySelectorAll('div#question_container').forEach(function (inner) {
+				inner.classList.remove('fade-to-green');
+				inner.classList.remove('fade-to-red');
+				inner.classList.remove('fade-to-white');
+				inner.classList.add(index === ci - 1 ? 'fade-to-green' : 'fade-to-red');
+			});
+		});
+	}
+	// Popup « bonne reponse + explication » (qcm / echelle) d'apres les blocs affiches.
+	function uqShowAnswerPopup(answersarray, ci, qtype, explanation, choice) {
+		var correctText = "";
+		if (answersarray[ci - 1]) {
+			var rep = answersarray[ci - 1].querySelector('p#rep');
+			if (rep) correctText = rep.innerText;
+		}
+		showAnswerPopup(correctText, explanation, parseInt(choice, 10) === ci, qtype == "echelle");
+	}
+	// Etat « repondu » d'une question reaffichee apres changement de langue : surbrillance,
+	// popup dans la nouvelle langue, Continuer -> question suivante (ou page finale).
+	// timeout = true bloque toute nouvelle reponse a cette question (le serveur l'a deja).
+	function uqRestoreAnswered(qnum, choice, qtype, ci, explanation, isFin) {
+		timeout = true;
+		var answersarray = findAllBlocks();
+		if (qtype == "qcm") uqHighlight(answersarray, ci);
+		uqShowAnswerPopup(answersarray, ci, qtype, explanation, choice);
+		UQ_ANSWERED = { q: qnum, choice: choice };
+		showContinueButton(function () {
+			UQ_ANSWERED = null;
+			if (isFin) { window.location.href = 'index.php'; return; }
+			timeout = false;
+			startQuestion();
+		});
+	}
 	// Palette Kahoot (couleur + symbole), identique à play.php, indexée par position de réponse.
 	var GAME_PALETTE = [
 		{ c: "#e21b3c", s: "▲" }, // rouge  ▲
@@ -489,7 +549,10 @@ $lang = $_SESSION['language'];
         var selectedCells = [];
         const connections = [];
 
-function startQuestion() {
+// reviewQ / reviewChoice (optionnels) : reaffiche la question reviewQ DEJA repondue, avec sa
+// reponse (changement de langue pendant que le popup / Continuer etaient affiches).
+function startQuestion(reviewQ, reviewChoice) {
+    reviewQ = parseInt(reviewQ, 10) || 0;
     changeRandomImage();
     parentDiv = document.getElementById("quest_list");
     var xhr2 = new XMLHttpRequest();
@@ -499,6 +562,7 @@ function startQuestion() {
         if (xhr2.readyState == 4 && xhr2.status == 200) {
             var answersarray = findAllBlocks();
             var response = xhr2.responseText.split("__");
+            if (reviewQ > 0 && !(parseInt(response[6], 10) === reviewQ && response.length > 11)) UQ_ANSWERED = null; // reprise refusee
             document.getElementById("Question").innerHTML = response[0];
             answersarray.forEach(function (item, index) {
                 const innerAnswers = item.querySelector('div#question_container');
@@ -551,6 +615,12 @@ function startQuestion() {
                     }
                 }
                 if (GAME_MODE) { applyGameColors(); if (typeof gameAfterRender === 'function') gameAfterRender(); }
+                // Reprise « deja repondue » (format review de StartQuestions.php : [9] bonne
+                // reponse, [10] derniere question, [11+] explication).
+                else if (reviewQ > 0 && parseInt(response[6], 10) === reviewQ && response.length > 11) {
+                    uqRestoreAnswered(reviewQ, parseInt(reviewChoice, 10), response[7], parseInt(response[9], 10),
+                        response.slice(11).join("__"), response[10] === "1");
+                }
 } else if (response[7] == "lien") {
     ismultiple = true;
     const blocks = document.querySelectorAll('div[id^="reponse_"]');
@@ -836,13 +906,23 @@ for (let i = 0; i < data1.length; i++) {
             }
         }
     };
-    xhr2.send();
+    // Reprise : l'etat « repondu » est garde des maintenant (changement de langue pendant le chargement).
+    if (reviewQ > 0) UQ_ANSWERED = { q: reviewQ, choice: parseInt(reviewChoice, 10) };
+    xhr2.send(reviewQ > 0 ? "review=" + reviewQ : "");
     resize_questions();
 }
 
     </script>
 
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
+    <?php
+    // Selecteur de langue sur tous les ecrans (choix du module, description, questionnaire,
+    // formulaire final, resultats). Masque en Mode Jeu : l'ecran hote pilote une partie en
+    // direct (lobby / reveal), un rechargement en pleine partie n'apporte rien et reste risque.
+    if (!$game_mode && isset($pdo_boot) && $pdo_boot instanceof PDO) {
+        echo i18n_switcher_html(i18n_languages($pdo_boot), $lang);
+    }
+    ?>
 
     <?php
 if (!isset($_SESSION['level'])) {
@@ -906,14 +986,7 @@ if (!isset($_SESSION['level'])) {
                         </form>
                     </div>
 
-                    <div class="language-selector">
-                        <?php foreach ((isset($pdo) && $pdo instanceof PDO) ? i18n_languages($pdo) : [] as $L): ?>
-                        <form method="POST" style="display: inline;">
-                            <input type="hidden" name="language" value="<?php echo htmlspecialchars($L['code']); ?>">
-                            <input type="image" src="images/<?php echo htmlspecialchars($L['flag_file']); ?>" alt="<?php echo htmlspecialchars($L['label']); ?>" title="<?php echo htmlspecialchars($L['label']); ?>" class="language-flag <?php echo $lang === $L['code'] ? 'selected' : ''; ?>">
-                        </form>
-                        <?php endforeach; ?>
-                    </div>
+<?php // Selecteur de langue : rendu une seule fois en haut de page (i18n_switcher_html, apres <body>). ?>
 
                     <?php if ($error_message): ?>
                         <p class="error u-text"><?= htmlspecialchars($error_message) ?></p>
@@ -1080,14 +1153,7 @@ if (!isset($_SESSION['level'])) {
                     <i><?php echo t('thanks'); ?></i>
                 </p>
 
-                <div class="language-selector">
-                    <?php foreach ((isset($pdo_desc) && $pdo_desc instanceof PDO) ? i18n_languages($pdo_desc) : [] as $L): ?>
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="language" value="<?php echo htmlspecialchars($L['code']); ?>">
-                        <input type="image" src="images/<?php echo htmlspecialchars($L['flag_file']); ?>" alt="<?php echo htmlspecialchars($L['label']); ?>" title="<?php echo htmlspecialchars($L['label']); ?>" class="language-flag <?php echo $lang === $L['code'] ? 'selected' : ''; ?>" style="width: 40px; height: 40px;">
-                    </form>
-                    <?php endforeach; ?>
-                </div>
+<?php // Selecteur de langue : rendu une seule fois en haut de page (i18n_switcher_html, apres <body>). ?>
 
                 <form method="POST" action="" id="start-form">
                     <div class="mode-choice-group" role="radiogroup" style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:1em auto 0.5em; max-width:560px;">
@@ -1137,7 +1203,7 @@ if (!isset($_SESSION['level'])) {
     </div>
 </section>
 
-    <?php } else if ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) {
+    <?php } else if ($uq_review_ok || ((isset($_POST["start"]) || isset($_SESSION["start"])) && (isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) <= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1))) {
 if (!isset($_SESSION["start"])) {
 	    if (!isset($_SESSION['level'])) {
         echo "Error: Questionnaire level not selected. Please go back and choose a questionnaire.";
@@ -1206,6 +1272,7 @@ if (!isset($_SESSION["start"])) {
         // Mode Jeu : mémorisé pour toute la durée de la partie (case cochée sur l'écran d'intro).
         $_SESSION["game_mode"] = isset($_POST["game_mode"]) ? 1 : 0;
         $_SESSION["LastQuestion"] = "1";
+        $_SESSION["q_lang"] = $lang; // langue des textes tires (cf. i18n_relocalize_session)
         // Nouveau lancement (POST start) : jamais de reprise d'une ancienne partie ; une simple
         // recharge de page en cours de partie ne repasse pas ici et reprend donc la même partie.
         game_cancel_host_game($GAME_DIR);
@@ -1215,14 +1282,16 @@ if (!isset($_SESSION["start"])) {
         exit();
     }
 }
-        if (isset(explode("__", $_SESSION["QuestionToUse"])[$_SESSION["LastQuestion"]])) {
-            $currentQuestion = explode("__", $_SESSION["QuestionToUse"])[$_SESSION["LastQuestion"]];
-            $currentRep1 = explode("__", $_SESSION["Rep1"])[$_SESSION["LastQuestion"]];
-            $currentRep2 = explode("__", $_SESSION["Rep2"])[$_SESSION["LastQuestion"]];
-            $currentRep3 = explode("__", $_SESSION["Rep3"])[$_SESSION["LastQuestion"]];
-            $currentRep4 = explode("__", $_SESSION["Rep4"])[$_SESSION["LastQuestion"]];
-            $currentRep5 = explode("__", $_SESSION["Rep5"])[$_SESSION["LastQuestion"]];
-            $qtype = explode("__", $_SESSION["qtype"])[$_SESSION["LastQuestion"]];
+        // Question affichee : la courante, ou celle qui vient d'etre repondue (reprise apres changement de langue).
+        $uq_show = $uq_review_ok ? $uq_review : $_SESSION["LastQuestion"];
+        if (isset(explode("__", $_SESSION["QuestionToUse"])[$uq_show])) {
+            $currentQuestion = explode("__", $_SESSION["QuestionToUse"])[$uq_show];
+            $currentRep1 = explode("__", $_SESSION["Rep1"])[$uq_show];
+            $currentRep2 = explode("__", $_SESSION["Rep2"])[$uq_show];
+            $currentRep3 = explode("__", $_SESSION["Rep3"])[$uq_show];
+            $currentRep4 = explode("__", $_SESSION["Rep4"])[$uq_show];
+            $currentRep5 = explode("__", $_SESSION["Rep5"])[$uq_show];
+            $qtype = explode("__", $_SESSION["qtype"])[$uq_show];
         } else {
             echo t('question_select_error');
         }
@@ -1264,7 +1333,7 @@ if (!isset($_SESSION["start"])) {
     <div class="u-container-style u-expanded-width u-grey-10 u-group u-group-1">
         <div class="u-container-layout u-container-layout-1">
             <h5 id="QuestionN" class="u-align-center" style="margin-top:2.5vh; margin-bottom:0; font-weight:800; font-size:1.3em; color:#4a3a86;">
-                Question <?php echo $_SESSION["LastQuestion"]; ?>
+                Question <?php echo $uq_show; ?>
             </h5>
             <button class="u-active-palette-2-light-1 u-align-center u-border-none u-btn u-btn-round u-button-style u-hover-palette-2-light-1 u-radius u-btn-4" style="color:black; margin-top:0; background-color:#8a7bf4;" id="button_next" onclick="updateQuestion(-1)">
                 <?php echo t('continue_without_answering'); ?>
@@ -1852,7 +1921,10 @@ if (!isset($_SESSION["start"])) {
 <?php endif; ?>
 
         <?php
-        if (!isset($_SESSION["finish"])) {
+        if ($uq_review_ok) {
+            // Reprise apres changement de langue : meme rendu (startQuestion), question deja repondue.
+            echo '<script type="text/javascript">window.addEventListener("load", function(){ startQuestion(' . (int)$uq_review . ', ' . (int)$uq_choice . '); });</script>';
+        } else if (!isset($_SESSION["finish"])) {
             if ($game_mode) {
                 // Mode Jeu : on n'enchaîne pas tout de suite — on affiche le lobby (PIN + QR).
                 echo '<script type="text/javascript">window.addEventListener("load", function(){ if (typeof initHostGame === "function") initHostGame(); });</script>';
@@ -1932,9 +2004,13 @@ if (!isset($_SESSION["start"])) {
 
     <?php } else if (((isset($_SESSION["LastQuestion"]) ? $_SESSION["LastQuestion"] : 0) >= (isset($_SESSION["TotalQuestions"]) ? $_SESSION["TotalQuestions"] : 1)) && ((isset($_POST["acc"]) && isset($_POST["consent_rgpd"])) || isset($_SESSION["acc"]))) {
         $_SESSION["acc"] = "1";
+        // Seulement a la soumission du formulaire : un rechargement de la page des resultats
+        // (ex. changement de langue) ne doit pas effacer genre / orientation / e-mail en session.
+        if (isset($_POST['acc'])) {
         $_SESSION["genre"] = isset($_POST['genre']) ? htmlspecialchars($_POST['genre'], ENT_QUOTES, 'UTF-8') : '';
         $_SESSION["orient"] = isset($_POST['orient']) ? htmlspecialchars($_POST['orient'], ENT_QUOTES, 'UTF-8') : '';
         $_SESSION["emailr"] = isset($_POST['e_mm']) ? htmlspecialchars($_POST['e_mm'], ENT_QUOTES, 'UTF-8') : '';
+        }
 
 if (isset($_SESSION["id_user"]) && isset($_SESSION["genre"])) {
     try {
@@ -2308,6 +2384,7 @@ if(isset($_SESSION['reponses'])){
 					if (xhr.readyState == 4 && xhr.status == 200) {
 
 						var response = xhr.responseText.split("__");
+						var uqAnsweredQ = UQ_QNUM; // question a laquelle on vient de repondre
 						// Le serveur a avancé : mémorise le numéro de la nouvelle question.
 						if (response[0] != "fin" && parseInt(response[6], 10) > 0) UQ_QNUM = parseInt(response[6], 10);
 						var answersarray = findAllBlocks();
@@ -2326,31 +2403,12 @@ if(isset($_SESSION['reponses'])){
 							});
 							// Ensuite, nous montrons la bonne/mauvaise réponse (pas pour échelle : pas de bonne/mauvaise réponse)
 							if (response[2] == "qcm") {
-								answersarray.forEach(function (item, index) {
-									const innerAnswers = item.querySelectorAll('div#question_container');
-									if (innerAnswers.length > 0) {
-										innerAnswers.forEach(function (innerAnswer) {
-											if (index === parseInt(response[1], 10) - 1) {
-												innerAnswer.classList.add("fade-to-green");
-											} else {
-												innerAnswer.classList.add("fade-to-red");
-											}
-										});
-									}
-								});
+								uqHighlight(answersarray, parseInt(response[1], 10));
 							}
 							// Popup (qcm / echelle), puis bouton "Continuer" vers la page finale
 							if (response[2] == "qcm" || response[2] == "echelle") {
-								let ci = parseInt(response[1], 10);
-								let correctText = "";
-								if (answersarray[ci - 1]) {
-									let rep = answersarray[ci - 1].querySelector('p#rep');
-									if (rep) correctText = rep.innerText;
-								}
-								let explanation = response.slice(3).join("__");
-								let isEchelle = response[2] == "echelle";
-								let userCorrect = parseInt(buttonIndex, 10) === ci;
-								showAnswerPopup(correctText, explanation, userCorrect, isEchelle);
+								uqShowAnswerPopup(answersarray, parseInt(response[1], 10), response[2], response.slice(3).join("__"), buttonIndex);
+								UQ_ANSWERED = { q: uqAnsweredQ, choice: parseInt(buttonIndex, 10) };
 							}
 							showContinueButton(function () {
 								window.location.href = window.location.href;
@@ -2371,17 +2429,12 @@ if(isset($_SESSION['reponses'])){
 									innerAnswers.classList.remove('fade-to-white');
 								}
 							});
+							if (response[9] == "qcm") {
+								uqHighlight(answersarray, parseInt(response[7], 10));
+							}
 							answersarray.forEach(function (item, index) {
-								const innerAnswers = item.querySelectorAll('div#question_container');
 								if (response[9] == "qcm") {
-									innerAnswers.forEach(function (innerAnswer) {
-
-										if (index === parseInt(response[7], 10) - 1) {
-											innerAnswer.classList.add("fade-to-green");
-										} else {
-											innerAnswer.classList.add("fade-to-red");
-										}
-									});
+									// surbrillance faite ci-dessus (uqHighlight)
 								}
 								else if (response[9] == "lien") {
 									const blocks = document.querySelectorAll('div[id^="reponse_"]');
@@ -2400,19 +2453,12 @@ if(isset($_SESSION['reponses'])){
 
 							// Popup avec la bonne réponse + explication (qcm / echelle) ; on attend le bouton "Continuer"
 							if (!GAME_MODE && (response[9] == "qcm" || response[9] == "echelle")) {
-								let ci = parseInt(response[7], 10);
-								let correctText = "";
-								if (answersarray[ci - 1]) {
-									let rep = answersarray[ci - 1].querySelector('p#rep');
-									if (rep) correctText = rep.innerText;
-								}
-								let explanation = response.slice(11).join("__");
-								let isEchelle = response[9] == "echelle";
-								let userCorrect = parseInt(buttonIndex, 10) === ci;
-								showAnswerPopup(correctText, explanation, userCorrect, isEchelle);
+								uqShowAnswerPopup(answersarray, parseInt(response[7], 10), response[9], response.slice(11).join("__"), buttonIndex);
+								UQ_ANSWERED = { q: uqAnsweredQ, choice: parseInt(buttonIndex, 10) };
 							}
 
 							var pendingNext = function () {
+								UQ_ANSWERED = null;
 								timeout = false;
 								document.getElementById("Question").innerHTML = response[0];
 								answersarray.forEach(function (item, index) {
