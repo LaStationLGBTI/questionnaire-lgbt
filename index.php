@@ -917,9 +917,9 @@ for (let i = 0; i < data1.length; i++) {
 <body data-path-to-root="./" data-include-products="false" class="u-body u-xl-mode" data-lang="<?php echo $lang; ?>" style="height:100%">
     <?php
     // Selecteur de langue sur tous les ecrans (choix du module, description, questionnaire,
-    // formulaire final, resultats). Masque en Mode Jeu : l'ecran hote pilote une partie en
-    // direct (lobby / reveal), un rechargement en pleine partie n'apporte rien et reste risque.
-    if (!$game_mode && isset($pdo_boot) && $pdo_boot instanceof PDO) {
+    // formulaire final, resultats), Mode Jeu compris : le rechargement de l'ecran hote reprend
+    // la meme partie (game.php action "resume" : meme PIN, joueurs et scores).
+    if (isset($pdo_boot) && $pdo_boot instanceof PDO) {
         echo i18n_switcher_html(i18n_languages($pdo_boot), $lang);
     }
     ?>
@@ -1624,6 +1624,12 @@ if (!isset($_SESSION["start"])) {
     }
 
     // --- Lobby ---
+    // La barre fixe (kh-bar) recouvre le bas de page : on reserve sa hauteur pour que le footer reste visible.
+    function khSyncBarPad() {
+        var bar = el("kh-bar");
+        document.body.style.paddingBottom = (bar && bar.classList.contains("show")) ? (bar.offsetHeight + 12) + "px" : "";
+    }
+    window.addEventListener("resize", khSyncBarPad);
     window.initHostGame = function () {
         // Masque l'écran de question tant qu'on est dans le lobby.
         var qcm = document.getElementById("qcm");
@@ -1685,6 +1691,7 @@ if (!isset($_SESSION["start"])) {
         if (qcm) qcm.style.display = "";
         el("kh-bar").classList.add("show");
         document.body.classList.add("kh-playing");
+        khSyncBarPad();
         startQuestion(); // rend la question courante (session) ; gameAfterRender() est appelé ensuite
     }
 
@@ -1872,6 +1879,7 @@ if (!isset($_SESSION["start"])) {
         khHideCorrectPanel();
         el("kh-bar").classList.remove("show");
         document.body.classList.remove("kh-playing");
+        document.body.style.paddingBottom = "";
         if (khNextTimer) { clearTimeout(khNextTimer); khNextTimer = null; }
         khMsg("");
         var showBoard = function (res) {
@@ -2312,6 +2320,26 @@ if(isset($_SESSION['reponses'])){
 			box.appendChild(body);
 			document.body.appendChild(box);
 
+			// Desktop : on place la fenetre juste a droite des reponses si la place le permet.
+			if (window.innerWidth > 640) {
+				let ar = null;
+				document.querySelectorAll('div[id^="reponse_"]').forEach(function (el) {
+					const r = el.getBoundingClientRect();
+					if (r.width === 0 || r.height === 0) return;
+					ar = ar ? { left: Math.min(ar.left, r.left), top: Math.min(ar.top, r.top), right: Math.max(ar.right, r.right), bottom: Math.max(ar.bottom, r.bottom) } : { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+				});
+				const room = ar ? window.innerWidth - ar.right - 32 : 0;
+				if (ar && room >= 260) {
+					const w = Math.min(380, room);
+					box.style.width = w + 'px';
+					box.style.left = (ar.right + 16) + 'px';
+					box.style.right = 'auto';
+					box.style.bottom = 'auto';
+					const top = Math.max(12, Math.min(ar.top, window.innerHeight - box.offsetHeight - 12));
+					box.style.top = top + 'px';
+				}
+			}
+
 			const reopen = document.createElement('button');
 			reopen.id = 'answer-reopen-btn';
 			reopen.type = 'button';
@@ -2331,6 +2359,10 @@ if(isset($_SESSION['reponses'])){
 			let dragging = false, offX = 0, offY = 0;
 			function startDrag(clientX, clientY) {
 				const rect = box.getBoundingClientRect();
+				// On fige la taille et on lache bottom/right, sinon la fenetre s'etire jusqu'au bas de l'ecran.
+				box.style.width = rect.width + 'px';
+				box.style.right = 'auto';
+				box.style.bottom = 'auto';
 				box.style.left = rect.left + 'px';
 				box.style.top = rect.top + 'px';
 				box.style.transform = 'none';
