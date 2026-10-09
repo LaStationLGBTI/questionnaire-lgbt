@@ -321,3 +321,150 @@ if (!function_exists('t')) {
     }
 
 }
+
+// ---------------------------------------------------------------------------
+//  Changement de langue en cours de questionnaire (selecteur de drapeaux)
+// ---------------------------------------------------------------------------
+if (!function_exists('i18n_relocalize_session')) {
+
+    /**
+     * Re-traduit le questionnaire DEJA tire en session (QuestionToUse, Rep1..5, expliqs)
+     * dans $lang, pour les memes ids francais et dans le meme ordre (IdInUse inchange).
+     * answer / qtype / IdInUse / LastQuestion / reponses ne sont PAS touches : aucune
+     * reponse n'est ecrite, la progression et le contrat des stats (ids FR) sont conserves.
+     * Meme requete (COALESCE/NULLIF, repli FR) que le tirage initial dans index.php.
+     * Tout ou rien : en cas d'erreur ou de format inattendu, la session reste intacte.
+     */
+    function i18n_relocalize_session(PDO $pdo, string $lang): bool
+    {
+        if (!isset($_SESSION['IdInUse'], $_SESSION['QuestionToUse'])) {
+            return false;
+        }
+        $ids = explode('__', (string) $_SESSION['IdInUse']);
+        $n = count($ids);
+        $want = [];
+        for ($i = 1; $i < $n; $i++) {
+            if (ctype_digit((string) $ids[$i])) {
+                $want[(int) $ids[$i]] = true;
+            }
+        }
+        if (!$want) {
+            return false;
+        }
+        $idList = array_keys($want);
+        $ph = implode(',', array_fill(0, count($idList), '?'));
+        try {
+            if ($lang === 'fr') {
+                $st = $pdo->prepare("SELECT id, question, rep1, rep2, rep3, rep4, rep5, expliq
+                                     FROM GSDatabase WHERE id IN ($ph)");
+                $st->execute($idList);
+            } else {
+                $st = $pdo->prepare("SELECT f.id,
+                        COALESCE(NULLIF(i.question, ''), f.question) AS question,
+                        COALESCE(NULLIF(i.rep1, ''), f.rep1) AS rep1, COALESCE(NULLIF(i.rep2, ''), f.rep2) AS rep2,
+                        COALESCE(NULLIF(i.rep3, ''), f.rep3) AS rep3, COALESCE(NULLIF(i.rep4, ''), f.rep4) AS rep4,
+                        COALESCE(NULLIF(i.rep5, ''), f.rep5) AS rep5, COALESCE(NULLIF(i.expliq, ''), f.expliq) AS expliq
+                    FROM GSDatabase f
+                    LEFT JOIN GSDatabase_i18n i ON i.fr_id = f.id AND i.lang = ?
+                    WHERE f.id IN ($ph)");
+                $st->execute(array_merge([$lang], $idList));
+            }
+            $rows = [];
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $rows[(int) $r['id']] = $r;
+            }
+        } catch (Throwable $e) {
+            error_log('i18n_relocalize_session: ' . $e->getMessage());
+            return false;
+        }
+        $map = ['QuestionToUse' => 'question', 'Rep1' => 'rep1', 'Rep2' => 'rep2', 'Rep3' => 'rep3',
+                'Rep4' => 'rep4', 'Rep5' => 'rep5', 'expliqs' => 'expliq'];
+        $new = [];
+        foreach ($map as $sk => $col) {
+            if (!isset($_SESSION[$sk])) {
+                if ($sk === 'expliqs') { continue; } // anciennes sessions sans expliqs
+                return false;
+            }
+            $cur = explode('__', (string) $_SESSION[$sk]);
+            if (count($cur) !== $n) {
+                return false; // format inattendu : on ne touche a rien
+            }
+            for ($i = 1; $i < $n; $i++) {
+                $id = (int) $ids[$i];
+                if (!isset($rows[$id])) {
+                    continue; // question supprimee entre-temps : texte d'origine conserve
+                }
+                $val = (string) $rows[$id][$col];
+                if (strpos($val, '__') !== false) {
+                    continue; // casserait le format __ : texte d'origine conserve
+                }
+                $cur[$i] = $val;
+            }
+            $new[$sk] = implode('__', $cur);
+        }
+        foreach ($new as $sk => $v) {
+            $_SESSION[$sk] = $v;
+        }
+        return true;
+    }
+
+    /**
+     * Vrai si la question $n vient d'etre repondue (popup « bonne reponse » + bouton
+     * Continuer encore a l'ecran) : le serveur a deja avance (LastQuestion = $n + 1, ou
+     * finish apres la derniere). Permet de reafficher CETTE question, en lecture seule,
+     * apres un rechargement de changement de langue. Solo uniquement, qcm/echelle seulement.
+     */
+    function i18n_review_ok($n): bool
+    {
+        $n = (int) $n;
+        if ($n < 1 || !empty($_SESSION['game_mode']) || isset($_SESSION['acc'])
+            || !isset($_SESSION['start'], $_SESSION['LastQuestion'], $_SESSION['TotalQuestions'],
+                $_SESSION['QuestionToUse'], $_SESSION['qtype'])) {
+            return false;
+        }
+        if ($n !== (int) $_SESSION['LastQuestion'] - 1 || $n > (int) $_SESSION['TotalQuestions']) {
+            return false;
+        }
+        $types = explode('__', (string) $_SESSION['qtype']);
+        $qs = explode('__', (string) $_SESSION['QuestionToUse']);
+        return isset($types[$n], $qs[$n]) && ($types[$n] === 'qcm' || $types[$n] === 'echelle');
+    }
+
+    /**
+     * Selecteur de langue compact (drapeaux des langues activees). Chaque drapeau poste
+     * « language » vers index.php (mecanisme existant). uq_review / uq_choice sont remplis
+     * par uqLangSubmit() (index.php) quand une reponse vient d'etre donnee, pour reafficher
+     * la meme question avec sa reponse apres rechargement.
+     */
+    function i18n_switcher_html(array $langs, string $current): string
+    {
+        if (count($langs) < 2) {
+            return '';
+        }
+        $h = '<style>'
+            . '.lang-switch{position:absolute;top:8px;right:10px;z-index:9990;display:flex;gap:6px;padding:5px 8px;'
+            . 'background:#f4eefb;border:1px solid #d8cff7;border-radius:30px;box-shadow:0 2px 8px rgba(74,58,134,.12);}'
+            . '.lang-switch form{margin:0;display:inline;}'
+            . '.lang-switch__btn{display:block;width:30px;height:30px;padding:0;margin:0;border:2px solid transparent;'
+            . 'border-radius:50%;overflow:hidden;background:#fff;cursor:pointer;line-height:0;transition:border-color .15s;}'
+            . '.lang-switch__btn img{width:100%;height:100%;object-fit:cover;display:block;}'
+            . '.lang-switch__btn:hover{border-color:#e9c4ce;}'
+            . '.lang-switch__btn.is-current{border-color:#8a7bf4;cursor:default;}'
+            . '</style>';
+        $h .= '<div class="lang-switch" role="group" aria-label="' . htmlspecialchars(t('lang_switch_label')) . '">';
+        foreach ($langs as $L) {
+            $code = (string) $L['code'];
+            $label = htmlspecialchars((string) $L['label']);
+            $cur = ($code === $current);
+            $h .= '<form method="POST" action="index.php" onsubmit="return (typeof uqLangSubmit === \'function\') ? uqLangSubmit(this) : true;">'
+                . '<input type="hidden" name="language" value="' . htmlspecialchars($code) . '">'
+                . '<input type="hidden" name="uq_review" value="">'
+                . '<input type="hidden" name="uq_choice" value="">'
+                . '<button type="submit" class="lang-switch__btn' . ($cur ? ' is-current' : '') . '" title="' . $label . '"'
+                . ($cur ? ' aria-current="true" disabled' : '') . '>'
+                . '<img src="images/' . htmlspecialchars((string) $L['flag_file']) . '" alt="' . $label . '">'
+                . '</button></form>';
+        }
+        return $h . '</div>';
+    }
+}
