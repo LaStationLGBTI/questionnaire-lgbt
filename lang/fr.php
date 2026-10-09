@@ -45,6 +45,7 @@ return [
     'launch_game_mode' => 'Lancer en mode jeu (PIN + QR, sur écran)',
     'mode_choice_solo' => 'Mode individuel',
     'mode_choice_game' => 'Mode jeu',
+    'lang_switch_label' => 'Langue',
     'back_to_module_selection' => 'Retour au choix du module',
     'missing_level_data' => 'Manque des données pour le niveau choisi. Veuillez contacter \'La STATION\'',
     'question_select_error' => 'Erreur lors de la sélection de la question, veuillez contacter \'La STATION\'',
