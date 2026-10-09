@@ -428,7 +428,7 @@ function access_handle_post() {
 //  Écran de saisie de la clé (page autonome, puis exit)
 // ---------------------------------------------------------------------------
 
-function access_render_gate($lang, $error = null) {
+function access_render_gate($lang, $error = null, $pdo = null) {
     // index.php émet « <!DOCTYPE html> » avant le PHP : on vide le tampon de sortie
     // pour que l'écran de saisie soit une page propre (et que les en-têtes passent).
     if (ob_get_level() > 0 && ob_get_length()) { @ob_clean(); }
@@ -487,6 +487,11 @@ function access_render_gate($lang, $error = null) {
 </style>
 </head>
 <body>
+<?php
+    // Selecteur de langue (si index.php fournit son PDO) : poste « language » vers index.php,
+    // qui reaffiche cet ecran dans la langue choisie.
+    if ($pdo instanceof PDO) { echo i18n_switcher_html(i18n_languages($pdo), $lang); }
+?>
     <div class="gate">
         <div class="lock">🔐</div>
         <h1><?php echo htmlspecialchars(t('access_title')); ?></h1>
