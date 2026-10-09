@@ -297,6 +297,16 @@ function public_state($game, $pid = null, $hostView = false) {
                 if (isset($a['n']) && (int)$a['n'] === $ci) { $out['correctText'] = $a['text']; break; }
             }
         }
+        // Hote ayant change de langue en cours de partie : la session est deja re-traduite
+        // (i18n_relocalize_session), on y relit le texte et l'explication si c'est la meme question.
+        $qn  = isset($game['question']['qNumber']) ? (int)$game['question']['qNumber'] : -1;
+        $ids = explode('__', isset($_SESSION['IdInUse']) ? $_SESSION['IdInUse'] : '');
+        if ($qn > 0 && isset($ids[$qn], $game['question']['qid']) && (string)$ids[$qn] === (string)$game['question']['qid']) {
+            $se = explode('__', isset($_SESSION['expliqs']) ? $_SESSION['expliqs'] : '');
+            if (isset($se[$qn])) $out['expliq'] = $se[$qn];
+            $sr = explode('__', isset($_SESSION['Rep' . $ci]) ? $_SESSION['Rep' . $ci] : '');
+            if ($ci >= 1 && $ci <= 5 && isset($sr[$qn]) && trim($sr[$qn]) !== '' && $sr[$qn] !== 'null') $out['correctText'] = $sr[$qn];
+        }
     }
     // Panneau "bonnes réponses" — RÉSERVÉ À L'HÔTE (jamais envoyé aux joueurs).
     // Calculé côté serveur à partir du vrai correctIndex, y compris pendant la phase 'question'
