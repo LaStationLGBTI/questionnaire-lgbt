@@ -435,6 +435,11 @@ switch ($action) {
                 if (in_array($g['status'], array('question', 'reveal'), true) && !empty($g['question'])
                     && (int)$g['qNumber'] === (int)$cq['qNumber']
                     && (string)$g['question']['qid'] === (string)$cq['qid']) {
+                    // Hote ayant change de langue : on rafraichit seulement les textes (meme question,
+                    // memes slots), sans toucher aux reponses ni a l'etat.
+                    $g['question']['text']    = $cq['text'];
+                    $g['question']['answers'] = $cq['answers'];
+                    $g['question']['expliq']  = $cq['expliq'];
                     return;
                 }
                 $g['question'] = array(
