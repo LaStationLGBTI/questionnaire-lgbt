@@ -40,11 +40,13 @@ $playFallback = [
 ];
 
 $play_languages = [];
+$play_flags = [];
 try {
     $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     i18n_boot($pdo);
     $play_languages = i18n_enabled_codes($pdo);
+    $play_flags = i18n_languages($pdo);
 } catch (Throwable $e) {
     error_log('play.php: i18n DB init failed, falling back to fr/en/de: ' . $e->getMessage());
     $play_languages = ['fr', 'en', 'de'];
@@ -52,6 +54,16 @@ try {
 if (empty($play_languages)) {
     $play_languages = ['fr'];
 }
+// Drapeaux du selecteur de langue (purement local au telephone : seuls les libelles de
+// l'interface joueur changent, la partie et ses reponses ne sont pas touchees).
+if (empty($play_flags)) {
+    $play_flags = array_values(array_filter(i18n_seed_languages(), static function ($l) use ($play_languages) {
+        return in_array($l['code'], $play_languages, true);
+    }));
+}
+$play_flags = array_values(array_filter($play_flags, static function ($l) use ($play_languages) {
+    return in_array($l['code'], $play_languages, true);
+}));
 
 $play_T = [];
 foreach ($play_languages as $code) {
@@ -128,6 +140,13 @@ i18n_use('fr');
         background: #fff; color: #2b2b2b; border-radius: 10px; margin-top: 8px; font-weight: 700; }
     .lead .row.me { outline: 3px solid #ffd54a; }
     /* Bandeau « reconnexion… » (coupure réseau passagère : la session est conservée). */
+    /* Selecteur de langue (local au telephone). */
+    .lang-switch { position: fixed; top: 8px; right: 10px; z-index: 40; display: flex; gap: 6px;
+        padding: 5px 8px; background: rgba(255,255,255,.22); border-radius: 30px; }
+    .lang-switch button { width: 28px; height: 28px; padding: 0; margin: 0; border: 2px solid transparent;
+        border-radius: 50%; overflow: hidden; background: #fff; cursor: pointer; line-height: 0; }
+    .lang-switch button img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .lang-switch button.is-current { border-color: #ffd54a; }
     #net-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 50; padding: 8px 12px;
         background: #ffd54a; color: #5a3a00; font-weight: 800; font-size: 14px; text-align: center;
         box-shadow: 0 2px 8px rgba(0,0,0,.2); }
@@ -135,6 +154,13 @@ i18n_use('fr');
 </head>
 <body>
 <div id="net-banner" class="hidden"><span id="net-text">Reconnexion…</span></div>
+<?php if (count($play_flags) > 1): ?>
+<div class="lang-switch" id="lang-switch" role="group">
+    <?php foreach ($play_flags as $L): ?>
+    <button type="button" data-lang="<?php echo htmlspecialchars($L['code']); ?>" title="<?php echo htmlspecialchars($L['label']); ?>"><img src="images/<?php echo htmlspecialchars($L['flag_file']); ?>" alt="<?php echo htmlspecialchars($L['label']); ?>"></button>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
 <div class="wrap">
 
     <!-- 1. Saisie du PIN -->
@@ -211,8 +237,14 @@ i18n_use('fr');
         ["screen-pin","screen-name","screen-lobby","screen-question","screen-wait","screen-end"]
             .forEach(function (s) { $(s).classList.toggle("hidden", s !== id); });
     }
+    // Langue choisie a la main via le selecteur : prioritaire sur la langue de la partie.
+    var LANG_LOCK = null;
+    try { var ls = sessionStorage.getItem("play_lang"); if (ls && T[ls]) LANG_LOCK = ls; } catch (e) {}
     function applyLang(l) {
+        if (LANG_LOCK) l = LANG_LOCK;
         if (l && T[l]) { lang = l; t = T[l]; }
+        var sw = document.querySelectorAll("#lang-switch button");
+        for (var i = 0; i < sw.length; i++) sw[i].classList.toggle("is-current", sw[i].getAttribute("data-lang") === lang);
         // Code inconnu/absent : on garde la langue courante (comportement d'origine).
         $("t-pin-sub").textContent = t.pinSub;
         $("t-name-h1").textContent = t.nameH1; $("t-name-sub").textContent = t.nameSub;
@@ -467,6 +499,17 @@ i18n_use('fr');
             return;
         }
     }
+
+    // Selecteur de langue : change seulement les libelles (les suivants suivent via t).
+    Array.prototype.forEach.call(document.querySelectorAll("#lang-switch button"), function (b) {
+        b.addEventListener("click", function () {
+            var l = b.getAttribute("data-lang");
+            if (!T[l]) return;
+            LANG_LOCK = l;
+            try { sessionStorage.setItem("play_lang", l); } catch (e) {}
+            applyLang(l);
+        });
+    });
 
     // Init : reprise de session si possible, sinon PIN (ou pseudo si PIN pré-rempli via QR).
     applyLang(DEFAULT_LANG);
