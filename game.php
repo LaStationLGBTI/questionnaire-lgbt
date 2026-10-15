@@ -38,6 +38,11 @@ if (!defined('GAME_LIB_ONLY')) {
     header('Content-Type: application/json; charset=utf-8');
 }
 
+// Fonctions i18n (i18n_enabled_codes, etc.) : fichier sans effet de bord sur des variables
+// globales (uniquement des declarations de fonctions), require_once sans risque ici meme
+// en mode bibliotheque (index.php le re-requiert ensuite, no-op).
+require_once __DIR__ . '/i18n.php';
+
 $GAME_DIR = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lgbt_kahoot';
 if (!defined('HOST_COOKIE')) define('HOST_COOKIE', 'lgbt_kahoot_host');
 
@@ -248,13 +253,96 @@ function current_question_from_session() {
 }
 
 /**
+ * Connexion DB best-effort pour game.php (pas de $pdo partagé avec index.php : AJAX =
+ * process séparé). Jamais fatal : null si indisponible, l'appelant se rabat sur la
+ * langue hôte (dégradation gracieuse, comme le reste du système i18n).
+ */
+function game_db() {
+    require_once __DIR__ . '/conf.php';
+    try {
+        $pdo = new PDO("mysql:host=$DB_HOSTNAME;dbname=$DB_NAME;charset=utf8", $DB_USERNAME, $DB_PASSWORD);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        return $pdo;
+    } catch (Throwable $e) {
+        error_log('game_db: connexion impossible : ' . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Construit, pour CHAQUE langue activée, le texte de question/réponses/explication de
+ * l'id français $frId, en réutilisant la même sémantique COALESCE(NULLIF(trad,''), fr)
+ * que le tirage initial (index.php) / i18n_relocalize_session. $slots = numéros de slot
+ * (1..5) déjà déterminés côté appelant (texte hôte non vide) : on les réutilise tels
+ * quels pour TOUTES les langues, afin que l'ENSEMBLE et la NUMÉROTATION des slots restent
+ * identiques quelle que soit la langue choisie par un joueur (correctIndex reste valide).
+ * Appelé une seule fois par `setq`, jamais pendant le polling (`state`).
+ * Renvoie [] si $pdo est indisponible ou si aucune langue n'a pu être lue (dégradation :
+ * l'appelant complète alors avec le texte hôte déjà en session).
+ */
+function game_build_qi18n($pdo, $frId, array $slots) {
+    $map = [];
+    try {
+        $codes = i18n_enabled_codes($pdo);
+    } catch (Throwable $e) {
+        error_log('game_build_qi18n: i18n_enabled_codes a echoue : ' . $e->getMessage());
+        return [];
+    }
+    foreach ($codes as $lang) {
+        try {
+            if ($lang === 'fr') {
+                $st = $pdo->prepare("SELECT question, rep1, rep2, rep3, rep4, rep5, expliq
+                                     FROM GSDatabase WHERE id = ?");
+                $st->execute([$frId]);
+            } else {
+                $st = $pdo->prepare("SELECT
+                        COALESCE(NULLIF(i.question, ''), f.question) AS question,
+                        COALESCE(NULLIF(i.rep1, ''), f.rep1) AS rep1, COALESCE(NULLIF(i.rep2, ''), f.rep2) AS rep2,
+                        COALESCE(NULLIF(i.rep3, ''), f.rep3) AS rep3, COALESCE(NULLIF(i.rep4, ''), f.rep4) AS rep4,
+                        COALESCE(NULLIF(i.rep5, ''), f.rep5) AS rep5, COALESCE(NULLIF(i.expliq, ''), f.expliq) AS expliq
+                    FROM GSDatabase f
+                    LEFT JOIN GSDatabase_i18n i ON i.fr_id = f.id AND i.lang = ?
+                    WHERE f.id = ?");
+                $st->execute([$lang, $frId]);
+            }
+            $row = $st->fetch(PDO::FETCH_ASSOC);
+            if (!$row) continue; // id introuvable pour cette langue : absente du tableau
+            $answers = [];
+            foreach ($slots as $n) {
+                $n = (int)$n;
+                $txt = isset($row['rep' . $n]) ? trim((string)$row['rep' . $n]) : '';
+                if ($txt === '' || strtolower($txt) === 'null') $txt = '';
+                $answers[] = ['n' => $n, 'text' => $txt];
+            }
+            $map[$lang] = [
+                'text'    => (string)$row['question'],
+                'answers' => $answers,
+                'expliq'  => (string)$row['expliq'],
+            ];
+        } catch (Throwable $e) {
+            error_log('game_build_qi18n: lecture ' . $lang . ' echouee : ' . $e->getMessage());
+            // repli : cette langue reste absente du tableau, public_state() retombe sur la langue hôte.
+        }
+    }
+    return $map;
+}
+
+/**
  * État renvoyé au client (correctIndex masqué hors reveal/ended).
  * $hostView : la requête vient de la page HÔTE (index.php : actions hôte, ou state avec
  * host=1). Un onglet play.php ouvert dans le navigateur de l'hôte est authentifié (cookie)
  * mais ne doit PAS recevoir les champs réservés à l'hôte (correctPlayers pendant la question).
  */
-function public_state($game, $pid = null, $hostView = false) {
+function public_state($game, $pid = null, $hostView = false, $lang = null) {
     $reveal = in_array($game['status'], ['reveal', 'ended'], true);
+    // Langue PROPRE AU JOUEUR (drapeau play.php), indépendante de celle de l'hôte.
+    // $qi18n est calculé une seule fois par setq (voir game_build_qi18n). Si $lang n'est
+    // pas demandé, inconnu, vide, ou égal à la langue de l'hôte -> comportement HOTE
+    // existant inchangé (y compris la relecture de session ci-dessous). Une langue
+    // joueur absente du tableau (DB indisponible au moment du setq, etc.) retombe aussi
+    // sur la langue hôte : jamais d'erreur, au pire un texte non traduit.
+    $qi18n = (!empty($game['question']['qi18n']) && is_array($game['question']['qi18n'])) ? $game['question']['qi18n'] : [];
+    $playerLang = ($lang !== null && $lang !== '' && $lang !== $game['lang'] && isset($qi18n[$lang])) ? $lang : null;
     $players = [];
     foreach ($game['players'] as $id => $p) {
         $players[] = [
@@ -269,11 +357,14 @@ function public_state($game, $pid = null, $hostView = false) {
 
     $q = null;
     if (!empty($game['question'])) {
+        // qid (id français) : clé stable cote play.php pour détecter un changement de
+        // QUESTION (et non un simple changement de langue du même texte).
         $q = [
-            'text'    => $game['question']['text'],
-            'answers' => $game['question']['answers'],
+            'text'    => ($playerLang !== null) ? $qi18n[$playerLang]['text']    : $game['question']['text'],
+            'answers' => ($playerLang !== null) ? $qi18n[$playerLang]['answers'] : $game['question']['answers'],
             'qNumber' => isset($game['qNumber']) ? $game['qNumber'] : 0,
             'totalQ'  => isset($game['totalQ']) ? $game['totalQ'] : 0,
+            'qid'     => isset($game['question']['qid']) ? $game['question']['qid'] : '',
         ];
     }
     $out = [
@@ -289,6 +380,14 @@ function public_state($game, $pid = null, $hostView = false) {
     if ($reveal && isset($game['question']['correctIndex'])) {
         $ci = (int)$game['question']['correctIndex'];
         $out['correctIndex'] = $ci;
+        if ($playerLang !== null) {
+            // Joueur avec une langue différente de l'hôte : texte traduit précalculé au setq.
+            $out['expliq'] = isset($qi18n[$playerLang]['expliq']) ? $qi18n[$playerLang]['expliq'] : '';
+            $out['correctText'] = '';
+            foreach ($qi18n[$playerLang]['answers'] as $a) {
+                if (isset($a['n']) && (int)$a['n'] === $ci) { $out['correctText'] = $a['text']; break; }
+            }
+        } else {
         // Texte de la bonne réponse + explication, pour la fenêtre d'info chez l'hôte.
         $out['expliq'] = isset($game['question']['expliq']) ? $game['question']['expliq'] : '';
         $out['correctText'] = '';
@@ -306,6 +405,7 @@ function public_state($game, $pid = null, $hostView = false) {
             if (isset($se[$qn])) $out['expliq'] = $se[$qn];
             $sr = explode('__', isset($_SESSION['Rep' . $ci]) ? $_SESSION['Rep' . $ci] : '');
             if ($ci >= 1 && $ci <= 5 && isset($sr[$qn]) && trim($sr[$qn]) !== '' && $sr[$qn] !== 'null') $out['correctText'] = $sr[$qn];
+        }
         }
     }
     // Panneau "bonnes réponses" — RÉSERVÉ À L'HÔTE (jamais envoyé aux joueurs).
@@ -423,8 +523,22 @@ switch ($action) {
         // La question courante est lue dans la session de l'hôte (hors verrou : pas d'accès fichier).
         $cq  = current_question_from_session();
         $sid = session_id();
+        // Précalcul des traductions par langue (une seule fois par question, hors du
+        // verrou exclusif de mutate_game : pas de requête DB par poll côté `state`).
+        // Repli : si la DB est indisponible, seule la langue hôte est disponible (public_state
+        // retombe alors sur l'hôte pour toute autre langue demandée par un joueur).
+        $qi18n = [];
+        if ($cq) {
+            $slots = array_map(function ($a) { return (int)$a['n']; }, $cq['answers']);
+            $pdo = game_db();
+            if ($pdo) { $qi18n = game_build_qi18n($pdo, $cq['qid'], $slots); }
+            $hostLang = isset($_SESSION['language']) ? $_SESSION['language'] : 'fr';
+            if (!isset($qi18n[$hostLang])) {
+                $qi18n[$hostLang] = ['text' => $cq['text'], 'answers' => $cq['answers'], 'expliq' => $cq['expliq']];
+            }
+        }
         try {
-            $game = mutate_game($GAME_DIR, $pin, function (&$g) use ($cq, $sid) {
+            $game = mutate_game($GAME_DIR, $pin, function (&$g) use ($cq, $sid, $qi18n) {
                 if (!host_auth($g)) throw new GameError('not_host');
                 // Partie terminée / annulée : on ne la rouvre jamais (requête rejouée, autre onglet…).
                 if ($g['status'] === 'ended' || $g['status'] === 'cancelled') throw new GameError('ended');
@@ -440,6 +554,7 @@ switch ($action) {
                     $g['question']['text']    = $cq['text'];
                     $g['question']['answers'] = $cq['answers'];
                     $g['question']['expliq']  = $cq['expliq'];
+                    $g['question']['qi18n']   = $qi18n;
                     return;
                 }
                 $g['question'] = array(
@@ -448,6 +563,7 @@ switch ($action) {
                     'correctIndex' => $cq['correctIndex'],
                     'expliq'       => $cq['expliq'],
                     'qid'          => $cq['qid'],
+                    'qi18n'        => $qi18n,
                 );
                 $g['qNumber'] = $cq['qNumber'];
                 $g['totalQ']  = $cq['totalQ'];
@@ -544,6 +660,7 @@ switch ($action) {
         $pin    = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
         $pid    = isset($_REQUEST['pid']) ? $_REQUEST['pid'] : '';
         $choice = isset($_REQUEST['choice']) ? (int)$_REQUEST['choice'] : 0;
+        $lang   = isset($_REQUEST['lang']) ? (string)$_REQUEST['lang'] : null;
         try {
             $game = mutate_game($GAME_DIR, $pin, function (&$g) use ($pid, $choice) {
                 if (!isset($g['players'][$pid])) throw new GameError('no_player');
@@ -558,12 +675,16 @@ switch ($action) {
             });
         } catch (GameError $e) { jerr($e->getMessage()); }
         if (!$game) jerr('not_found');
-        jexit(public_state($game, $pid));
+        jexit(public_state($game, $pid, false, $lang));
     }
 
     case 'state': {
-        $pin = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
-        $pid = isset($_REQUEST['pid']) ? $_REQUEST['pid'] : null;
+        $pin  = isset($_REQUEST['pin']) ? trim($_REQUEST['pin']) : '';
+        $pid  = isset($_REQUEST['pid']) ? $_REQUEST['pid'] : null;
+        // Langue CHOISIE PAR LE JOUEUR (drapeau play.php), indépendante de celle de l'hôte.
+        // Validée dans public_state() contre la carte qi18n précalculée au setq ; inconnue
+        // ou absente -> repli silencieux sur la langue de l'hôte (jamais d'erreur).
+        $lang = isset($_REQUEST['lang']) ? (string)$_REQUEST['lang'] : null;
         // Lecture seule : on libère tout de suite le verrou de session (polling fréquent).
         session_write_close();
         $game = load_game($GAME_DIR, $pin);
@@ -571,7 +692,7 @@ switch ($action) {
         if ($game === false) jerr('busy');     // échec passager : le client réessaie
         // Champs hôte uniquement si la page hôte le demande explicitement (host=1) ET s'authentifie.
         $hostView = isset($_REQUEST['host']) && $_REQUEST['host'] === '1';
-        jexit(public_state($game, $pid, $hostView));
+        jexit(public_state($game, $pid, $hostView, $lang));
     }
 
     default:
