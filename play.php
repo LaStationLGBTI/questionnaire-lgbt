@@ -231,6 +231,10 @@ i18n_use('fr');
     var lang = DEFAULT_LANG, t = T[DEFAULT_LANG];
     var pin = "", pid = "", myName = "";
     var pollTimer = null, lastStatus = "", lastQNumber = -1, answeredThisQ = false;
+    // Langue utilisee pour le DERNIER rendu des boutons de reponse (independante de
+    // lastQNumber : un changement de drapeau sur la MEME question doit re-rendre les
+    // boutons dans la nouvelle langue, sans la traiter comme une question differente).
+    var lastRenderedLang = "";
 
     function $(id) { return document.getElementById(id); }
     function show(id) {
@@ -308,7 +312,7 @@ i18n_use('fr');
         var v = $("pin-input").value.replace(/\D/g, "");
         if (!/^\d{6}$/.test(v)) { $("pin-err").textContent = "PIN = 6 chiffres"; return; }
         // Vérifie que la partie existe.
-        api({ action: "state", pin: v }).then(function (res) {
+        api({ action: "state", pin: v, lang: lang }).then(function (res) {
             if (!res.ok) { $("pin-err").textContent = res.error === "not_found" ? t.badPin : t.netError; return; }
             if (res.status === "ended" || res.status === "cancelled") { $("pin-err").textContent = t.ended; return; }
             $("pin-err").textContent = "";
@@ -367,7 +371,7 @@ i18n_use('fr');
         if (answeredThisQ) return;
         answeredThisQ = true;
         showWaitAnswered(null);
-        api({ action: "answer", pin: pin, pid: pid, choice: choice }).then(function (res) {
+        api({ action: "answer", pin: pin, pid: pid, choice: choice, lang: lang }).then(function (res) {
             netOk();
             if (res.ok && res.me) { $("wait-score").textContent = res.me.score + " " + t.score; }
             // Refus réessayable (busy, joueur à re-lier…) : le prochain polling réaffiche
@@ -392,7 +396,7 @@ i18n_use('fr');
     function poll() {
         if (polling || !pin || !pid) return; // une seule requête en vol (réseau lent)
         polling = true;
-        api({ action: "state", pin: pin, pid: pid }).then(function (res) {
+        api({ action: "state", pin: pin, pid: pid, lang: lang }).then(function (res) {
             polling = false; netOk();
             if (pid) handleState(res); // pid vidé entre-temps (retour à l'écran pseudo) : on ignore
         }, function () {
@@ -453,8 +457,9 @@ i18n_use('fr');
             return;
         }
         if (res.status === "question" && res.question) {
-            // Nouvelle question (numéro + texte : l'hôte peut avoir relancé le questionnaire).
-            var qKey = res.question.qNumber + "|" + res.question.text;
+            // Nouvelle question (numéro + id français : STABLE d'une langue à l'autre,
+            // contrairement au texte qui change avec le drapeau choisi par le joueur).
+            var qKey = res.question.qNumber + "|" + (res.question.qid || "");
             if (qKey !== lastQNumber) {
                 lastQNumber = qKey;
                 answeredThisQ = !!me.answered;
@@ -464,10 +469,12 @@ i18n_use('fr');
                 showWaitAnswered(me.score);
             } else {
                 // Ne reconstruit les boutons qu'une fois par question (un tap pendant un
-                // re-rendu toutes les 1,5 s pouvait être perdu).
-                if (renderedQ !== qKey || $("screen-question").classList.contains("hidden")) {
+                // re-rendu toutes les 1,5 s pouvait être perdu) - SAUF si la langue a
+                // change depuis le dernier rendu (meme question, nouveau texte a afficher).
+                if (renderedQ !== qKey || lang !== lastRenderedLang || $("screen-question").classList.contains("hidden")) {
                     renderQuestion(res.question);
                     renderedQ = qKey;
+                    lastRenderedLang = lang;
                 }
                 show("screen-question");
             }
@@ -508,6 +515,9 @@ i18n_use('fr');
             LANG_LOCK = l;
             try { sessionStorage.setItem("play_lang", l); } catch (e) {}
             applyLang(l);
+            // Rejoue tout de suite le polling : la question/le reveal en cours doivent
+            // s'afficher dans la nouvelle langue sans attendre jusqu'a 1,5s.
+            if (pid) poll();
         });
     });
 
@@ -518,7 +528,7 @@ i18n_use('fr');
 
     function gotoPinOrName() {
         if (/^\d{6}$/.test(pre)) {
-            api({ action: "state", pin: pre }).then(function (res) {
+            api({ action: "state", pin: pre, lang: lang }).then(function (res) {
                 if (res.ok && res.status !== "ended" && res.status !== "cancelled") {
                     pin = pre; applyLang(res.lang);
                     if (saved && saved.name) $("name-input").value = saved.name; // pré-remplit l'ancien pseudo
@@ -540,7 +550,7 @@ i18n_use('fr');
     // Reprise d'une session mémorisée. Erreur réseau / serveur momentanément indisponible :
     // on GARDE la session et on réessaie (avant : la session était effacée => joueur perdu).
     function resumeSaved() {
-        api({ action: "state", pin: saved.pin, pid: saved.pid }).then(function (res) {
+        api({ action: "state", pin: saved.pin, pid: saved.pid, lang: lang }).then(function (res) {
             if (res.ok && res.status !== "ended" && res.status !== "cancelled") {
                 netOk();
                 // Joueur replacé dans la partie ; si son pid est inconnu, handleState se
