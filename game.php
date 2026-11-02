@@ -342,7 +342,10 @@ function public_state($game, $pid = null, $hostView = false, $lang = null) {
     // joueur absente du tableau (DB indisponible au moment du setq, etc.) retombe aussi
     // sur la langue hôte : jamais d'erreur, au pire un texte non traduit.
     $qi18n = (!empty($game['question']['qi18n']) && is_array($game['question']['qi18n'])) ? $game['question']['qi18n'] : [];
-    $playerLang = ($lang !== null && $lang !== '' && $lang !== $game['lang'] && isset($qi18n[$lang])) ? $lang : null;
+    // Pas de test "$lang !== $game['lang']" : $game['lang'] reste la langue initiale, alors que
+    // $game['question'] suit la langue COURANTE de l'hôte -> un joueur resté sur la langue
+    // initiale aurait suivi chaque changement de l'hôte.
+    $playerLang = ($lang !== null && $lang !== '' && isset($qi18n[$lang])) ? $lang : null;
     $players = [];
     foreach ($game['players'] as $id => $p) {
         $players[] = [
