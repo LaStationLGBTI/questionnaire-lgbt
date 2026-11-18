@@ -1317,9 +1317,9 @@ if (admin_is_logged_in()) {
                     // Action par ligne selon la table : édition (FR et EN) ou suppression (résultats)
                     $row_action = null;
                     $action_lang_qs = (substr($current_view, -3) === '_en') ? '&qlang=en' : '';
-                    if (($current_view === 'questions' || $current_view === 'questions_en') && in_array('id', $columns)) {
+                    if (in_array($current_view, ['questions', 'questions_en', 'questions_i18n'], true) && in_array('id', $columns)) {
                         $row_action = 'edit_question';
-                    } elseif ($current_view === 'texts' || $current_view === 'texts_en') {
+                    } elseif (in_array($current_view, ['texts', 'texts_en', 'texts_i18n'], true)) {
                         $row_action = 'edit_level';
                     } elseif ($current_view === 'results' && in_array('id', $columns)) {
                         $row_action = 'delete_response';
@@ -1404,10 +1404,13 @@ if (admin_is_logged_in()) {
                                     echo "<td>" . htmlspecialchars($val, ENT_QUOTES, 'UTF-8') . "</td>";
                                 }
                             }
+                            // Tables i18n : la langue de la ligne cible l'édition de la traduction.
+                            $row_lang_qs = (isset($row['lang']) && $row['lang'] !== '' && $row['lang'] !== 'fr')
+                                ? '&qlang=' . urlencode((string) $row['lang']) : $action_lang_qs;
                             if ($row_action === 'edit_question') {
-                                echo "<td class='col-actions'><a class='btn-small' href='?page=questions&action=edit&id=" . urlencode($row['id']) . $action_lang_qs . "'>Modifier</a></td>";
+                                echo "<td class='col-actions'><a class='btn-small' href='?page=questions&action=edit&id=" . urlencode($row['id']) . $row_lang_qs . "'>Modifier</a></td>";
                             } elseif ($row_action === 'edit_level') {
-                                echo "<td class='col-actions'><a class='btn-small' href='?page=levels&action=edit&id=" . urlencode($row['level']) . $action_lang_qs . "'>Modifier</a></td>";
+                                echo "<td class='col-actions'><a class='btn-small' href='?page=levels&action=edit&id=" . urlencode($row['level']) . $row_lang_qs . "'>Modifier</a></td>";
                             } elseif ($row_action === 'delete_response') {
                                 echo "<td class='col-actions'><form action='?page=database' method='POST' style='margin:0;' onsubmit=\"return confirm('Supprimer cette réponse ? Cette action est irréversible.');\">"
                                    . csrf_input()
